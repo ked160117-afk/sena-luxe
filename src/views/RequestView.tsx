@@ -13,9 +13,9 @@ export const RequestView: React.FC = () => {
           <Gem className="w-3.5 h-3.5" />
           <span>LISTED STONE ACCOUNT INQUIRY</span>
         </div>
-        <h1 className="text-2xl sm:text-4xl font-bold text-white">掲載中の石垢について問い合わせ</h1>
+        <h1 className="text-2xl sm:text-4xl font-bold text-white">石垢について相談・問い合わせ</h1>
         <p className="text-xs sm:text-sm text-stone-400 mt-2 leading-relaxed">
-          商品ページに掲載されている石垢アカウントについて、商品番号を添えて公式LINEからお問い合わせください。
+          掲載中の石垢の在庫確認はもちろん、一覧にないゲームタイトルや石垢についても、公式LINEからご相談いただけます。ご希望を伺い、取扱可否・在庫を確認してお探しします。
         </p>
       </div>
 
@@ -25,14 +25,14 @@ export const RequestView: React.FC = () => {
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-white">お問い合わせいただける内容</h2>
             <p className="text-xs text-stone-400 leading-relaxed">
-              掲載商品の在庫状況、記載された通貨数量・アカウント内容、価格、引き継ぎ条件の確認。
+              掲載商品の在庫・価格・通貨数量の確認、一覧にない石垢や新しいゲームタイトルのご相談、商品内容・引き継ぎ方法などの確認。
             </p>
           </div>
         </div>
         <div className="border-t border-stone-800 pt-4 space-y-2">
           <h2 className="text-sm font-semibold text-white">お受けしていない内容</h2>
           <p className="text-xs text-stone-400 leading-relaxed">
-            掲載外商品の個別手配・取り寄せ・予約、キャラクター指定、アカウント育成、既存アカウントへの通貨追加、各種代行サービスは承っておりません。
+            ゲームのプレイ代行・育成代行・通貨追加などの代行サービス、既存アカウントへの通貨追加は行っておりません。石垢アカウントの販売のみを取り扱います。
           </p>
         </div>
         <a
@@ -42,7 +42,7 @@ export const RequestView: React.FC = () => {
           className="w-full py-3 px-4 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-2"
         >
           <MessageCircle className="w-4 h-4" />
-          <span>公式LINEで掲載商品について問い合わせる</span>
+          <span>公式LINEで石垢について相談する</span>
         </a>
       </div>
     </div>
