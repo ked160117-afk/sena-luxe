@@ -361,7 +361,7 @@ export const FaqNoticeView: React.FC = () => {
         <div className="max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#06C755]/15 border border-[#06C755]/30 text-[#06C755] text-xs font-medium">
             <MessageCircle className="w-3.5 h-3.5" />
-            <span>SENA LUXE OFFICIAL CONCIERGE</span>
+            <span>SENA LUXE OFFICIAL LINE</span>
           </div>
 
           <h3 className="text-xl sm:text-3xl font-bold text-white font-cinzel">
@@ -369,8 +369,7 @@ export const FaqNoticeView: React.FC = () => {
           </h3>
 
           <p className="text-xs sm:text-sm text-stone-300 leading-relaxed">
-            商品のお探し、希望キャラクターの在庫確認、お支払い方法のご相談など、専任コンシェルジュが1対1で迅速に対応いたします。<br className="hidden sm:inline" />
-            ご購入前の事前確認だけでもお気軽にお問い合わせください。
+            掲載中の石垢アカウントについて、商品番号を添えて在庫・通貨数量・価格・引き継ぎ条件をご確認ください。返信までお時間をいただく場合があります。
           </p>
         </div>
 
@@ -382,16 +381,16 @@ export const FaqNoticeView: React.FC = () => {
             className="w-full sm:w-auto px-8 py-3.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-[#06C755] hover:bg-[#05b34c] transition-all flex items-center justify-center gap-2.5 shadow-[0_4px_20px_rgba(6,199,85,0.3)]"
           >
             <MessageCircle className="w-4 h-4 fill-white stroke-none" />
-            <span>公式LINEでコンシェルジュに相談する</span>
+            <span>公式LINEで問い合わせる</span>
           </a>
         </div>
 
         <div className="pt-2 flex items-center justify-center gap-6 text-[11px] text-stone-500">
-          <span>個別非公開対応</span>
+          <span>掲載商品についての問い合わせ</span>
           <span aria-hidden="true">·</span>
-          <span>日本人スタッフ常駐</span>
+          <span>日本語対応</span>
           <span aria-hidden="true">·</span>
-          <span>事前相談無料</span>
+          <span>購入前に内容確認</span>
         </div>
       </section>
     </div>
