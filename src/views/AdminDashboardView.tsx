@@ -370,13 +370,14 @@ export const AdminDashboardView: React.FC = () => {
   // Open Stone Rate Full Edit Modal
   const openEditRateModal = (plan: StoneRatePlan) => {
     setEditingRatePlan(plan);
-    setEditRatePlanName(plan.planName);
-    setEditRateAmount(plan.currencyAmount);
-    setEditRateConditions(plan.conditions);
-    setEditRateRefPrice(String(plan.referencePrice));
-    setEditRateIsPriceConfirmed(plan.currentPrice !== null);
-    setEditRateCurrPrice(plan.currentPrice !== null ? String(plan.currentPrice) : '');
-    setEditRateNotes(plan.notes || '');
+    const isVerified = plan.verifiedForPublic === true;
+    setEditRatePlanName(isVerified ? plan.planName : '');
+    setEditRateAmount(isVerified ? plan.currencyAmount : '');
+    setEditRateConditions(isVerified ? plan.conditions : '');
+    setEditRateRefPrice(isVerified ? String(plan.referencePrice) : '0');
+    setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
+    setEditRateCurrPrice(isVerified && plan.currentPrice !== null ? String(plan.currentPrice) : '');
+    setEditRateNotes(isVerified ? plan.notes || '' : '');
   };
 
   // Save Stone Rate Full Edit
@@ -391,8 +392,9 @@ export const AdminDashboardView: React.FC = () => {
       conditions: editRateConditions.trim(),
       referencePrice: Number(editRateRefPrice) || 0,
       currentPrice: currPriceVal,
-      status: currPriceVal === null ? '価格確認中' : '現在準備中',
-      isPreparation: true,
+      status: currPriceVal === null ? '価格確認中' : '取扱中',
+      isPreparation: currPriceVal === null,
+      verifiedForPublic: currPriceVal !== null,
       notes: editRateNotes.trim() || undefined,
       confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
     });
@@ -419,8 +421,9 @@ export const AdminDashboardView: React.FC = () => {
       referencePrice: Number(newRateRefPrice) || 0,
       currentPrice: currPriceVal,
       confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
-      status: currPriceVal === null ? '価格確認中' : '現在準備中',
-      isPreparation: true,
+      status: currPriceVal === null ? '価格確認中' : '取扱中',
+      isPreparation: currPriceVal === null,
+      verifiedForPublic: currPriceVal !== null,
     });
 
     setIsAddRateModalOpen(false);
@@ -758,15 +761,15 @@ export const AdminDashboardView: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 font-mono text-stone-400 whitespace-nowrap">
-                      {plan.referencePrice > 0 ? `¥${plan.referencePrice.toLocaleString()}` : '-'}
+                      {plan.verifiedForPublic && plan.referencePrice > 0 ? `¥${plan.referencePrice.toLocaleString()}` : '未確認・非公開'}
                     </td>
                     <td className="py-3 px-3 sm:px-4 font-mono whitespace-nowrap">
-                      {plan.priceDisplay ? (
+                      {plan.verifiedForPublic && plan.priceDisplay ? (
                         <span className="font-bold text-[#f7e7ce]">{plan.priceDisplay}</span>
-                      ) : plan.currentPrice !== null ? (
+                      ) : plan.verifiedForPublic && plan.currentPrice !== null ? (
                         <span className="font-bold text-white">¥{plan.currentPrice.toLocaleString()}</span>
                       ) : (
-                        <span className="text-amber-400 font-medium">{plan.status === '要相談' ? '要相談' : '価格確認中'}</span>
+                        <span className="text-amber-400 font-medium">{plan.verifiedForPublic ? (plan.status === '要相談' ? '要相談' : '価格確認中') : '未確認・非公開'}</span>
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
@@ -845,7 +848,7 @@ export const AdminDashboardView: React.FC = () => {
                           </button>
                           <button
                             onClick={async () => {
-                              const nextStatus = plan.status === '現在準備中' ? '取扱中' : '現在準備中';
+                              const nextStatus = plan.verifiedForPublic ? '現在準備中' : '取扱中';
                               const canActivate =
                                 plan.currentPrice !== null &&
                                 plan.currentPrice > 0 &&
@@ -857,22 +860,23 @@ export const AdminDashboardView: React.FC = () => {
                                 status: nextStatus,
                                 stockStatus: '在庫要確認',
                                 isPreparation: nextStatus !== '取扱中',
+                                verifiedForPublic: nextStatus === '取扱中',
                               });
                             }}
                             className={`px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
-                              plan.status === '現在準備中'
+                              !plan.verifiedForPublic
                                 ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-800/60'
                                 : 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border-amber-700/60'
                             }`}
-                            disabled={plan.status === '現在準備中' && !(plan.currentPrice !== null && plan.currentPrice > 0 && Boolean(plan.planName?.trim()) && Boolean(plan.currencyAmount?.trim()) && Boolean(plan.conditions?.trim()))}
+                            disabled={!plan.verifiedForPublic && !(plan.currentPrice !== null && plan.currentPrice > 0 && Boolean(plan.planName?.trim()) && Boolean(plan.currencyAmount?.trim()) && Boolean(plan.conditions?.trim()))}
                             title="価格・商品名・通貨数量・条件を入力してから取扱中に変更できます"
                           >
-                            {plan.status === '現在準備中' ? '取扱中に変更' : '準備中に変更'}
+                            {plan.verifiedForPublic ? '準備中に変更' : '内容確認済みとして公開'}
                           </button>
                           <button
                             onClick={() => {
                               setRateEditPlanId(plan.id);
-                              setRateEditNewPrice(plan.currentPrice !== null ? String(plan.currentPrice) : '');
+                              setRateEditNewPrice(plan.verifiedForPublic && plan.currentPrice !== null ? String(plan.currentPrice) : '');
                               setRateEditReason('');
                             }}
                             className="px-2 py-1 rounded bg-stone-800 hover:bg-stone-700 text-[11px] text-[#d4af37] border border-stone-700"
