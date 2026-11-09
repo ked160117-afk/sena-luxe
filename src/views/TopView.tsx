@@ -23,7 +23,7 @@ export const TopView: React.FC = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-xs font-cinzel tracking-widest uppercase mb-6">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>ESTABLISHED 2026 · EXCLUSIVE GAMING CONCIERGE</span>
+            <span>ESTABLISHED 2026 · STONE ACCOUNT COLLECTION</span>
           </div>
 
           <h1 className="font-cinzel text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-4">
@@ -35,8 +35,8 @@ export const TopView: React.FC = () => {
           </p>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-stone-300 leading-relaxed font-sans mb-10">
-            選ばれしプレイヤーのための高級ゲームアカウント・石垢・育成済みデータ専門店。<br className="hidden sm:inline" />
-            専任コンシェルジュによる個別確認と、安全・透明性を追求した最上級のコレクションをお届けします。
+            ゲーム内通貨を保有した石垢アカウントを掲載・販売する専門店です。<br className="hidden sm:inline" />
+            掲載商品の内容・在庫・価格は、ご購入前に公式LINEでご確認ください。
           </p>
 
           {/* Quick Action Buttons */}
@@ -149,7 +149,7 @@ export const TopView: React.FC = () => {
               <span className="text-[10px] tracking-widest text-[#d4af37] font-cinzel uppercase">EXCLUSIVE RATE TABLE</span>
               <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">石垢専用料金表</h3>
               <p className="text-xs sm:text-sm text-stone-300 mt-2 leading-relaxed">
-                全33タイトルの天井確保・大量通貨プランを一元掲載。参考サイトの相場基準と同額を基準にし、リアルタイム価格改定履歴も完全公開。
+                掲載中の石垢アカウント情報をご案内します。価格・在庫・通貨数量は購入前に公式LINEでご確認ください。
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-[#d4af37] group-hover:translate-x-1.5 transition-transform">
@@ -160,21 +160,21 @@ export const TopView: React.FC = () => {
 
           {/* Game Request Banner */}
           <div
-            onClick={() => setCurrentView('request')}
+            onClick={() => setCurrentView('faq')}
             className="group cursor-pointer rounded-xl bg-gradient-to-br from-[#14151a] to-[#0e0f13] border border-stone-800 hover:border-[#d4af37]/60 p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_10px_35px_rgba(0,0,0,0.8)]"
           >
             <div>
               <div className="w-12 h-12 rounded-lg bg-stone-800/80 border border-stone-700 flex items-center justify-center text-[#d4af37] mb-4 group-hover:scale-105 transition-transform">
                 <HelpCircle className="w-6 h-6" />
               </div>
-              <span className="text-[10px] tracking-widest text-stone-400 font-cinzel uppercase">CUSTOM PROCUREMENT</span>
-              <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">その他・ゲームリクエスト</h3>
+              <span className="text-[10px] tracking-widest text-stone-400 font-cinzel uppercase">STONE ACCOUNT SALES</span>
+              <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">石垢販売について</h3>
               <p className="text-xs sm:text-sm text-stone-300 mt-2 leading-relaxed">
-                取扱タイトルにないゲームや、指定キャラ・完凸サポカ・指定条件のアカウントも専任コンシェルジュが手配可能か調査いたします。
+                販売対象は掲載中の石垢アカウントのみです。掲載外商品の個別手配・取り寄せ・予約・代行は承っておりません。
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-stone-300 group-hover:text-[#d4af37] group-hover:translate-x-1.5 transition-transform">
-              <span>リクエストフォームを開く</span>
+              <span>販売内容・注意事項を確認する</span>
               <ArrowRight className="w-4 h-4" />
             </div>
           </div>
@@ -206,7 +206,7 @@ export const TopView: React.FC = () => {
               <h3 className="text-base sm:text-lg font-semibold text-white">現在商品を準備中です</h3>
               <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
                 SENA LUXEでは、実際に販売可能性と安全性が確認できた正規商品のみを掲載しております。<br className="hidden sm:inline" />
-                実態確認が完了した商品から順次公開いたします。お急ぎのアカウントや石垢のご要望は公式LINEにて個別にお問い合わせください。
+                掲載中の商品がない場合は、現在商品を準備中です。掲載外商品の個別手配・取り寄せ・予約は承っておりません。
               </p>
             </div>
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -302,7 +302,7 @@ export const TopView: React.FC = () => {
               お取引に関する注意事項 & よくあるご質問（FAQ）
             </h3>
             <p className="text-xs sm:text-sm text-stone-300 max-w-2xl leading-relaxed">
-              ゲーム運営会社の利用規約・利用制限リスクへの留意事項、石垢の仕様（アカウント本体の引渡し）、PayPay／Amazonギフト券決済、引き継ぎ時の安定環境と即時パスワード変更手順などをわかりやすく解説しています。
+              ゲーム運営会社の利用規約・利用制限リスクへの留意事項、石垢の仕様（アカウント本体の引渡し）、掲載商品の内容・価格・在庫、ゲーム運営会社の利用規約、アカウント引き継ぎ時の注意事項などを案内しています。
             </p>
           </div>
           <button
@@ -322,28 +322,28 @@ export const TopView: React.FC = () => {
             <div className="space-y-1.5">
               <div className="flex items-center justify-center md:justify-start gap-2 text-[#d4af37]">
                 <ShieldCheck className="w-5 h-5" />
-                <span className="font-semibold text-white text-sm">完全な品質確認済み</span>
+                <span className="font-semibold text-white text-sm">掲載内容を購入前に確認</span>
               </div>
               <p className="text-xs text-stone-400 leading-relaxed">
-                全商品、専任スタッフがログイン確認・連携状況・ペナルティ履歴の有無を事前チェック。
+                商品ページの説明・通貨数量・在庫状況を、購入前に公式LINEで確認してください。
               </p>
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-center md:justify-start gap-2 text-[#d4af37]">
                 <MessageCircle className="w-5 h-5" />
-                <span className="font-semibold text-white text-sm">LINE公式での迅速案内</span>
+                <span className="font-semibold text-white text-sm">公式LINEでの問い合わせ</span>
               </div>
               <p className="text-xs text-stone-400 leading-relaxed">
-                商品番号をワンクリックコピーして送信するだけ。自動返信ではなく担当コンシェルジュが即応。
+                商品番号と確認したい内容をお知らせください。返信までお時間をいただく場合があります。
               </p>
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-center md:justify-start gap-2 text-[#d4af37]">
                 <Sparkles className="w-5 h-5" />
-                <span className="font-semibold text-white text-sm">永久欠番による安全管理</span>
+                <span className="font-semibold text-white text-sm">商品番号の管理</span>
               </div>
               <p className="text-xs text-stone-400 leading-relaxed">
-                一度発行された商品番号は永久欠番となり、再利用や重複のない安全な追跡性を保証。
+                発行済みの商品番号は再利用しない運用です。
               </p>
             </div>
           </div>
