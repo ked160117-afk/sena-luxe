@@ -170,7 +170,7 @@ export const TopView: React.FC = () => {
               <span className="text-[10px] tracking-widest text-stone-400 font-cinzel uppercase">STONE ACCOUNT SALES</span>
               <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">石垢販売について</h3>
               <p className="text-xs sm:text-sm text-stone-300 mt-2 leading-relaxed">
-                販売対象は掲載中の石垢アカウントのみです。掲載外商品の個別手配・取り寄せ・予約・代行は承っておりません。
+                当店は石垢アカウントの販売専門店です。一覧にない商品や新しいゲームタイトルも、公式LINEからご相談いただけます。ゲームのプレイ代行・育成代行・通貨追加などの代行サービスは行っておりません。
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-stone-300 group-hover:text-[#d4af37] group-hover:translate-x-1.5 transition-transform">
@@ -206,7 +206,7 @@ export const TopView: React.FC = () => {
               <h3 className="text-base sm:text-lg font-semibold text-white">現在商品を準備中です</h3>
               <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
                 掲載準備が完了した石垢アカウントを商品ページに掲載します。<br className="hidden sm:inline" />
-                掲載中の商品がない場合は、現在商品を準備中です。掲載外商品の個別手配・取り寄せ・予約は承っておりません。
+                掲載中の商品がない場合も、一覧にない商品や新しいゲームタイトルについて公式LINEからご相談いただけます。ご希望を伺い、取扱い・在庫を確認してご案内します。
               </p>
             </div>
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -323,7 +323,7 @@ export const TopView: React.FC = () => {
                 <span className="font-semibold text-white text-sm">掲載内容を購入前に確認</span>
               </div>
               <p className="text-xs text-stone-400 leading-relaxed">
-                商品ページの説明・通貨数量・在庫状況を、購入前に公式LINEで確認してください。
+                石垢の料金は料金表をご確認ください。在庫・商品内容・お支払いなど、不明点は公式LINEでお問い合わせください。
               </p>
             </div>
             <div className="space-y-1.5">
