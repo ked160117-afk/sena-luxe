@@ -321,19 +321,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!snapshot.empty) {
           const loadedRates: StoneRatePlan[] = snapshot.docs.map((d) => {
             const data = d.data() as StoneRatePlan;
+            const catalogFallback = INITIAL_STONE_RATES.find((plan) => plan.id === data.id);
+            // Older Firestore records had their public prices cleared during the
+            // temporary preparation state. Restore only the original catalog price
+            // for entries already marked 取扱中 in that source catalog.
+            const restoreCatalogPrice =
+              data.currentPrice == null &&
+              catalogFallback?.verifiedForPublic === true &&
+              typeof catalogFallback.currentPrice === 'number';
+            const merged: StoneRatePlan = restoreCatalogPrice && catalogFallback
+              ? {
+                  ...catalogFallback,
+                  ...data,
+                  currentPrice: catalogFallback.currentPrice,
+                  referencePrice: catalogFallback.referencePrice,
+                  confirmedDate: catalogFallback.confirmedDate,
+                  status: '取扱中',
+                  currencyAmount: data.currencyAmount?.trim() ? data.currencyAmount : catalogFallback.currencyAmount,
+                  planName: data.planName?.trim() ? data.planName : catalogFallback.planName,
+                  conditions: data.conditions?.trim() ? data.conditions : catalogFallback.conditions,
+                  isPreparation: false,
+                  verifiedForPublic: true,
+                }
+              : data;
             const confirmedForDisplay =
-              data.verifiedForPublic === true &&
-              data.status === '取扱中' &&
-              data.isPreparation === false &&
-              typeof data.currentPrice === 'number' &&
-              data.currentPrice > 0 &&
-              Boolean(data.currencyAmount?.trim()) &&
-              Boolean(data.planName?.trim()) &&
-              Boolean(data.conditions?.trim());
+              merged.verifiedForPublic === true &&
+              merged.status === '取扱中' &&
+              merged.isPreparation === false &&
+              typeof merged.currentPrice === 'number' &&
+              merged.currentPrice > 0 &&
+              Boolean(merged.currencyAmount?.trim()) &&
+              Boolean(merged.planName?.trim()) &&
+              Boolean(merged.conditions?.trim());
             return {
-              ...data,
-              status: confirmedForDisplay ? '取扱中' : '現在準備中',
-              stockStatus: data.stockStatus || '在庫要確認',
+              ...merged,
+              status: confirmedForDisplay ? '取扱中' : '価格確認中',
+              stockStatus: '在庫要確認',
               isPreparation: !confirmedForDisplay,
               verifiedForPublic: confirmedForDisplay,
             };
@@ -610,22 +633,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // LINE Navigation Actions: directly open official LINE friend link without modal
+  // Copy the inquiry message first, then let the customer open LINE and paste it.
   const copyToClipboardAndOpenModal = async (
-    _textToCopy: string,
-    _gameName: string,
-    _productNumber: string,
-    _planName?: string
+    textToCopy: string,
+    gameName: string,
+    productNumber: string,
+    planName?: string
   ) => {
-    if (typeof window !== 'undefined') {
-      window.open(OFFICIAL_LINE_URL, '_blank', 'noopener,noreferrer');
+    let copiedSuccessfully = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+        copiedSuccessfully = true;
+      }
+    } catch {
+      copiedSuccessfully = false;
     }
+    setLineModal({
+      isOpen: true,
+      gameName,
+      productNumber,
+      planName,
+      formattedText: textToCopy,
+      copiedSuccessfully,
+    });
   };
 
-  const openLineInquiry = (_gameName?: string, _productNumber?: string, _planName?: string) => {
-    if (typeof window !== 'undefined') {
-      window.open(OFFICIAL_LINE_URL, '_blank', 'noopener,noreferrer');
-    }
+  const openLineInquiry = (gameName = 'お問い合わせ', productNumber = '一般相談', planName?: string) => {
+    const message = [
+      '【SENA LUXE お問い合わせ】',
+      `ゲーム名：${gameName}`,
+      `商品番号：${productNumber}`,
+      planName ? `商品・プラン：${planName}` : '',
+      '確認したい内容：',
+    ].filter(Boolean).join('\n');
+    void copyToClipboardAndOpenModal(message, gameName, productNumber, planName);
   };
 
   const closeLineModal = () => {
