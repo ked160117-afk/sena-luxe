@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { Sparkles, ArrowRight, MessageCircle, Clock, ShieldCheck, Check } from 'lucide-react';
+import { Sparkles, ArrowRight, Clock, ShieldCheck, Check } from 'lucide-react';
 import { GameCardIcon } from '../components/GameCardIcon';
 
 export const CandidatesView: React.FC = () => {
