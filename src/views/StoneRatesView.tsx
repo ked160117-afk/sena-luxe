@@ -78,7 +78,7 @@ export const StoneRatesView: React.FC = () => {
                 当店で取り扱う「石垢」は、指定されたゲーム内通貨・石を所持した<strong className="text-white underline decoration-[#d4af37] underline-offset-2">新規または進行済みアカウント本体をお渡しする商品</strong>です。
               </p>
               <p className="text-xs text-stone-400 leading-relaxed">
-                ※お客様が現在プレイされている既存アカウントへのゲーム内通貨チャージ・追加代行サービスではありません。<br />
+                ※お客様が現在プレイされている既存アカウントへのゲーム内通貨の追加は承っておりません。<br />
                 ※ゲーム運営会社の利用規約によるアカウント制限リスク、引き継ぎ時の通信環境の留意点、受取後のパスワード変更義務等がございます。
               </p>
             </div>
