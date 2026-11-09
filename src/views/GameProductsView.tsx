@@ -78,7 +78,7 @@ export const GameProductsView: React.FC = () => {
           >
             <option value="ALL">すべてのゲーム</option>
             {games.map((g) => {
-              const count = products.filter((p) => p.gameId === g.id && p.status === '掲載中').length;
+              const count = products.filter((p) => p.gameId === g.id && p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢').length;
               return (
                 <option key={g.id} value={g.id}>
                   {g.name} ({count > 0 ? `${count}件` : '準備中'})
