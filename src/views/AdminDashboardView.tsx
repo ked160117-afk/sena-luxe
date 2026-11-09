@@ -408,15 +408,21 @@ export const AdminDashboardView: React.FC = () => {
     if (!editingRatePlan) return;
 
     const currPriceVal = editRateIsPriceConfirmed && editRateCurrPrice ? Number(editRateCurrPrice) : null;
+    const isVerifiedForPublic =
+      Boolean(editRatePlanName.trim()) &&
+      Boolean(editRateAmount.trim()) &&
+      Boolean(editRateConditions.trim()) &&
+      currPriceVal !== null &&
+      currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
       referencePrice: 0,
-      currentPrice: currPriceVal,
-      status: currPriceVal === null ? '価格確認中' : '取扱中',
-      isPreparation: currPriceVal === null,
-      verifiedForPublic: currPriceVal !== null,
+      currentPrice: isVerifiedForPublic ? currPriceVal : null,
+      status: isVerifiedForPublic ? '取扱中' : '現在準備中',
+      isPreparation: !isVerifiedForPublic,
+      verifiedForPublic: isVerifiedForPublic,
       notes: editRateNotes.trim() || undefined,
       confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
     });
@@ -431,6 +437,12 @@ export const AdminDashboardView: React.FC = () => {
     if (!game) return;
 
     const currPriceVal = newRateIsPriceConfirmed && newRateCurrPrice ? Number(newRateCurrPrice) : null;
+    const isVerifiedForPublic =
+      Boolean(newRatePlanName.trim()) &&
+      Boolean(newRateAmount.trim()) &&
+      Boolean(newRateConditions.trim()) &&
+      currPriceVal !== null &&
+      currPriceVal > 0;
 
     addNewStoneRatePlan({
       gameId: game.id,
@@ -439,13 +451,13 @@ export const AdminDashboardView: React.FC = () => {
       planName: newRatePlanName.trim(),
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
-      conditions: newRateConditions.trim() || '初期状態・即納対応',
+      conditions: newRateConditions.trim(),
       referencePrice: 0,
-      currentPrice: currPriceVal,
-      confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
-      status: currPriceVal === null ? '価格確認中' : '取扱中',
-      isPreparation: currPriceVal === null,
-      verifiedForPublic: currPriceVal !== null,
+      currentPrice: isVerifiedForPublic ? currPriceVal : null,
+      confirmedDate: isVerifiedForPublic ? new Date().toISOString().split('T')[0].replace(/-/g, '/') : '価格確認中',
+      status: isVerifiedForPublic ? '取扱中' : '現在準備中',
+      isPreparation: !isVerifiedForPublic,
+      verifiedForPublic: isVerifiedForPublic,
     });
 
     setIsAddRateModalOpen(false);
