@@ -29,7 +29,7 @@ export const Footer: React.FC = () => {
             rel="noopener noreferrer"
             className="px-4 py-2 rounded text-xs font-medium text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors whitespace-nowrap shrink-0"
           >
-            専任コンシェルジュに相談
+            公式LINEで問い合わせ
           </a>
         </div>
       </div>
@@ -47,7 +47,7 @@ export const Footer: React.FC = () => {
               PREMIUM GAME COLLECTION
             </p>
             <p className="text-xs text-stone-400 leading-relaxed">
-              厳選されたハイエンドゲームアカウント・石垢・育成済みデータをお届けするセレクトサロン。
+              ゲーム内通貨を保有した石垢アカウントを掲載・販売しています。
             </p>
             <div className="pt-2">
               <a
@@ -88,7 +88,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button onClick={() => handleNav('request')} className="hover:text-[#d4af37] transition-colors">
-                  その他・ゲームリクエスト
+                  石垢販売について
                 </button>
               </li>
             </ul>
@@ -131,7 +131,7 @@ export const Footer: React.FC = () => {
             <h4 className="text-xs font-semibold uppercase tracking-wider text-stone-200">サポート・運営</h4>
             <p className="text-xs text-stone-400 leading-relaxed">
               対応時間：{settings.contactDeskHours || '公式LINEにてご案内'}<br />
-              専任コンシェルジュが迅速に個別対応いたします。
+              お問い合わせへの返信にはお時間をいただく場合があります。
             </p>
             <div className="pt-2">
               <button
@@ -151,11 +151,10 @@ export const Footer: React.FC = () => {
             <span>コンプライアンス及びお取引に関する重要事項</span>
           </div>
           <p>
-            当サロンでは各ゲームタイトルの利用規約および法令を尊重し、安全かつ誠実なお取引を徹底しております。
-            Webサイト上での自動決済機能は提供しておらず、すべての取引は専任コンシェルジュによる在庫・条件確認を経て個別対応いたします。
+            当サイトでは石垢アカウントを掲載しています。Webサイト上での自動決済機能は提供しておらず、価格・在庫・商品内容は購入前に公式LINEでご確認ください。
           </p>
           <p>
-            外部トレード市場の流出データと当店独自セレクト品は完全に分離管理されており、実態の確認が取れていない商品は販売いたしません。
+            掲載外商品の個別手配・取り寄せ・予約・代行は承っておりません。ゲームごとの利用規約やアカウント譲渡に関する制限を事前にご確認ください。
           </p>
         </div>
 
@@ -165,9 +164,9 @@ export const Footer: React.FC = () => {
             &copy; {new Date().getFullYear()} SENA LUXE. All Rights Reserved. PREMIUM GAME COLLECTION.
           </div>
           <div className="flex items-center gap-4">
-            <span>安心の国内コンシェルジュ個別対応</span>
+            <span>石垢アカウント販売</span>
             <span aria-hidden="true">·</span>
-            <span>LINE公式認証窓口</span>
+            <span>公式LINE窓口</span>
           </div>
         </div>
       </div>
