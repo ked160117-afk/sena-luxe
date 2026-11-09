@@ -171,7 +171,6 @@ export const StoneRatesView: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPlans.map((plan) => {
             const game = games.find((g) => g.id === plan.gameId || g.name === plan.gameName || g.code === plan.gameCode);
-            const isAvailable = plan.status === '取扱中';
 
             return (
               <div
@@ -208,16 +207,11 @@ export const StoneRatesView: React.FC = () => {
                           {plan.accountType}
                         </span>
                       )}
-                      {/* Product Status: 現在準備中 (or 取扱中 if toggled) */}
+                      {/* Stone account status: all plans are inquiry-based */}
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded flex items-center gap-1 border ${
-                          isAvailable
-                            ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
-                            : 'bg-amber-950/70 text-amber-300 border-amber-700/60'
-                        }`}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded flex items-center gap-1 border bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40"
                       >
-                        {!isAvailable && <Clock className="w-3 h-3 text-amber-400" />}
-                        <span>{isAvailable ? '取扱中' : '現在準備中'}</span>
+                        <span>要相談</span>
                       </span>
                       {/* Stock Status: 在庫要確認 */}
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-900 text-stone-300 border border-stone-700">
