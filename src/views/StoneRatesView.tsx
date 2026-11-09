@@ -262,10 +262,10 @@ export const StoneRatesView: React.FC = () => {
                 <div className="pt-4 border-t border-stone-800/80 space-y-3">
                   {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? (
                     <div className="rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/5 p-3 space-y-1">
-                      <span className="text-[10px] text-[#d4af37] block font-medium">価格・在庫</span>
-                      <span className="text-sm font-semibold text-stone-100">購入前に公式LINEで要確認</span>
+                      <span className="text-[10px] text-[#d4af37] block font-medium">販売価格（税込）</span>
+                      <span className="text-lg font-bold font-mono text-[#f7e7ce]">¥{plan.currentPrice?.toLocaleString() ?? '確認中'}</span>
                       <p className="text-[11px] text-stone-400 leading-relaxed">
-                        価格・在庫は購入前にご確認ください。
+                        在庫状況・引き継ぎ条件は購入前に公式LINEでご確認ください。
                       </p>
                     </div>
                   ) : (
