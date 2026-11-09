@@ -210,7 +210,7 @@ export const StoneRatesView: React.FC = () => {
                               `ゲーム名：${plan.gameName}`,
                               `無償石の数・通貨数量：${plan.currencyAmount || '確認中'}`,
                               `プラン名：${plan.planName}`,
-                              `掲載価格：${confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : '価格確認中'}`,
+                              `掲載価格：${confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : plan.priceDisplay?.trim() ? `参考価格：${plan.priceDisplay}（要LINE確認）` : '価格確認中'}`,
                               '確認したい内容：在庫・商品内容・引き継ぎ方法など',
                             ].join('\\n');
                             copyToClipboardAndOpenModal(inquiryText, plan.gameName, '無償石（無料入手分）石垢料金表', plan.planName);
