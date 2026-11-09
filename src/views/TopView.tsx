@@ -217,7 +217,7 @@ export const TopView: React.FC = () => {
                 className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center gap-2"
               >
                 <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                <span>公式LINEで在庫・入荷状況を確認する</span>
+                <span>公式LINEで掲載商品について問い合わせる</span>
               </a>
               <button
                 onClick={() => setCurrentView('faq')}
