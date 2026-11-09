@@ -260,14 +260,23 @@ export const StoneRatesView: React.FC = () => {
 
                 {/* Price Block & Action */}
                 <div className="pt-4 border-t border-stone-800/80 space-y-3">
-                  {/* Price / stock are confirmed individually through LINE */}
-                  <div className="rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/5 p-3 space-y-1">
-                    <span className="text-[10px] text-[#d4af37] block font-medium">価格・在庫</span>
-                    <span className="text-sm font-semibold text-stone-100">購入前に公式LINEで要確認</span>
-                    <p className="text-[11px] text-stone-400 leading-relaxed">
-                      未確認の価格や参考相場は掲載していません。商品内容・通貨数量・在庫とあわせてご確認ください。
-                    </p>
-                  </div>
+                  {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? (
+                    <div className="rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/5 p-3 space-y-1">
+                      <span className="text-[10px] text-[#d4af37] block font-medium">価格・在庫</span>
+                      <span className="text-sm font-semibold text-stone-100">購入前に公式LINEで要確認</span>
+                      <p className="text-[11px] text-stone-400 leading-relaxed">
+                        価格・在庫は購入前にご確認ください。
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-stone-700 bg-stone-900/60 p-3 space-y-1">
+                      <span className="text-[10px] text-amber-400 block font-medium">掲載状況</span>
+                      <span className="text-sm font-semibold text-stone-100">掲載準備中</span>
+                      <p className="text-[11px] text-stone-400 leading-relaxed">
+                        内容確認が完了するまで、購入・個別問い合わせの受付は行っておりません。
+                      </p>
+                    </div>
+                  )}
 
                   {plan.verifiedForPublic && plan.priceHistory && plan.priceHistory.length > 0 && (
                     <div className="flex justify-end text-[11px] pt-1">
@@ -281,16 +290,22 @@ export const StoneRatesView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Order / Inquiry Button */}
-                  <a
-                    href="https://lin.ee/6uy8hu9"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                    <span>LINEで在庫・購入について問い合わせる</span>
-                  </a>
+                  {/* Inquiry is available only for verified listed plans */}
+                  {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? (
+                    <a
+                      href="https://lin.ee/6uy8hu9"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
+                      <span>掲載中の石垢についてLINEで問い合わせる</span>
+                    </a>
+                  ) : (
+                    <div className="w-full py-2.5 px-3 rounded-lg text-xs font-medium text-stone-400 bg-stone-900 border border-stone-800 text-center">
+                      掲載準備中
+                    </div>
+                  )}
                 </div>
               </div>
             );
