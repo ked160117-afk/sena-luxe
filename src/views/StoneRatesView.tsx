@@ -15,11 +15,19 @@ export const StoneRatesView: React.FC = () => {
   const [activeHistoryPlan, setActiveHistoryPlan] = useState<StoneRatePlan | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter stone rate plans by game and search query
-  const filteredPlans = stoneRates.filter((p) => {
-    const matchesGame = selectedGameId ? p.gameId === selectedGameId : true;
-    if (!matchesGame) return false;
-
+  // Only explicitly verified and active plans are public.
+  const publishedPlans = stoneRates.filter(
+    (plan) =>
+      plan.verifiedForPublic === true &&
+      plan.status === '取扱中' &&
+      !plan.isPreparation &&
+      typeof plan.currentPrice === 'number' &&
+      plan.currentPrice > 0
+  );
+  const plansForSelectedGame = publishedPlans.filter((plan) =>
+    selectedGameId ? plan.gameId === selectedGameId : true
+  );
+  const filteredPlans = plansForSelectedGame.filter((p) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -55,8 +63,8 @@ export const StoneRatesView: React.FC = () => {
         {/* Listing count only; no unverified benchmark claim */}
         <div className="rounded-lg bg-[#121316] border border-stone-800 p-3 text-xs text-stone-400 self-start md:self-end">
           <div className="text-[10px] text-stone-500 uppercase font-cinzel">LISTED PLANS</div>
-          <div className="text-stone-300 font-medium">掲載プラン</div>
-          <div className="text-[11px] text-stone-500 mt-0.5">{stoneRates.length}件</div>
+          <div className="text-stone-300 font-medium">掲載中のプラン</div>
+          <div className="text-[11px] text-stone-500 mt-0.5">{publishedPlans.length}件</div>
         </div>
       </div>
 
@@ -156,7 +164,14 @@ export const StoneRatesView: React.FC = () => {
       {/* Plans List / Cards */}
       {filteredPlans.length === 0 ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-12 text-center text-stone-400">
-          <p className="text-sm">該当する石垢料金プランが見つかりませんでした。</p>
+          <p className="text-sm font-semibold text-stone-200">
+            {plansForSelectedGame.length === 0 ? '現在商品を準備中です' : '検索条件に一致する石垢プランが見つかりませんでした'}
+          </p>
+          <p className="mt-2 text-xs text-stone-400">
+            {plansForSelectedGame.length === 0
+              ? '掲載準備が完了し、内容・価格を確認した石垢アカウントから掲載します。'
+              : '検索条件を変更するか、フィルターをリセットしてください。'}
+          </p>
           <button
             onClick={() => {
               setSelectedGameId(null);
