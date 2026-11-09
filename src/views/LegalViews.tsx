@@ -240,7 +240,7 @@ export const LawView: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">販売価格</span>
           <span className="sm:w-2/3 text-stone-300">
-            商品ごとの販売価格およびお客様にご負担いただく費用は、購入前に公式LINEで提示し、支払総額をご確認いただきます。
+            掲載中の商品は、商品ページに税込の販売価格を表示します。通信料・送金手数料など別途ご負担いただく費用がある場合は、購入前に明示します。
           </span>
         </div>
 
