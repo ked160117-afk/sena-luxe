@@ -490,7 +490,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     category: 'バトルロワイヤル',
     currencyName: '金券',
     currencyUnit: '金券',
-    iconUrl: 'https://play-lh.googleusercontent.com/co478HyuivmHColPd8JER5MoRzEUqFJTCAHuQSeypNAxcRynPnhAIMpx-8S3udWte0hbZdXupMYoN9cvt06P=w240-h480',
+    iconUrl: '',
     isHandled: true,
     description: '100人のプレイヤーが無人島に降り立ち最後の一人を目指すバトルロワイヤル。',
     order: 35,
