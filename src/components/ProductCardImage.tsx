@@ -105,7 +105,9 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
           alt={gameName}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
-          onError={() => setFailedImageUrl(imageUrl || null)}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
       </div>
