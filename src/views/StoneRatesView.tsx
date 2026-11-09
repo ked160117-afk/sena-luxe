@@ -269,7 +269,7 @@ export const StoneRatesView: React.FC = () => {
                     </p>
                   </div>
 
-                  {plan.priceHistory && plan.priceHistory.length > 0 && (
+                  {plan.verifiedForPublic && plan.priceHistory && plan.priceHistory.length > 0 && (
                     <div className="flex justify-end text-[11px] pt-1">
                       <button
                         onClick={() => setActiveHistoryPlan(plan)}
