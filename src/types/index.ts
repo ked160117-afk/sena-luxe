@@ -74,6 +74,7 @@ export interface StoneRatePlan {
   status: '取扱中' | '価格確認中' | '在庫準備中' | '現在準備中' | '要相談' | '要確認';
   stockStatus?: '在庫要確認' | '在庫あり' | '売り切れ';
   isPreparation?: boolean;
+  verifiedForPublic?: boolean;
   priceHistory: PriceHistoryRecord[];
   notes?: string;
   order?: number;
