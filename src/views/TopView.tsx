@@ -220,10 +220,10 @@ export const TopView: React.FC = () => {
                 <span>公式LINEで在庫・入荷状況を確認する</span>
               </a>
               <button
-                onClick={() => setCurrentView('request')}
+                onClick={() => setCurrentView('faq')}
                 className="px-5 py-2.5 rounded-lg text-xs font-medium text-stone-300 bg-stone-800 hover:bg-stone-700 transition-colors"
               >
-                ゲームリクエストを送る
+                販売内容・注意事項を確認する
               </button>
             </div>
           </div>
@@ -261,10 +261,8 @@ export const TopView: React.FC = () => {
                       <p className="text-xs text-stone-400 mt-1 line-clamp-2 leading-relaxed">{item.summary}</p>
                       <div className="mt-4 pt-3 border-t border-stone-800/80 flex items-center justify-between">
                         <div className="text-xs text-stone-400">
-                          販売価格:{' '}
-                          <span className="font-mono text-base font-bold text-white tabular-nums">
-                            {item.price ? `¥${item.price.toLocaleString()}` : '価格確認中'}
-                          </span>
+                          価格・在庫:{' '}
+                          <span className="font-medium text-amber-400">LINEで要確認</span>
                         </div>
                         <span className="text-[11px] text-emerald-400 px-2 py-0.5 bg-emerald-950/60 rounded border border-emerald-800/60">
                           {item.status}
