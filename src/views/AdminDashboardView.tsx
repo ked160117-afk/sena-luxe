@@ -327,7 +327,7 @@ export const AdminDashboardView: React.FC = () => {
     setNewProdImageUrl('');
     setNewProdPrice('');
     setNewProdIsPriceConfirmed(false);
-    setNewProdStatus('掲載中');
+    setNewProdStatus('掲載停止');
   };
 
   // Open Product Edit Modal
