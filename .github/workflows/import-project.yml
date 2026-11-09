@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "sena-luxe-github-ready.zip"
+      - "package.json"
   workflow_dispatch:
 
 permissions:
