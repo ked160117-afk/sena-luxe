@@ -288,7 +288,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       collection(db, 'products'),
       (snapshot) => {
         if (!snapshot.empty) {
-          const loadedProducts: ProductItem[] = snapshot.docs.map((d) => d.data() as ProductItem);
+          const loadedProducts: ProductItem[] = snapshot.docs.map((d) => {
+            const data = d.data() as ProductItem;
+            const verified =
+              data.verifiedForPublic === true &&
+              data.category === 'ゲーム内通貨・石垢' &&
+              typeof data.price === 'number' &&
+              data.price > 0 &&
+              Boolean(data.title?.trim()) &&
+              Boolean(data.summary?.trim());
+            return {
+              ...data,
+              verifiedForPublic: verified,
+              status: verified ? data.status : '掲載停止',
+            };
+          });
           // sort by createdAt desc
           loadedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setProducts(loadedProducts);
@@ -456,6 +470,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
+    const target = products.find((p) => p.id === id);
+    if (!target) return;
+    if (status === '掲載中' && (!target.verifiedForPublic || target.category !== 'ゲーム内通貨・石垢' || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
     await updateProductDoc(id, { status });
   };
 
