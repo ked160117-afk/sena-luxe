@@ -186,7 +186,7 @@ export const StoneRatesView: React.FC = () => {
                       gameName={plan.gameName}
                       gameCode={plan.gameCode}
                       currencyName={plan.currencyName}
-                      currencyIconUrl={game?.currencyIconUrl || (game?.iconUrl ? game.iconUrl : undefined)}
+                      currencyIconUrl={game?.currencyIconUrl || undefined}
                       title={plan.planName}
                       className="w-full h-32 rounded-lg"
                     />
