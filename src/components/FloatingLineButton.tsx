@@ -4,7 +4,6 @@
  */
 
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
 
 export const FloatingLineButton: React.FC = () => {
   return (
@@ -17,8 +16,14 @@ export const FloatingLineButton: React.FC = () => {
         aria-label="LINE問い合わせ"
         title="LINEお問い合わせ"
       >
-        <div className="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center text-white shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-          <MessageCircle className="w-5 h-5 fill-white stroke-none" />
+        <div className="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+          <svg viewBox="0 0 32 32" className="w-7 h-7" role="img" aria-label="LINE">
+            <path
+              fill="#FFFFFF"
+              d="M16 3.5C8.82 3.5 3 8.48 3 14.62c0 3.31 1.68 6.27 4.34 8.24-.19 1.12-.7 2.58-1.65 3.75-.22.27-.02.68.33.66 2.36-.13 4.5-1.08 6.02-2.05 1.25.34 2.58.52 3.96.52 7.18 0 13-4.98 13-11.12S23.18 3.5 16 3.5Z"
+            />
+            <text x="16" y="17.4" textAnchor="middle" fontSize="7.1" fontWeight="800" letterSpacing=".15" fill="#06C755">LINE</text>
+          </svg>
         </div>
         <div className="hidden sm:flex flex-col text-left pr-1">
           <span className="text-[10px] tracking-widest text-[#d4af37] font-cinzel leading-none">OFFICIAL LINE</span>
