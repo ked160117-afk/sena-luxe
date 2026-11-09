@@ -28,8 +28,7 @@ export const ShopInfoView: React.FC = () => {
             コンセプト：PREMIUM GAME COLLECTION
           </h2>
           <p>
-            「SENA LUXE（セナ・リュクス）」は、厳選された大人のプレイヤーのための高級ゲームアカウント・石垢・育成済みデータ専門店です。
-            市場に氾濫する不正データや粗悪な転売品を徹底排除し、信頼できるサプライヤーおよび正規基準に基づく検品体制を敷いております。
+            「SENA LUXE（セナ・リュクス）」は、ゲーム内通貨を保有した石垢アカウントを掲載・販売するオンラインショップです。販売対象は、商品ページに掲載した石垢アカウントに限ります。
           </p>
         </section>
 
@@ -40,9 +39,9 @@ export const ShopInfoView: React.FC = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div className="p-4 rounded-lg bg-[#0a0b0d] border border-stone-800 space-y-1">
-              <span className="text-[#d4af37] font-semibold text-xs block">01. 徹底的な品質検証</span>
+              <span className="text-[#d4af37] font-semibold text-xs block">01. 商品情報の事前確認</span>
               <p className="text-xs text-stone-400">
-                アカウントのペナルティ履歴、連携状況、セキュリティ設定を専任スタッフが1件ずつ手動で確認。
+                商品ページに記載した内容・通貨数量・在庫状況を、購入前に公式LINEでご確認いただきます。
               </p>
             </div>
             <div className="p-4 rounded-lg bg-[#0a0b0d] border border-stone-800 space-y-1">
@@ -52,9 +51,9 @@ export const ShopInfoView: React.FC = () => {
               </p>
             </div>
             <div className="p-4 rounded-lg bg-[#0a0b0d] border border-stone-800 space-y-1">
-              <span className="text-[#d4af37] font-semibold text-xs block">03. 専任コンシェルジュ対応</span>
+              <span className="text-[#d4af37] font-semibold text-xs block">03. 公式LINEでのお問い合わせ</span>
               <p className="text-xs text-stone-400">
-                公式LINEを通じて、ご購入前の事前ヒアリングから引き継ぎ完了まで1対1で親身にサポート。
+                掲載商品の在庫・内容・価格・引き継ぎ条件について、公式LINEでお問い合わせいただけます。返信までお時間をいただく場合があります。
               </p>
             </div>
           </div>
@@ -63,11 +62,10 @@ export const ShopInfoView: React.FC = () => {
         <section className="space-y-3">
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <span className="w-1.5 h-4 bg-[#d4af37] rounded-full inline-block" />
-            外部マーケットプレイスとの完全分離
+            販売対象について
           </h2>
           <p>
-            外部の一般トレードサイト等の商品データと、当店が独自に仕入れ・検品を行うコレクションは完全に分離して管理されています。
-            実態や安全性が確認できない商品については掲載を行わず、安全基準に適合した高品質な商品のみを提供しています。
+            掲載中の石垢アカウントのみを販売対象としています。掲載外商品の個別手配・取り寄せ・予約、既存アカウントへの通貨追加、各種代行サービスは承っておりません。
           </p>
         </section>
 
@@ -90,7 +88,7 @@ export const ShopInfoView: React.FC = () => {
             className="px-6 py-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors inline-flex items-center gap-2"
           >
             <MessageCircle className="w-4 h-4 fill-black stroke-none" />
-            <span>公式LINEでコンシェルジュに相談する</span>
+            <span>公式LINEで問い合わせる</span>
           </a>
         </div>
       </div>
@@ -113,7 +111,7 @@ export const TermsView: React.FC = () => {
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-white">第1条（総則および本規約の適用）</h2>
           <p>
-            本利用規約（以下「本規約」）は、SENA LUXE（以下「当店」）が提供するゲーム関連商品・石垢料金表情報および相談仲介サービス（以下「本サービス」）の利用条件を定めるものです。利用者は本サービスを利用することにより、本規約に同意したものとみなされます。
+            本利用規約（以下「本規約」）は、SENA LUXE（以下「当店」）が提供する石垢アカウントの商品情報の掲載および販売（以下「本サービス」）の利用条件を定めるものです。利用者は本サービスを利用することにより、本規約に同意したものとみなされます。
           </p>
         </section>
 
@@ -128,8 +126,8 @@ export const TermsView: React.FC = () => {
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-white">第3条（お問い合わせおよび取引の成立）</h2>
           <p>
-            1. 当Webサイト上の商品情報および石垢料金表は、参考価格および取扱い状況の提示であり、サイト上での売買契約を即時締結するものではありません。<br />
-            2. 正式なお取引は、公式LINEを通じて個別の在庫確認、引き継ぎ条件の合意が完了した時点で成立するものとします。
+            1. 当Webサイトの商品情報は、掲載商品の内容を案内するものです。価格・在庫・通貨数量・引き継ぎ条件は、購入前に公式LINEで最新の内容をご確認ください。<br />
+            2. お取引の条件・成立時点については、購入前に個別にご案内します。
           </p>
         </section>
 
@@ -194,7 +192,7 @@ export const PrivacyView: React.FC = () => {
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-white">4. 安全管理措置</h2>
           <p>
-            取得した情報は暗号化通信（SSL）環境および厳格なアクセス制御の下で安全に保管され、業務目的の終了後は速やかに適切な破棄措置を実施いたします。
+            取得した情報は、お問い合わせ対応および取引に必要な範囲で適切に管理します。保管期間や削除のご希望については、法令および対応可能な範囲に従って取り扱います。
           </p>
         </section>
       </div>
@@ -242,7 +240,7 @@ export const LawView: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">販売価格</span>
           <span className="sm:w-2/3 text-stone-300">
-            各商品カードおよび石垢料金表に明記（すべて税込表示・参考価格との比較掲載）
+            商品ごとの販売価格は、購入前に公式LINEでご案内し、税込・必要な費用を含む支払総額を確認いただきます。
           </span>
         </div>
 
@@ -257,22 +255,21 @@ export const LawView: React.FC = () => {
           <span className="font-semibold text-white sm:w-1/3">お支払い方法および決済時期</span>
           <span className="sm:w-2/3 text-stone-300 leading-relaxed">
             本サイト上でのクレジットカード等の直接決済機能は設けておりません。<br />
-            公式LINEでの条件合意後、個別にご案内する決済手段（銀行振込等の指定方法）に従い、商品引き渡し前にお支払いいただきます。
+            利用可能なお支払い方法と支払時期は、購入前に公式LINEでご案内します。案内された方法・期限をご確認のうえ、お支払いください。
           </span>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">商品引き渡し時期</span>
           <span className="sm:w-2/3 text-stone-300">
-            決済完了確認後、公式LINEトーク画面にて原則即時〜24時間以内に引き継ぎコード等の情報をお渡しいたします。
+            商品ごとに異なります。引き渡し時期・方法は、お支払い前に商品ごとの条件としてご案内します。
           </span>
         </div>
 
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">返品・交換・キャンセル条件</span>
           <span className="sm:w-2/3 text-stone-300 leading-relaxed">
-            デジタルコンテンツおよびアカウントデータの性質上、お引き渡し完了後のお客様都合によるキャンセル・返品・返金はお受けいたしかねます。<br />
-            万が一、お引き渡し時点で掲載情報と著しく異なる重大な不具合が認められた場合に限り、確認のうえ代替品のご案内または返金対応を行います。
+            キャンセル・返品・返金の可否は、商品の性質、取引条件および適用される法令に基づいて取り扱います。商品説明と実際の内容に相違がある場合は、確認のうえ個別にご案内します。
           </span>
         </div>
       </div>
