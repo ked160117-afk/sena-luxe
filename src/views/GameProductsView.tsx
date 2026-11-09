@@ -34,7 +34,7 @@ export const GameProductsView: React.FC = () => {
   // Filter only active, publicly published products (excluding 掲載停止)
   const filteredProducts = useMemo(() => {
     return products
-      .filter((p) => p.status === '掲載中' && p.category === 'ゲーム内通貨・石垢')
+      .filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢')
       .filter((p) => {
         const matchesGame = selectedGameId ? p.gameId === selectedGameId : true;
         const matchesCat = selectedCategory === 'ALL' ? true : p.category === selectedCategory;
