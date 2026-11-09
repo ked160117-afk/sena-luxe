@@ -25,7 +25,7 @@ export const CandidatesView: React.FC = () => {
           <h1 className="text-2xl sm:text-4xl font-bold text-white">人気ゲーム追加候補</h1>
           <p className="text-xs sm:text-sm text-stone-400 mt-2 max-w-2xl leading-relaxed">
             現在正式取扱中のタイトルとは別枠で管理されている追加候補ゲーム（全{candidateGames.length}タイトル）です。
-            市場供給体制および安全性を検証中であり、価格未設定の場合は「価格確認中」と表示しています。
+            取扱可否と販売準備状況を確認中です。未確認の商品情報や価格は掲載していません。
           </p>
         </div>
 
