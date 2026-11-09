@@ -3,12 +3,17 @@
  * Pops up when customer taps inquiry, copies game and product code, and guides to official LINE.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { CheckCircle2, Copy, ExternalLink, X, MessageCircle } from 'lucide-react';
 
 export const LineInquiryModal: React.FC = () => {
   const { lineModal, closeLineModal, settings } = useStore();
+  const [copied, setCopied] = useState(lineModal.copiedSuccessfully);
+
+  useEffect(() => {
+    setCopied(lineModal.copiedSuccessfully);
+  }, [lineModal.formattedText, lineModal.copiedSuccessfully]);
 
   if (!lineModal.isOpen) return null;
 
@@ -19,8 +24,9 @@ export const LineInquiryModal: React.FC = () => {
   const handleReCopy = async () => {
     try {
       await navigator.clipboard.writeText(lineModal.formattedText);
+      setCopied(true);
     } catch {
-      // fallback
+      setCopied(false);
     }
   };
 
@@ -49,14 +55,14 @@ export const LineInquiryModal: React.FC = () => {
           </div>
           <div>
             <span className="text-[11px] tracking-widest text-[#d4af37] uppercase font-cinzel">SENA LUXE CONCIERGE</span>
-            <h3 className="text-base sm:text-lg font-semibold text-white">お問い合わせ内容をコピーしました</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white">{copied ? 'お問い合わせ内容をコピーしました' : 'お問い合わせ文を準備しました'}</h3>
           </div>
         </div>
 
         {/* Copy Box */}
         <div className="mb-5 p-4 rounded-lg bg-[#0b0c0e] border border-stone-800">
           <div className="flex items-center justify-between text-xs text-stone-400 mb-1.5">
-            <span>コピー済みの問い合わせコード</span>
+            <span>{copied ? 'コピー済みの問い合わせ内容' : 'コピーする問い合わせ内容'}</span>
             <button
               onClick={handleReCopy}
               className="flex items-center gap-1 text-[#d4af37] hover:underline"
@@ -68,6 +74,7 @@ export const LineInquiryModal: React.FC = () => {
           <div className="font-mono text-sm sm:text-base font-semibold text-[#f7e7ce] select-all break-all py-1">
             {lineModal.formattedText}
           </div>
+          {!copied && <p className="text-[11px] text-amber-300 mt-2">自動コピーできなかった場合は、上の文章を長押ししてコピーしてください。</p>}
           {lineModal.planName && (
             <div className="text-xs text-stone-400 mt-1 border-t border-stone-800/80 pt-1.5">
               対象プラン: <span className="text-stone-300">{lineModal.planName}</span>
@@ -83,11 +90,11 @@ export const LineInquiryModal: React.FC = () => {
           </p>
           <p className="flex items-start gap-2">
             <span className="text-[#d4af37] font-bold">2.</span>
-            <span>コピーされたテキストを貼り付けてそのまま送信してください。</span>
+            <span>コピーされた文章をトーク画面に貼り付けて送信してください。</span>
           </p>
           <p className="flex items-start gap-2">
             <span className="text-[#d4af37] font-bold">3.</span>
-            <span>掲載商品の在庫・内容・価格について確認し、公式LINEでご案内します。返信までお時間をいただく場合があります。</span>
+            <span>在庫・商品内容・価格・お支払いなど、不明点は公式LINEでご案内します。</span>
           </p>
         </div>
 
