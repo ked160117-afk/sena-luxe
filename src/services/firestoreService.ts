@@ -155,6 +155,7 @@ export async function createProductAtomic(data: {
   currencyIconUrl?: string;
   keyHighlights: string[];
   status?: ProductStatus;
+  verifiedForPublic?: boolean;
 }): Promise<ProductItem> {
   const code = data.gameCode.toUpperCase();
   const seqDocRef = doc(db, COLLECTIONS.SEQUENCES, code);
@@ -190,7 +191,8 @@ export async function createProductAtomic(data: {
         title: data.title,
         summary: data.summary,
         price: data.price,
-        status: data.status || '掲載中',
+        status: data.status || '掲載停止',
+        verifiedForPublic: data.verifiedForPublic === true,
         imageUrl: data.imageUrl,
         currencyIconUrl: data.currencyIconUrl,
         keyHighlights: data.keyHighlights,
