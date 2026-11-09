@@ -374,16 +374,21 @@ const RAW_STONE_RATES: StoneRatePlan[] = [
   ...BULK_REGISTERED_STONE_RATES,
 ];
 
-export const INITIAL_STONE_RATES: StoneRatePlan[] = RAW_STONE_RATES.map((plan) => ({
-  ...plan,
-  referencePrice: 0,
-  currentPrice: null,
-  confirmedDate: '価格確認中',
-  status: '現在準備中',
-  stockStatus: '在庫要確認',
-  isPreparation: true,
-  verifiedForPublic: false,
-}));
+export const INITIAL_STONE_RATES: StoneRatePlan[] = RAW_STONE_RATES.map((plan) => {
+  // Restore source-catalog prices only for plans already marked 取扱中.
+  // Other plans remain visible as 価格確認中 and are never assigned a guessed price.
+  const confirmed = plan.status === '取扱中' && typeof plan.currentPrice === 'number' && plan.currentPrice > 0;
+  return {
+    ...plan,
+    referencePrice: confirmed ? plan.referencePrice : 0,
+    currentPrice: confirmed ? plan.currentPrice : null,
+    confirmedDate: confirmed ? plan.confirmedDate : '価格確認中',
+    status: confirmed ? '取扱中' : '価格確認中',
+    stockStatus: '在庫要確認',
+    isPreparation: !confirmed,
+    verifiedForPublic: confirmed,
+  };
+});
 
 export const INITIAL_SEQUENCES: Record<string, SerialSequence> = {
   // Existing registered sequence histories (strictly preserved)
