@@ -154,7 +154,7 @@ export const StoneRatesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Plans List / Cards */}
+      {/* Grouped game title rate table */}
       {filteredPlans.length === 0 ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-12 text-center text-stone-400">
           <p className="text-sm font-semibold text-stone-200">
@@ -162,7 +162,7 @@ export const StoneRatesView: React.FC = () => {
           </p>
           <p className="mt-2 text-xs text-stone-400">
             {plansForSelectedGame.length === 0
-              ? '掲載準備が完了し、内容・価格を確認した石垢アカウントから掲載します。'
+              ? '一覧にない商品や新しいゲームタイトルも公式LINEでご相談いただけます。'
               : '検索条件を変更するか、フィルターをリセットしてください。'}
           </p>
           <button
@@ -176,146 +176,58 @@ export const StoneRatesView: React.FC = () => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPlans.map((plan) => {
-            const game = games.find((g) => g.id === plan.gameId || g.name === plan.gameName || g.code === plan.gameCode);
-
+        <div className="space-y-7">
+          {Array.from(new Map(filteredPlans.map((plan) => [plan.gameId || plan.gameName, plan.gameName])).entries()).map(([gameId, gameName]) => {
+            const gamePlans = filteredPlans.filter((plan) => (plan.gameId || plan.gameName) === gameId);
             return (
-              <div
-                key={plan.id}
-                className="rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/50 p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(212,175,55,0.12)]"
-              >
-                <div>
-                  {/* Currency / Stone Account Image Banner */}
-                  <div className="mb-3.5">
-                    <ProductCardImage
-                      category="ゲーム内通貨・石垢"
-                      gameName={plan.gameName}
-                      gameCode={plan.gameCode}
-                      currencyName={plan.verifiedForPublic ? plan.currencyName : undefined}
-                      currencyIconUrl={plan.verifiedForPublic ? game?.currencyIconUrl || undefined : undefined}
-                      title={plan.planName}
-                      className="w-full h-32 rounded-lg"
-                    />
-                  </div>
-
-                  {/* Header: Game Name & Badges */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="text-xs font-semibold text-[#d4af37] tracking-wide">
-                      {plan.gameName}
-                    </span>
-                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' && plan.deviceRequirement && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
-                          {plan.deviceRequirement}
-                        </span>
-                      )}
-                      {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' && plan.accountType && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-800 text-stone-300 border border-stone-700">
-                          {plan.accountType}
-                        </span>
-                      )}
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60' : 'bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40'}`}>
-                        {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? '料金掲載中' : '価格確認中'}
-                      </span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-900 text-stone-300 border border-stone-700">
-                        在庫はLINEで確認
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Plan Title */}
-                  <h3 className="text-base font-semibold text-white">{plan.planName}</h3>
-
-                  {/* Hide unverified quantities and conditions until the plan is confirmed */}
-                  {!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? (
-                    <div className="my-3.5 p-3 rounded-lg bg-[#0a0b0d] border border-[#d4af37]/25 space-y-1">
-                      <span className="text-[10px] text-stone-400 uppercase tracking-wider block">商品内容</span>
-                      <span className="text-sm font-semibold text-amber-400">通貨数量・アカウント内容を確認中</span>
-                      <p className="text-[11px] text-stone-400">確認が完了するまで詳細は掲載しません。</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="my-3.5 p-3 rounded-lg bg-[#0a0b0d] border border-[#d4af37]/25 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] text-stone-400 uppercase tracking-wider block">
-                            数量・内訳 ({plan.currencyName})
-                          </span>
-                          <span className="text-sm sm:text-base font-bold text-gold-gradient font-mono">
-                            {plan.currencyAmount}
-                          </span>
+              <section key={gameId} className="rounded-xl bg-[#111216] border border-[#d4af37]/30 overflow-hidden">
+                <div className="px-4 sm:px-5 py-4 bg-gradient-to-r from-[#201a0d] to-[#111216] border-b border-[#d4af37]/25 flex items-center gap-2">
+                  <Gem className="w-5 h-5 text-[#d4af37]" />
+                  <h2 className="text-base sm:text-lg font-bold text-[#f7e7ce]">{gameName}</h2>
+                </div>
+                <div className="divide-y divide-stone-800">
+                  {gamePlans.map((plan) => {
+                    const confirmed = plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' && typeof plan.currentPrice === 'number' && plan.currentPrice > 0;
+                    return (
+                      <div key={plan.id} className="px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-3 sm:gap-5 sm:items-center">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '石の数量確認中'}</div>
+                          <div className="text-xs text-stone-400 mt-1">{plan.planName}</div>
+                          {plan.conditions && confirmed && <div className="text-[11px] text-stone-500 mt-1">{plan.conditions}</div>}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-[#d4af37]/15 flex items-center justify-center text-[#d4af37] shrink-0 ml-2">
-                          <Gem className="w-4 h-4" />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 text-xs text-stone-300 mb-4">
-                        <div className="text-[11px] text-stone-400 font-medium">プラン条件・仕様：</div>
-                        <p className="bg-stone-900/40 p-2 rounded border border-stone-800/60 text-stone-300 text-xs leading-relaxed">
-                          {plan.conditions}
-                        </p>
-                        {plan.notes && (
-                          <div className="p-2 rounded bg-amber-950/20 border border-amber-700/40 text-[11px] text-amber-300 leading-relaxed">
-                            ※ {plan.notes}
+                        <div className="sm:text-right">
+                          <div className="text-[10px] text-stone-500 mb-0.5">販売価格</div>
+                          <div className="text-lg font-bold font-mono text-[#f7e7ce]">
+                            {confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : '価格確認中'}
                           </div>
-                        )}
+                          <div className="text-[10px] text-stone-500">在庫はLINEにてご確認ください</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const inquiryText = [
+                              '【SENA LUXE 石垢料金・在庫問い合わせ】',
+                              `ゲーム名：${plan.gameName}`,
+                              `石の数・通貨数量：${plan.currencyAmount || '確認中'}`,
+                              `プラン名：${plan.planName}`,
+                              `掲載価格：${confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : '価格確認中'}`,
+                              '確認したい内容：在庫・商品内容・引き継ぎ方法など',
+                            ].join('\\n');
+                            copyToClipboardAndOpenModal(inquiryText, plan.gameName, '石垢料金表', plan.planName);
+                          }}
+                          className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          問い合わせる
+                        </button>
                       </div>
-                    </>
-                  )}
+                    );
+                  })}
                 </div>
-
-                {/* Price Block & Action */}
-                <div className="pt-4 border-t border-stone-800/80 space-y-3">
-                  {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? (
-                    <div className="rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/5 p-3 space-y-1">
-                      <span className="text-[10px] text-[#d4af37] block font-medium">販売価格</span>
-                      <span className="text-lg font-bold font-mono text-[#f7e7ce]">¥{plan.currentPrice?.toLocaleString() ?? '確認中'}</span>
-                      <p className="text-[11px] text-stone-400 leading-relaxed">
-                        在庫は公式LINEにてお問い合わせください。
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-stone-700 bg-stone-900/60 p-3 space-y-1">
-                      <span className="text-[10px] text-amber-400 block font-medium">掲載状況</span>
-                      <span className="text-sm font-semibold text-amber-300">価格確認中</span>
-                      <p className="text-[11px] text-stone-400 leading-relaxed">
-                        価格が確定していないプランです。公式LINEでお問い合わせください。
-                      </p>
-                    </div>
-                  )}
-
-                  {plan.verifiedForPublic && plan.priceHistory && plan.priceHistory.length > 0 && (
-                    <div className="flex justify-end text-[11px] pt-1">
-                      <button
-                        onClick={() => setActiveHistoryPlan(plan)}
-                        className="text-[#d4af37] hover:underline flex items-center gap-1"
-                      >
-                        <History className="w-3 h-3" />
-                        <span>価格改定履歴 ({plan.priceHistory.length})</span>
-                      </button>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const inquiryText = [
-                        '【SENA LUXE 石垢料金・在庫問い合わせ】',
-                        `ゲーム名：${plan.gameName}`,
-                        `プラン名：${plan.planName}`,
-                        `通貨・数量：${plan.currencyAmount || '確認中'}`,
-                        `掲載価格：${plan.verifiedForPublic && typeof plan.currentPrice === 'number' ? `¥${plan.currentPrice.toLocaleString()}` : '価格確認中'}`,
-                        '確認したい内容：在庫・商品内容・引き継ぎ方法など',
-                      ].join('\\n');
-                      copyToClipboardAndOpenModal(inquiryText, plan.gameName, '石垢料金表', plan.planName);
-                    }}
-                    className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                    <span>在庫は公式LINEにてお問い合わせください</span>
-                  </button>
+                <div className="px-4 sm:px-5 py-2.5 bg-black/20 text-[11px] text-stone-400">
+                  在庫は公式LINEにてお問い合わせください。ご不明点もLINEでご案内します。
                 </div>
-              </div>
+              </section>
             );
           })}
         </div>
