@@ -883,18 +883,10 @@ export const AdminDashboardView: React.FC = () => {
                           </button>
                           <button
                             onClick={async () => {
-                              const nextStatus = '現在準備中';
-                              const canActivate =
-                                plan.currentPrice !== null &&
-                                plan.currentPrice > 0 &&
-                                Boolean(plan.planName?.trim()) &&
-                                Boolean(plan.currencyAmount?.trim()) &&
-                                Boolean(plan.conditions?.trim());
-                              if (nextStatus === '取扱中' && !canActivate) return;
                               await updateStoneRatePlan(plan.id, {
-                                status: nextStatus,
+                                status: '現在準備中',
                                 stockStatus: '在庫要確認',
-                                isPreparation: nextStatus !== '取扱中',
+                                isPreparation: true,
                                 verifiedForPublic: false,
                               });
                             }}
