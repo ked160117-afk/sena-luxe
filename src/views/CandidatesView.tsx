@@ -43,7 +43,7 @@ export const CandidatesView: React.FC = () => {
         <Clock className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <span className="text-stone-200 font-medium">【別区分表示について】</span>
-          本ページのタイトルは現在入荷検証中の候補枠です。お客様からの入荷希望・事前相談を承っており、ご要望の集積および信頼できるルートの確保が完了次第、順次「取扱ゲーム」へと移行いたします。
+          本ページのタイトルは現在入荷検証中の候補枠です。候補タイトルは取扱可否・安全性を確認中です。正式に販売準備が整った商品だけを「取扱ゲーム」に掲載いたします。
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export const CandidatesView: React.FC = () => {
                 className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                <span>入荷・事前予約をLINEで相談</span>
+                <span>掲載商品の在庫・内容をLINEで確認</span>
               </a>
 
               {isAdminLoggedIn && (
@@ -100,12 +100,11 @@ export const CandidatesView: React.FC = () => {
         ))}
       </div>
 
-      {/* Procurement Note */}
+      {/* Candidate Notice */}
       <div className="rounded-xl bg-[#0c0d10] border border-stone-800 p-6 text-xs text-stone-400 text-center max-w-3xl mx-auto space-y-2">
-        <h4 className="text-sm font-semibold text-stone-200">候補タイトルの個別調達について</h4>
+        <h4 className="text-sm font-semibold text-stone-200">候補タイトルについて</h4>
         <p className="leading-relaxed">
-          正式取扱開始前であっても、お客様からの個別のご要望に応じて、提携パートナーより条件に合致するアカウントや石垢を特別にお探しすることが可能です。
-          お気軽に公式LINEまたはリクエストフォームよりご相談ください。
+          正式取扱開始前の商品について、個別調達・取り寄せ・予約は承っておりません。販売開始後、商品ページに掲載された在庫のみご購入いただけます。
         </p>
       </div>
     </div>
