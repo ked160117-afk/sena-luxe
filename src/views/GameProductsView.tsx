@@ -57,7 +57,7 @@ export const GameProductsView: React.FC = () => {
               />
             ) : null}
             <h1 className="text-2xl sm:text-4xl font-bold text-white">
-              {selectedGame ? `${selectedGame.name} 商品一覧` : '通常商品一覧'}
+              {selectedGame ? `${selectedGame.name} 石垢一覧` : '石垢アカウント一覧'}
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-400 mt-2">
