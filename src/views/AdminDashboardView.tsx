@@ -100,7 +100,7 @@ export const AdminDashboardView: React.FC = () => {
   const [newProdPrice, setNewProdPrice] = useState<string>('');
   const [newProdImageUrl, setNewProdImageUrl] = useState('');
   const [newProdHighlights, setNewProdHighlights] = useState('');
-  const [newProdStatus, setNewProdStatus] = useState<ProductStatus>('掲載中');
+  const [newProdStatus, setNewProdStatus] = useState<ProductStatus>('掲載停止');
 
   // ==========================================
   // Product Edit Modal State
@@ -292,6 +292,17 @@ export const AdminDashboardView: React.FC = () => {
     e.preventDefault();
     if (!newProdTitle.trim() || !newProdGameId) return;
 
+    const isVerifiedForPublic =
+      newProdCategory === 'ゲーム内通貨・石垢' &&
+      newProdIsPriceConfirmed &&
+      Boolean(newProdPrice.trim()) &&
+      Number(newProdPrice) > 0 &&
+      Boolean(newProdSummary.trim());
+    if (newProdStatus === '掲載中' && !isVerifiedForPublic) {
+      window.alert('公開するには、商品説明と確認済み価格を入力してください。');
+      return;
+    }
+
     const highlightsArr = newProdHighlights
       .split('\n')
       .map((s) => s.trim())
@@ -299,13 +310,14 @@ export const AdminDashboardView: React.FC = () => {
 
     await addNewProduct({
       gameId: newProdGameId,
-      category: newProdCategory,
+      category: 'ゲーム内通貨・石垢',
       title: newProdTitle.trim(),
       summary: newProdSummary.trim(),
-      price: newProdIsPriceConfirmed && newProdPrice ? Number(newProdPrice) : null,
+      price: isVerifiedForPublic ? Number(newProdPrice) : null,
+      verifiedForPublic: isVerifiedForPublic,
       imageUrl: newProdImageUrl.trim() || undefined,
       keyHighlights: highlightsArr,
-      status: newProdStatus,
+      status: isVerifiedForPublic ? newProdStatus : '掲載停止',
     });
 
     setIsProductModalOpen(false);
@@ -320,15 +332,16 @@ export const AdminDashboardView: React.FC = () => {
 
   // Open Product Edit Modal
   const openEditProductModal = (product: ProductItem) => {
+    const isVerified = product.verifiedForPublic === true;
     setEditingProduct(product);
     setEditProdTitle(product.title);
     setEditProdCategory('ゲーム内通貨・石垢');
-    setEditProdIsPriceConfirmed(product.price !== null);
-    setEditProdPrice(product.price !== null ? String(product.price) : '');
-    setEditProdSummary(product.summary || '');
-    setEditProdHighlights(product.keyHighlights?.join('\n') || '');
-    setEditProdImageUrl(product.imageUrl || '');
-    setEditProdStatus(product.status);
+    setEditProdIsPriceConfirmed(isVerified && product.price !== null);
+    setEditProdPrice(isVerified && product.price !== null ? String(product.price) : '');
+    setEditProdSummary(isVerified ? product.summary || '' : '');
+    setEditProdHighlights(isVerified ? product.keyHighlights?.join('\n') || '' : '');
+    setEditProdImageUrl(isVerified ? product.imageUrl || '' : '');
+    setEditProdStatus(isVerified ? product.status : '掲載停止');
     setEditProdOrder(product.order !== undefined ? String(product.order) : '0');
   };
 
@@ -337,6 +350,17 @@ export const AdminDashboardView: React.FC = () => {
     e.preventDefault();
     if (!editingProduct) return;
 
+    const isVerifiedForPublic =
+      editProdCategory === 'ゲーム内通貨・石垢' &&
+      editProdIsPriceConfirmed &&
+      Boolean(editProdPrice.trim()) &&
+      Number(editProdPrice) > 0 &&
+      Boolean(editProdSummary.trim());
+    if (editProdStatus === '掲載中' && !isVerifiedForPublic) {
+      window.alert('公開するには、商品説明と確認済み価格を入力してください。');
+      return;
+    }
+
     const highlightsArr = editProdHighlights
       .split('\n')
       .map((s) => s.trim())
@@ -344,12 +368,13 @@ export const AdminDashboardView: React.FC = () => {
 
     await updateProduct(editingProduct.id, {
       title: editProdTitle.trim(),
-      category: editProdCategory,
-      price: editProdIsPriceConfirmed && editProdPrice ? Number(editProdPrice) : null,
+      category: 'ゲーム内通貨・石垢',
+      price: isVerifiedForPublic ? Number(editProdPrice) : null,
+      verifiedForPublic: isVerifiedForPublic,
       summary: editProdSummary.trim(),
       keyHighlights: highlightsArr,
       imageUrl: editProdImageUrl.trim() || undefined,
-      status: editProdStatus,
+      status: isVerifiedForPublic ? editProdStatus : '掲載停止',
       order: editProdOrder ? Number(editProdOrder) : 0,
     });
 
@@ -611,7 +636,7 @@ export const AdminDashboardView: React.FC = () => {
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-stone-400 whitespace-nowrap">{p.category}</td>
                     <td className="py-3 px-3 sm:px-4 font-mono whitespace-nowrap">
-                      {p.price !== null ? (
+                      {p.verifiedForPublic && p.price !== null ? (
                         <span className="font-bold text-stone-200">¥{p.price.toLocaleString()}</span>
                       ) : (
                         <span className="text-amber-400 font-medium">価格確認中</span>
@@ -631,7 +656,7 @@ export const AdminDashboardView: React.FC = () => {
                             : 'text-rose-400 border-rose-800'
                         }`}
                       >
-                        <option value="掲載中">掲載中</option>
+                        <option value="掲載中" disabled={!p.verifiedForPublic}>掲載中</option>
                         <option value="商談中">商談中</option>
                         <option value="売り切れ">売り切れ</option>
                         <option value="掲載停止">掲載停止 (非公開)</option>
