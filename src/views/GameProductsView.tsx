@@ -15,10 +15,7 @@ import { ProductCardImage } from '../components/ProductCardImage';
 
 const CATEGORIES: (ProductCategory | 'ALL')[] = [
   'ALL',
-  'ゲームアカウント',
   'ゲーム内通貨・石垢',
-  '育成済みデータ',
-  '限定キャラクター・アイテム',
 ];
 
 export const GameProductsView: React.FC = () => {
@@ -37,7 +34,7 @@ export const GameProductsView: React.FC = () => {
   // Filter only active, publicly published products (excluding 掲載停止)
   const filteredProducts = useMemo(() => {
     return products
-      .filter((p) => p.status === '掲載中')
+      .filter((p) => p.status === '掲載中' && p.category === 'ゲーム内通貨・石垢')
       .filter((p) => {
         const matchesGame = selectedGameId ? p.gameId === selectedGameId : true;
         const matchesCat = selectedCategory === 'ALL' ? true : p.category === selectedCategory;
@@ -64,7 +61,7 @@ export const GameProductsView: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-400 mt-2">
-            実態と安全性を確認した正規商品のみを掲載しております。
+            掲載中の石垢アカウントを表示しています。商品内容・在庫・価格は購入前にご確認ください。
           </p>
         </div>
 
@@ -117,7 +114,7 @@ export const GameProductsView: React.FC = () => {
         <ShieldAlert className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <span className="text-stone-300 font-medium">実態確認・セキュリティ保護方針：</span>
-          架空の在庫や推測価格は一切公開いたしません。実際に検品済みの商品のみを掲載し、詳細情報や引き継ぎ条件は公式LINEにて専任担当者が個別にご案内いたします。
+          掲載情報は購入前にご確認ください。通貨数量・在庫・引き継ぎ条件は、公式LINEで最新の内容をご確認ください。
         </div>
       </div>
 
@@ -132,7 +129,7 @@ export const GameProductsView: React.FC = () => {
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
               {selectedGame ? `「${selectedGame.name}」の商品は現在、安全確認および在庫精査を行っております。` : '現在、安全確認および在庫精査を行っております。'}
               <br className="hidden sm:inline" />
-              確認が完了した商品から順次掲載いたします。お急ぎの個別リクエストは公式LINEよりご相談ください。
+              掲載準備が完了した石垢アカウントから掲載します。掲載外商品の個別手配・取り寄せ・予約は承っておりません。
             </p>
           </div>
 
@@ -147,11 +144,11 @@ export const GameProductsView: React.FC = () => {
               <span>公式LINEで入荷状況を問い合わせる</span>
             </a>
             <button
-              onClick={() => setCurrentView('request')}
+              onClick={() => setCurrentView('faq')}
               className="px-5 py-2.5 rounded-lg text-xs font-medium text-stone-300 bg-stone-800 hover:bg-stone-700 transition-colors flex items-center gap-1.5"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>ゲームリクエストを送る</span>
+              <span>お取引注意事項を確認する</span>
             </button>
           </div>
         </div>
@@ -216,16 +213,9 @@ export const GameProductsView: React.FC = () => {
                 {/* Card Footer: Price & Inquiry Button */}
                 <div className="mt-5 pt-3.5 border-t border-stone-800">
                   <div className="flex items-baseline justify-between mb-3">
-                    <span className="text-xs text-stone-400">販売価格</span>
+                    <span className="text-xs text-stone-400">価格・在庫</span>
                     <div className="text-right">
-                      {item.price ? (
-                        <span className="font-mono text-lg font-bold text-[#f7e7ce] tabular-nums">
-                          ¥{item.price.toLocaleString()}
-                          <span className="text-[10px] text-stone-400 font-normal ml-1">(税込)</span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-amber-400 font-medium">価格確認中</span>
-                      )}
+                      <span className="text-xs text-amber-400 font-medium">購入前にLINEで要確認</span>
                     </div>
                   </div>
 
