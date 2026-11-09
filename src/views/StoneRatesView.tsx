@@ -191,7 +191,7 @@ export const StoneRatesView: React.FC = () => {
                     return (
                       <div key={plan.id} className="px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-3 sm:gap-5 sm:items-center">
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '石の数量確認中'}</div>
+                          <div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '無償石の数量確認中'}</div>
                           <div className="text-xs text-stone-400 mt-1">{plan.planName}</div>
                           {plan.conditions && confirmed && <div className="text-[11px] text-stone-500 mt-1">{plan.conditions}</div>}
                         </div>
@@ -208,12 +208,12 @@ export const StoneRatesView: React.FC = () => {
                             const inquiryText = [
                               '【SENA LUXE 石垢料金・在庫問い合わせ】',
                               `ゲーム名：${plan.gameName}`,
-                              `石の数・通貨数量：${plan.currencyAmount || '確認中'}`,
+                              `無償石の数・通貨数量：${plan.currencyAmount || '確認中'}`,
                               `プラン名：${plan.planName}`,
                               `掲載価格：${confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : '価格確認中'}`,
                               '確認したい内容：在庫・商品内容・引き継ぎ方法など',
                             ].join('\\n');
-                            copyToClipboardAndOpenModal(inquiryText, plan.gameName, '石垢料金表', plan.planName);
+                            copyToClipboardAndOpenModal(inquiryText, plan.gameName, '無償石（無料入手分）石垢料金表', plan.planName);
                           }}
                           className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
                         >
