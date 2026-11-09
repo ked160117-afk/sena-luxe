@@ -833,7 +833,7 @@ export const AdminDashboardView: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-stone-400 font-mono text-[11px] whitespace-nowrap">
-                      {plan.confirmedDate}
+                      {plan.verifiedForPublic ? plan.confirmedDate || '-' : '未確認'}
                     </td>
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <span className="text-[11px] text-stone-400">
