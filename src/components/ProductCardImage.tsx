@@ -71,6 +71,12 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
             {gameName}
           </div>
 
+          {currencyName && (
+            <div className="text-[10px] font-semibold text-[#d4af37] max-w-[180px] truncate">
+              {currencyName}
+            </div>
+          )}
+
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-black/80 border border-[#d4af37]/60 shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
             <span className="text-xs font-bold font-serif text-[#f7e7ce] tracking-widest">
