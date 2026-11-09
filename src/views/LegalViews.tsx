@@ -232,7 +232,7 @@ export const LawView: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">公式お問い合わせ窓口</span>
           <span className="sm:w-2/3 text-stone-300">
-            SENA LUXE 公式LINEコンシェルジュデスク（@sena_luxe）<br />
+            SENA LUXE 公式LINE窓口<br />
             受付時間：{settings.contactDeskHours || '公式LINEにてご案内'}
           </span>
         </div>
