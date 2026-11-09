@@ -110,6 +110,7 @@ interface StoreContextType {
     imageUrl?: string;
     keyHighlights: string[];
     status?: ProductStatus;
+    verifiedForPublic?: boolean;
   }) => Promise<ProductItem>;
   updateProduct: (id: string, updates: Partial<ProductItem>) => Promise<void>;
   deleteProduct: (id: string, reason?: string) => Promise<void>;
@@ -434,6 +435,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     imageUrl?: string;
     keyHighlights: string[];
     status?: ProductStatus;
+    verifiedForPublic?: boolean;
   }): Promise<ProductItem> => {
     const game = allGames.find((g) => g.id === data.gameId);
     const gameCode = game ? game.code.toUpperCase() : 'GEN';
@@ -448,12 +450,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       summary: data.summary,
       price: data.price,
       imageUrl: data.imageUrl,
-      currencyIconUrl:
-        data.category === 'ゲーム内通貨・石垢'
-          ? '/src/assets/images/luxury_game_gems_1794056906978.jpg'
-          : undefined,
       keyHighlights: data.keyHighlights,
       status: data.status,
+      verifiedForPublic: data.verifiedForPublic,
     });
 
     return newProd;
