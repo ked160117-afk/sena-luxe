@@ -197,12 +197,12 @@ export const StoneRatesView: React.FC = () => {
                       {plan.gameName}
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {plan.deviceRequirement && (
+                      {!plan.isPreparation && plan.status === '取扱中' && plan.deviceRequirement && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
                           {plan.deviceRequirement}
                         </span>
                       )}
-                      {plan.accountType && (
+                      {!plan.isPreparation && plan.status === '取扱中' && plan.accountType && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-800 text-stone-300 border border-stone-700">
                           {plan.accountType}
                         </span>
