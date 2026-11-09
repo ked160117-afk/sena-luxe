@@ -43,7 +43,7 @@ export const CandidatesView: React.FC = () => {
         <Clock className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <span className="text-stone-200 font-medium">【別区分表示について】</span>
-          本ページのタイトルは現在入荷検証中の候補枠です。候補タイトルは取扱可否・安全性を確認中です。正式に販売準備が整った商品だけを「取扱ゲーム」に掲載いたします。
+          本ページのタイトルは現在、取扱可否・安全性を確認中です。正式に販売準備が整った商品だけを「取扱ゲーム」に掲載いたします。
         </div>
       </div>
 
