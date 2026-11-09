@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { StoneRatePlan, PriceHistoryRecord } from '../types';
-import { Gem, Calendar, History, ArrowUpRight, MessageCircle, ExternalLink, ShieldCheck, X, Clock } from 'lucide-react';
+import { Gem, History, ArrowUpRight, MessageCircle, ExternalLink, ShieldCheck, X, Clock } from 'lucide-react';
 import { ProductCardImage } from '../components/ProductCardImage';
 
 export const StoneRatesView: React.FC = () => {
@@ -207,11 +207,9 @@ export const StoneRatesView: React.FC = () => {
                           {plan.accountType}
                         </span>
                       )}
-                      {/* Stone account status: all plans are inquiry-based */}
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded flex items-center gap-1 border bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40"
-                      >
-                        <span>要相談</span>
+                      {/* Preparation state is shown until an admin verifies the plan */}
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded border bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40">
+                        {plan.isPreparation || plan.status !== '取扱中' ? '掲載準備中' : '要相談'}
                       </span>
                       {/* Stock Status: 在庫要確認 */}
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-900 text-stone-300 border border-stone-700">
@@ -221,35 +219,43 @@ export const StoneRatesView: React.FC = () => {
                   </div>
 
                   {/* Plan Title */}
-                  <h3 className="text-base font-semibold text-white">{plan.planName}</h3>
+                  <h3 className="text-base font-semibold text-white">{plan.isPreparation || plan.status !== '取扱中' ? '石垢プラン（内容確認中）' : plan.planName}</h3>
 
-                  {/* Currency Amount Display Box */}
-                  <div className="my-3.5 p-3 rounded-lg bg-[#0a0b0d] border border-[#d4af37]/25 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-stone-400 uppercase tracking-wider block">
-                        数量・内訳 ({plan.currencyName})
-                      </span>
-                      <span className="text-sm sm:text-base font-bold text-gold-gradient font-mono">
-                        {plan.currencyAmount}
-                      </span>
+                  {/* Hide unverified quantities and conditions until the plan is confirmed */}
+                  {plan.isPreparation || plan.status !== '取扱中' ? (
+                    <div className="my-3.5 p-3 rounded-lg bg-[#0a0b0d] border border-[#d4af37]/25 space-y-1">
+                      <span className="text-[10px] text-stone-400 uppercase tracking-wider block">商品内容</span>
+                      <span className="text-sm font-semibold text-amber-400">通貨数量・アカウント内容を確認中</span>
+                      <p className="text-[11px] text-stone-400">確認が完了するまで詳細は掲載しません。</p>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-[#d4af37]/15 flex items-center justify-center text-[#d4af37] shrink-0 ml-2">
-                      <Gem className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  {/* Conditions / Details */}
-                  <div className="space-y-1.5 text-xs text-stone-300 mb-4">
-                    <div className="text-[11px] text-stone-400 font-medium">プラン条件・仕様：</div>
-                    <p className="bg-stone-900/40 p-2 rounded border border-stone-800/60 text-stone-300 text-xs leading-relaxed">
-                      {plan.conditions}
-                    </p>
-                    {plan.notes && (
-                      <div className="p-2 rounded bg-amber-950/20 border border-amber-700/40 text-[11px] text-amber-300 leading-relaxed">
-                        ※ {plan.notes}
+                  ) : (
+                    <>
+                      <div className="my-3.5 p-3 rounded-lg bg-[#0a0b0d] border border-[#d4af37]/25 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-stone-400 uppercase tracking-wider block">
+                            数量・内訳 ({plan.currencyName})
+                          </span>
+                          <span className="text-sm sm:text-base font-bold text-gold-gradient font-mono">
+                            {plan.currencyAmount}
+                          </span>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-[#d4af37]/15 flex items-center justify-center text-[#d4af37] shrink-0 ml-2">
+                          <Gem className="w-4 h-4" />
+                        </div>
                       </div>
-                    )}
-                  </div>
+                      <div className="space-y-1.5 text-xs text-stone-300 mb-4">
+                        <div className="text-[11px] text-stone-400 font-medium">プラン条件・仕様：</div>
+                        <p className="bg-stone-900/40 p-2 rounded border border-stone-800/60 text-stone-300 text-xs leading-relaxed">
+                          {plan.conditions}
+                        </p>
+                        {plan.notes && (
+                          <div className="p-2 rounded bg-amber-950/20 border border-amber-700/40 text-[11px] text-amber-300 leading-relaxed">
+                            ※ {plan.notes}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Price Block & Action */}
