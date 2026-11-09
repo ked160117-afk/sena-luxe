@@ -31,21 +31,21 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   title,
   className = 'w-full h-44',
 }) => {
-  const [imgError, setImgError] = useState(false);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const isStoneCategory = category === 'ゲーム内通貨・石垢';
 
   // 1. Stone Account Category
   if (isStoneCategory) {
-    // If an authentic currency icon URL is provided and not errored
-    if (currencyIconUrl && !imgError) {
+    // Prefer the actual product/account screenshot uploaded for this listing.
+    if (imageUrl && failedImageUrl !== imageUrl) {
       return (
-        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 flex items-center justify-center ${className}`}>
+        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
           <img
-            src={currencyIconUrl}
-            alt={`${gameName} ${currencyName || '石垢'}`}
-            className="w-full h-full object-contain p-3"
+            src={imageUrl}
+            alt={`${gameName} 石垢アカウント画像`}
+            className="w-full h-full object-contain"
             loading="lazy"
-            onError={() => setImgError(true)}
+            onError={() => setFailedImageUrl(imageUrl)}
           />
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
             石垢
@@ -54,39 +54,43 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
       );
     }
 
-    // Official Black x Gold Shared Placeholder for Stone Accounts
+    // If no product screenshot is available, use only a separately registered game-currency icon.
+    if (currencyIconUrl && failedImageUrl !== currencyIconUrl) {
+      return (
+        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 flex items-center justify-center ${className}`}>
+          <img
+            src={currencyIconUrl}
+            alt={`${gameName} ${currencyName || 'ゲーム内通貨'}`}
+            className="w-full h-full object-contain p-3"
+            loading="lazy"
+            onError={() => setFailedImageUrl(currencyIconUrl)}
+          />
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
+            石垢
+          </div>
+        </div>
+      );
+    }
+
+    // No unrelated or generated artwork: keep the existing SENA LUXE placeholder.
     return (
       <div
         className={`relative overflow-hidden bg-gradient-to-b from-[#131419] to-[#08090b] border-b border-[#d4af37]/20 flex flex-col items-center justify-center p-4 text-center select-none ${className}`}
       >
-        {/* Subtle Luxury Pattern / Glow */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#d4af37]/10 via-transparent to-transparent pointer-events-none" />
-
         <div className="relative z-10 space-y-1.5 flex flex-col items-center">
           <div className="w-10 h-10 rounded-full bg-black/70 border border-[#d4af37]/40 flex items-center justify-center shadow-lg">
             <Gem className="w-5 h-5 text-[#d4af37]" />
           </div>
-
-          <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">
-            {gameName}
-          </div>
-
+          <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">{gameName}</div>
           {currencyName && (
-            <div className="text-[10px] font-semibold text-[#d4af37] max-w-[180px] truncate">
-              {currencyName}
-            </div>
+            <div className="text-[10px] font-semibold text-[#d4af37] max-w-[180px] truncate">{currencyName}</div>
           )}
-
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-black/80 border border-[#d4af37]/60 shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
-            <span className="text-xs font-bold font-serif text-[#f7e7ce] tracking-widest">
-              石垢
-            </span>
+            <span className="text-xs font-bold font-serif text-[#f7e7ce] tracking-widest">石垢</span>
           </div>
-
-          <div className="text-[9px] font-mono tracking-widest text-[#d4af37]/70">
-            通貨画像準備中
-          </div>
+          <div className="text-[9px] font-mono tracking-widest text-[#d4af37]/70">画像準備中</div>
         </div>
       </div>
     );
@@ -101,9 +105,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
           alt={gameName}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
+          onError={() => setFailedImageUrl(imageUrl || null)}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
       </div>
