@@ -854,7 +854,7 @@ export const AdminDashboardView: React.FC = () => {
                           </button>
                           <button
                             onClick={async () => {
-                              const nextStatus = plan.verifiedForPublic ? '現在準備中' : '取扱中';
+                              const nextStatus = '現在準備中';
                               const canActivate =
                                 plan.currentPrice !== null &&
                                 plan.currentPrice > 0 &&
@@ -866,7 +866,7 @@ export const AdminDashboardView: React.FC = () => {
                                 status: nextStatus,
                                 stockStatus: '在庫要確認',
                                 isPreparation: nextStatus !== '取扱中',
-                                verifiedForPublic: nextStatus === '取扱中',
+                                verifiedForPublic: false,
                               });
                             }}
                             className={`px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
@@ -874,10 +874,10 @@ export const AdminDashboardView: React.FC = () => {
                                 ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-800/60'
                                 : 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border-amber-700/60'
                             }`}
-                            disabled={!plan.verifiedForPublic && !(plan.currentPrice !== null && plan.currentPrice > 0 && Boolean(plan.planName?.trim()) && Boolean(plan.currencyAmount?.trim()) && Boolean(plan.conditions?.trim()))}
-                            title="価格・商品名・通貨数量・条件を入力してから取扱中に変更できます"
+                            disabled={!plan.verifiedForPublic}
+                            title="未確認プランは編集画面で価格・数量・条件を確認してから公開してください"
                           >
-                            {plan.verifiedForPublic ? '準備中に変更' : '内容確認済みとして公開'}
+                            {plan.verifiedForPublic ? '準備中に変更' : '編集画面で確認'}
                           </button>
                           <button
                             onClick={() => {
