@@ -49,7 +49,7 @@ export const StoneRatesView: React.FC = () => {
           <h1 className="text-2xl sm:text-4xl font-bold text-white">石垢専用料金表</h1>
           <p className="text-xs sm:text-sm text-stone-400 mt-2 max-w-3xl leading-relaxed">
             通常商品一覧とは分けて、石垢プランの内容を掲載しています。
-            料金は確認済みの内容を掲載しています。在庫状況・商品内容の詳細・お支払いなど、不明点は公式LINEでお問い合わせください。
+            確認済みの販売価格を掲載し、取扱条件・価格の確認が必要なプランも参考価格を含めて表示しています。在庫状況・商品内容・お支払いなど、不明点は公式LINEでお問い合わせください。
           </p>
         </div>
 
@@ -76,7 +76,7 @@ export const StoneRatesView: React.FC = () => {
                 <span className="text-[11px] text-stone-400">ご購入前に必ずご確認ください</span>
               </div>
               <p className="text-xs sm:text-sm text-stone-200 font-medium leading-relaxed">
-                当店で取り扱う「石垢」は、指定されたゲーム内通貨・石を所持した<strong className="text-white underline decoration-[#d4af37] underline-offset-2">新規または進行済みアカウント本体をお渡しする商品</strong>です。
+                当店で取り扱う「石垢」は、ゲーム内で無料で入手できる<strong className="text-white underline decoration-[#d4af37] underline-offset-2">無償石・無償通貨のみ</strong>を所持した新規または進行済みアカウント本体をお渡しする商品です。有償石・課金石・有料通貨は一切取り扱いません。
               </p>
               <p className="text-xs text-stone-400 leading-relaxed">
                 ※お客様が現在プレイされている既存アカウントへのゲーム内通貨の追加は承っておりません。<br />
@@ -198,7 +198,7 @@ export const StoneRatesView: React.FC = () => {
                         <div className="sm:text-right">
                           <div className="text-[10px] text-stone-500 mb-0.5">販売価格</div>
                           <div className="text-lg font-bold font-mono text-[#f7e7ce]">
-                            {confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : '価格確認中'}
+                            {confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : plan.priceDisplay?.trim() ? `参考価格：${plan.priceDisplay}（要LINE確認）` : '価格確認中'}
                           </div>
                           <div className="text-[10px] text-stone-500">在庫はLINEにてご確認ください</div>
                         </div>
@@ -243,7 +243,7 @@ export const StoneRatesView: React.FC = () => {
           このページは石垢アカウントの掲載情報を案内するものです。掲載情報だけで在庫や販売可能な状態を保証するものではありません。
         </p>
         <p className="leading-relaxed">
-          料金表には確認済みの価格を掲載し、未確認の価格は「価格確認中」と表示しています。在庫はすべて公式LINEでご確認ください。一覧にない商品や新しいゲームタイトルもご相談いただけます。
+          確認済みの価格は販売価格として、取扱条件・価格の確認が必要なプランは参考価格として表示しています。在庫はすべて公式LINEでご確認ください。掲載外の商品や新しいゲームタイトルも公式LINEでご相談いただけます。
         </p>
       </div>
 
