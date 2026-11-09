@@ -87,7 +87,7 @@ export const LineInquiryModal: React.FC = () => {
           </p>
           <p className="flex items-start gap-2">
             <span className="text-[#d4af37] font-bold">3.</span>
-            <span>専任コンシェルジュが在庫状況・詳細確認を迅速にご案内いたします。</span>
+            <span>掲載商品の在庫・内容・価格について確認し、公式LINEでご案内します。返信までお時間をいただく場合があります。</span>
           </p>
         </div>
 
