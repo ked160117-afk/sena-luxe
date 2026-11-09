@@ -306,11 +306,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!snapshot.empty) {
           const loadedRates: StoneRatePlan[] = snapshot.docs.map((d) => {
             const data = d.data() as StoneRatePlan;
+            const confirmedForDisplay =
+              data.status === '取扱中' &&
+              data.isPreparation === false &&
+              typeof data.currentPrice === 'number' &&
+              data.currentPrice > 0 &&
+              Boolean(data.currencyAmount?.trim()) &&
+              Boolean(data.planName?.trim()) &&
+              Boolean(data.conditions?.trim());
             return {
               ...data,
-              status: data.status === '取扱中' ? '取扱中' : '現在準備中',
+              status: confirmedForDisplay ? '取扱中' : '現在準備中',
               stockStatus: data.stockStatus || '在庫要確認',
-              isPreparation: data.status !== '取扱中',
+              isPreparation: !confirmedForDisplay,
             };
           });
           setStoneRates(loadedRates);
