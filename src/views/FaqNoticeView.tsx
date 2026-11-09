@@ -177,7 +177,7 @@ export const FaqNoticeView: React.FC = () => {
             当店は「ゲームアカウントそのもの」を販売しております
           </p>
           <p>
-            「石垢」とは、記載された数量のゲーム内通貨（魔法石、聖晶石、オーブ、ダイヤ、ジュエル等）をあらかじめ所持している<strong className="text-[#f7e7ce]">ゲームアカウント本体をお渡しする商品</strong>です。
+            「石垢」とは、ゲーム内で無料で入手できる石・通貨（魔法石、聖晶石、オーブ、ダイヤ、ジュエル等）をあらかじめ所持している<strong className="text-[#f7e7ce]">ゲームアカウント本体をお渡しする商品</strong>です。当店で取り扱う石・通貨は無償入手分のみで、有償石・課金石・有料通貨は一切取り扱いません。
           </p>
           <div className="p-3.5 rounded bg-amber-950/25 border border-amber-800/40 text-amber-200/90 text-xs flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
