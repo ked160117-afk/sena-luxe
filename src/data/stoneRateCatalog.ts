@@ -794,7 +794,7 @@ export const BULK_REGISTERED_STONE_RATES: StoneRatePlan[] = [
   },
 
   // ============================================================
-  // 3. ONE PIECE バウンティラッシュ (全7プラン)
+  // 3. ONE PIECE バウンティラッシュ (全6プラン)
   // ============================================================
   {
     id: 'rate-opbr-ios-1',
@@ -898,25 +898,7 @@ export const BULK_REGISTERED_STONE_RATES: StoneRatePlan[] = [
     status: '取扱中',
     priceHistory: [],
   },
-  {
-    id: 'rate-opbr-and-2',
-    gameId: 'game-opbr',
-    gameCode: 'OPBR',
-    gameName: 'ONE PIECE バウンティラッシュ',
-    planName: '【追加オプション】iOSへのガチャ代行',
-    currencyName: '代行サービス',
-    currencyAmount: '代行作業一式',
-    conditions: 'Android版からiOS端末へのガチャ代行作業（追加オプション）',
-    deviceRequirement: 'iOS代行',
-    accountType: '追加オプション',
-    referencePrice: 1500,
-    currentPrice: 1000,
-    priceDisplay: '追加料金1,000円',
-    confirmedDate: '2026/11/07',
-    status: '取扱中',
-    priceHistory: [],
-    notes: 'iOSへのガチャ代行：＋1,000円',
-  },
+
 
   // ============================================================
   // 4. Fate/Grand Order（FGO） (全6プラン)
