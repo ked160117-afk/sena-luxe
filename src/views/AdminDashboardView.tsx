@@ -371,9 +371,9 @@ export const AdminDashboardView: React.FC = () => {
       category: 'ゲーム内通貨・石垢',
       price: isVerifiedForPublic ? Number(editProdPrice) : null,
       verifiedForPublic: isVerifiedForPublic,
-      summary: editProdSummary.trim(),
-      keyHighlights: highlightsArr,
-      imageUrl: editProdImageUrl.trim() || undefined,
+      summary: isVerifiedForPublic ? editProdSummary.trim() : editingProduct.summary,
+      keyHighlights: isVerifiedForPublic ? highlightsArr : editingProduct.keyHighlights,
+      imageUrl: isVerifiedForPublic ? editProdImageUrl.trim() || undefined : editingProduct.imageUrl,
       status: isVerifiedForPublic ? editProdStatus : '掲載停止',
       order: editProdOrder ? Number(editProdOrder) : 0,
     });
@@ -408,12 +408,11 @@ export const AdminDashboardView: React.FC = () => {
     if (!editingRatePlan) return;
 
     const currPriceVal = editRateIsPriceConfirmed && editRateCurrPrice ? Number(editRateCurrPrice) : null;
-    const isVerifiedForPublic =
-      Boolean(editRatePlanName.trim()) &&
-      Boolean(editRateAmount.trim()) &&
-      Boolean(editRateConditions.trim()) &&
-      currPriceVal !== null &&
-      currPriceVal > 0;
+    if (!editRatePlanName.trim() || !editRateAmount.trim() || !editRateConditions.trim()) {
+      window.alert('プラン名・通貨数量・確認済みの条件を入力してください。');
+      return;
+    }
+    const isVerifiedForPublic = currPriceVal !== null && currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
