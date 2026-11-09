@@ -30,10 +30,10 @@ export const CandidatesView: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setCurrentView('request')}
+          onClick={() => setCurrentView('faq')}
           className="px-4 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center gap-2 self-start md:self-end shrink-0"
         >
-          <span>リクエストを送る</span>
+          <span>販売方針を確認する</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
@@ -76,15 +76,9 @@ export const CandidatesView: React.FC = () => {
 
             {/* Actions */}
             <div className="pt-4 mt-4 border-t border-stone-800/80 space-y-2">
-              <a
-                href="https://lin.ee/6uy8hu9"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                <span>掲載商品の在庫・内容をLINEで確認</span>
-              </a>
+              <div className="w-full py-2.5 px-3 rounded-lg text-xs font-medium text-stone-400 bg-stone-900 border border-stone-800 text-center">
+                現在、販売準備中です
+              </div>
 
               {isAdminLoggedIn && (
                 <button
