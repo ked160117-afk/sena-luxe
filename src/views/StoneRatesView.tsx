@@ -197,19 +197,19 @@ export const StoneRatesView: React.FC = () => {
                       {plan.gameName}
                     </span>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {!plan.isPreparation && plan.status === '取扱中' && plan.deviceRequirement && (
+                      {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' && plan.deviceRequirement && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
                           {plan.deviceRequirement}
                         </span>
                       )}
-                      {!plan.isPreparation && plan.status === '取扱中' && plan.accountType && (
+                      {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' && plan.accountType && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-800 text-stone-300 border border-stone-700">
                           {plan.accountType}
                         </span>
                       )}
                       {/* Preparation state is shown until an admin verifies the plan */}
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded border bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40">
-                        {plan.isPreparation || plan.status !== '取扱中' ? '掲載準備中' : '要相談'}
+                        {!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? '掲載準備中' : '要相談'}
                       </span>
                       {/* Stock Status: 在庫要確認 */}
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-900 text-stone-300 border border-stone-700">
@@ -219,10 +219,10 @@ export const StoneRatesView: React.FC = () => {
                   </div>
 
                   {/* Plan Title */}
-                  <h3 className="text-base font-semibold text-white">{plan.isPreparation || plan.status !== '取扱中' ? '石垢プラン（内容確認中）' : plan.planName}</h3>
+                  <h3 className="text-base font-semibold text-white">{!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? '石垢プラン（内容確認中）' : plan.planName}</h3>
 
                   {/* Hide unverified quantities and conditions until the plan is confirmed */}
-                  {plan.isPreparation || plan.status !== '取扱中' ? (
+                  {!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? (
                     <div className="my-3.5 p-3 rounded-lg bg-[#0a0b0d] border border-[#d4af37]/25 space-y-1">
                       <span className="text-[10px] text-stone-400 uppercase tracking-wider block">商品内容</span>
                       <span className="text-sm font-semibold text-amber-400">通貨数量・アカウント内容を確認中</span>
