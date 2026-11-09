@@ -22,6 +22,7 @@ export const GameProductsView: React.FC = () => {
   const {
     products,
     games,
+    stoneRates,
     selectedGameId,
     setSelectedGameId,
     selectedCategory,
@@ -171,7 +172,7 @@ export const GameProductsView: React.FC = () => {
                       category={item.category}
                       gameName={item.gameName}
                       gameCode={item.gameCode}
-                      currencyName={game?.currencyName}
+                      currencyName={stoneRates.find((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true)?.currencyName}
                       imageUrl={item.imageUrl}
                       currencyIconUrl={item.currencyIconUrl || game?.currencyIconUrl}
                       title={item.title}
