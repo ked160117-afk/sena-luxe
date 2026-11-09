@@ -21,7 +21,7 @@ export const Navbar: React.FC = () => {
     { label: '石垢料金表', view: 'stone_rates' },
     { label: '注意事項・FAQ', view: 'faq' },
     { label: '追加候補', view: 'candidates' },
-    { label: 'リクエスト', view: 'request' },
+    { label: '掲載商品問い合わせ', view: 'request' },
     { label: 'ショップ情報', view: 'shop_info' },
   ];
 
@@ -141,7 +141,7 @@ export const Navbar: React.FC = () => {
               className="w-full py-3 rounded-lg text-xs font-semibold text-black bg-[#06C755] flex items-center justify-center gap-2 shadow-md"
             >
               <MessageCircle className="w-4 h-4 fill-black stroke-none" />
-              <span>公式LINEで相談する</span>
+              <span>公式LINEで問い合わせる</span>
             </a>
 
             {isAdminLoggedIn ? (
