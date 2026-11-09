@@ -174,7 +174,7 @@ export const GameProductsView: React.FC = () => {
                       gameCode={item.gameCode}
                       currencyName={stoneRates.find((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true)?.currencyName}
                       imageUrl={item.imageUrl}
-                      currencyIconUrl={item.currencyIconUrl || game?.currencyIconUrl}
+                      currencyIconUrl={stoneRates.some((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true) ? item.currencyIconUrl || game?.currencyIconUrl : undefined}
                       title={item.title}
                     />
                   </div>
