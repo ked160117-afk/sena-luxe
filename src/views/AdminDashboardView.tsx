@@ -150,7 +150,7 @@ export const AdminDashboardView: React.FC = () => {
     setSyncFeedback(null);
     try {
       const res = await syncAllStoneRatesAndGamesToFirestore();
-      setSyncFeedback(`Firestore一括同期完了: ゲーム${res.gamesSynced}件、石垢料金プラン${res.ratesSynced}件を反映・永続保存しました。`);
+      setSyncFeedback(`Firestore同期完了: 新規ゲーム${res.gamesSynced}件、新規石垢プラン${res.ratesSynced}件を追加しました。既存データ・履歴・商品番号台帳は上書きしていません。`);
     } catch {
       setSyncFeedback('Firestoreへの一括同期に失敗しました。');
     } finally {
