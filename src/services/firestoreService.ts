@@ -50,8 +50,8 @@ const COLLECTIONS = {
 };
 
 /**
- * Bulk sync all 36 games and 118 stone rate plans to Firestore using safe batches.
- * Preserves existing documents and merges updates safely without deleting products or sequence ledgers.
+ * Add-only catalog sync to Firestore.
+ * Creates missing records only; existing products, prices, histories, icons, and sequence ledgers are never overwritten.
  */
 export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSynced: number; ratesSynced: number }> {
   try {
@@ -116,7 +116,7 @@ export async function seedInitialDataIfEmpty(): Promise<void> {
     const gamesSnapshot = await getDocs(collection(db, COLLECTIONS.GAMES));
     const ratesSnapshot = await getDocs(collection(db, COLLECTIONS.STONE_RATES));
 
-    // If games or stone rates count is below expected catalog, execute safe merge sync
+    // If catalog collections are incomplete, add only missing records
     if (gamesSnapshot.empty || ratesSnapshot.empty || gamesSnapshot.size < INITIAL_GAMES.length || ratesSnapshot.size < INITIAL_STONE_RATES.length) {
       console.log('Syncing / Seeding SENA LUXE catalog into Firestore...');
       await syncAllStoneRatesAndGamesToFirestore();
