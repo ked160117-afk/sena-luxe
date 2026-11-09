@@ -1518,7 +1518,7 @@ export const AdminDashboardView: React.FC = () => {
                 <label className="text-stone-300 block mb-1 font-semibold">ハイライト（改行区切り）</label>
                 <textarea
                   rows={2}
-                  placeholder="限定SSR所持&#10;ワンオーナー安心データ&#10;即納対応"
+                  placeholder="確認済みの通貨内訳&#10;アカウント連携状況&#10;引き継ぎ条件"
                   value={newProdHighlights}
                   onChange={(e) => setNewProdHighlights(e.target.value)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white resize-none"
