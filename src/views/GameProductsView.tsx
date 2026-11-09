@@ -127,7 +127,7 @@ export const GameProductsView: React.FC = () => {
           <div className="space-y-1.5">
             <h3 className="text-base sm:text-lg font-semibold text-white">現在商品を準備中です</h3>
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-              {selectedGame ? `「${selectedGame.name}」の商品は現在、安全確認および在庫精査を行っております。` : '現在、安全確認および在庫精査を行っております。'}
+              {selectedGame ? `「${selectedGame.name}」の石垢アカウントは現在準備中です。` : '石垢アカウントは現在準備中です。'}
               <br className="hidden sm:inline" />
               掲載準備が完了した石垢アカウントから掲載します。掲載外商品の個別手配・取り寄せ・予約は承っておりません。
             </p>
@@ -141,7 +141,7 @@ export const GameProductsView: React.FC = () => {
               className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center gap-2 shadow-sm"
             >
               <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-              <span>公式LINEで入荷状況を問い合わせる</span>
+              <span>掲載開始はこのページでご案内します</span>
             </a>
             <button
               onClick={() => setCurrentView('faq')}
