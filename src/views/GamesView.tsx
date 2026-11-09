@@ -36,7 +36,7 @@ export const GamesView: React.FC = () => {
       {/* Handled Games 8 Titles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {games.map((game) => {
-          const currencyVerified = stoneRates.some((plan) => plan.gameId === game.id && plan.verifiedForPublic === true);
+          const verifiedCurrencies = Array.from(new Set(stoneRates.filter((plan) => plan.gameId === game.id && plan.verifiedForPublic === true).map((plan) => plan.currencyName).filter(Boolean)));
           return (
           <div
             key={game.id}
@@ -51,7 +51,7 @@ export const GamesView: React.FC = () => {
                 {game.name}
               </h3>
               <div className="text-[11px] text-[#d4af37]/90 font-medium mt-1">
-                {currencyVerified ? `取扱通貨: ${game.currencyName} (${game.currencyUnit})` : 'ゲーム内通貨情報確認中'}
+                {verifiedCurrencies.length > 0 ? `取扱通貨: ${verifiedCurrencies.join('・')}` : 'ゲーム内通貨情報確認中'}
               </div>
               <p className="text-xs text-stone-400 mt-2 line-clamp-3 leading-relaxed">
                 {game.description}
