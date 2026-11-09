@@ -256,8 +256,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
             }
 
-            let iconUrl = data.iconUrl || '';
-            let currencyIconUrl = data.currencyIconUrl || '';
+            let iconUrl = data.iconUrl || fallback?.iconUrl || '';
+            let currencyIconUrl = data.currencyIconUrl || fallback?.currencyIconUrl || '';
             // Remove unverified stock images
             if (iconUrl.includes('images.unsplash.com')) {
               iconUrl = '';
