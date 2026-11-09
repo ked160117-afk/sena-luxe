@@ -744,20 +744,26 @@ export const AdminDashboardView: React.FC = () => {
                   <tr key={plan.id} className="hover:bg-stone-900/40 transition-colors">
                     <td className="py-3 px-3 sm:px-4">
                       <div className="text-[11px] text-[#d4af37] font-medium">{plan.gameName}</div>
-                      <div className="font-semibold text-white">{plan.planName}</div>
+                      <div className="font-semibold text-white">{plan.verifiedForPublic ? plan.planName : '未確認プラン（非公開）'}</div>
                     </td>
                     <td className="py-3 px-3 sm:px-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-mono text-[#f7e7ce] font-bold">{plan.currencyAmount}</span>
-                        {plan.deviceRequirement && (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
-                            {plan.deviceRequirement}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-stone-400 line-clamp-1">{plan.conditions}</div>
-                      {plan.notes && (
-                        <div className="text-[10px] text-amber-400/90 italic">※ {plan.notes}</div>
+                      {plan.verifiedForPublic ? (
+                        <>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-[#f7e7ce] font-bold">{plan.currencyAmount}</span>
+                            {plan.deviceRequirement && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
+                                {plan.deviceRequirement}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-stone-400 line-clamp-1">{plan.conditions}</div>
+                          {plan.notes && (
+                            <div className="text-[10px] text-amber-400/90 italic">※ {plan.notes}</div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-[11px] text-amber-400">数量・条件は未確認（編集画面で再入力）</div>
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 font-mono text-stone-400 whitespace-nowrap">
