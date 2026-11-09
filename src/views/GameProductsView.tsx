@@ -207,7 +207,7 @@ export const GameProductsView: React.FC = () => {
                 {/* Card Footer: Price & Inquiry Button */}
                 <div className="mt-5 pt-3.5 border-t border-stone-800">
                   <div className="flex items-baseline justify-between mb-3">
-                    <span className="text-xs text-stone-400">販売価格（税込）</span>
+                    <span className="text-xs text-stone-400">販売価格</span>
                     <div className="text-right">
                       <span className="font-mono text-lg font-bold text-[#f7e7ce] tabular-nums">¥{item.price?.toLocaleString() ?? '確認中'}</span>
                     </div>
