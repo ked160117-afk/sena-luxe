@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "Game": {
+      "title": "Game",
+      "description": "Handled game title in SENA LUXE",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "maxLength": 10 },
+        "name": { "type": "string", "maxLength": 100 },
+        "shortName": { "type": "string", "maxLength": 50 },
+        "category": { "type": "string", "maxLength": 50 },
+        "currencyName": { "type": "string", "maxLength": 50 },
+        "currencyUnit": { "type": "string", "maxLength": 20 },
+        "iconUrl": { "type": "string", "maxLength": 500 },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "isHandled": { "type": "boolean" },
+        "description": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "code", "name", "shortName", "currencyName", "isHandled"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Game accounts and digital products with SL-CODE-001 permanent numbering",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productNumber": { "type": "string", "pattern": "^SL-[A-Z0-9]+-[0-9]{3}$", "maxLength": 30 },
+        "gameId": { "type": "string" },
+        "gameCode": { "type": "string", "maxLength": 10 },
+        "gameName": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "enum": ["ゲームアカウント", "ゲーム内通貨・石垢", "育成済みデータ", "限定キャラクター・アイテム"] },
+        "title": { "type": "string", "maxLength": 150 },
+        "summary": { "type": "string", "maxLength": 500 },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["掲載中", "商談中", "売り切れ", "掲載停止"] },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "currencyIconUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "productNumber", "gameCode", "category", "title", "status"]
+    },
+    "StoneRatePlan": {
+      "title": "StoneRatePlan",
+      "description": "Dedicated stone account plan with benchmark and current pricing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gameId": { "type": "string" },
+        "gameCode": { "type": "string", "maxLength": 10 },
+        "gameName": { "type": "string", "maxLength": 100 },
+        "planName": { "type": "string", "maxLength": 100 },
+        "currencyName": { "type": "string", "maxLength": 50 },
+        "currencyAmount": { "type": "string", "maxLength": 50 },
+        "conditions": { "type": "string", "maxLength": 300 },
+        "referencePrice": { "type": "number" },
+        "currentPrice": { "type": "number" },
+        "confirmedDate": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["取扱中", "価格確認中", "在庫準備中"] }
+      },
+      "required": ["id", "gameCode", "planName", "currencyAmount", "referencePrice", "status"]
+    },
+    "GameRequest": {
+      "title": "GameRequest",
+      "description": "User custom game and account inquiry requests",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "gameTitle": { "type": "string", "maxLength": 100 },
+        "requestType": { "type": "string", "maxLength": 50 },
+        "desiredQuantity": { "type": "string", "maxLength": 150 },
+        "budget": { "type": "string", "maxLength": 100 },
+        "contactNotes": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["受付済", "確認中", "案内済", "対応不可"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "gameTitle", "requestType", "status", "createdAt"]
+    },
+    "SerialSequence": {
+      "title": "SerialSequence",
+      "description": "Registry tracking permanent serial numbers and retired identifiers per game",
+      "type": "object",
+      "properties": {
+        "gameCode": { "type": "string", "maxLength": 10 },
+        "lastSequence": { "type": "number" }
+      },
+      "required": ["gameCode", "lastSequence"]
+    }
+  },
+  "firestore": {
+    "/games/{gameId}": {
+      "schema": "Game",
+      "description": "Handled and candidate games catalog"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Active and archived game account products"
+    },
+    "/stoneRates/{rateId}": {
+      "schema": "StoneRatePlan",
+      "description": "Stone account rate plans and benchmark data"
+    },
+    "/requests/{requestId}": {
+      "schema": "GameRequest",
+      "description": "Customer game procurement requests"
+    },
+    "/sequences/{gameCode}": {
+      "schema": "SerialSequence",
+      "description": "Sequential product counter and retired numbers ledger"
+    }
+  }
+}

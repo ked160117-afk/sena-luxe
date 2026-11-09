@@ -1,0 +1,6 @@
+{
+  "name": "SENA LUXE - PREMIUM GAME COLLECTION",
+  "description": "高級ゲーム専門セレクトショップ SENA LUXE。厳選アカウント・石垢・育成済みデータの上質コレクション。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

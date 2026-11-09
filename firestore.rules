@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'ked160117@gmail.com' ||
+        request.auth.uid == 'cjUzsc6SK4ZBrsddvFQjuhPphBA2'
+      );
+    }
+
+    // Admins collection: Used for Role-Based Access Control (RBAC)
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Games Catalog: Publicly readable, admin writable
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Products: Publicly readable for active collection, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Stone Rate Plans: Publicly readable, admin write
+    match /stoneRates/{rateId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Serial Sequence & Permanent Retired Number Registry: Admin only
+    match /sequences/{gameCode} {
+      allow read, write: if isAdmin();
+    }
+
+    // Customer Procurement Requests: Anyone can submit (create), only admin can read & manage
+    match /requests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Admin Settings (LINE URL, announcement notice): Public read, admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Connection Health Check
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "projectId": "sena-luxe",
+  "appId": "1:855513691154:web:42f209a7453bd84cbed4cb",
+  "apiKey": "AIzaSyB4WIxMbLa6v_IiGQJBeg608_C8ifHEIwo",
+  "authDomain": "sena-luxe.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699",
+  "storageBucket": "sena-luxe.firebasestorage.app",
+  "messagingSenderId": "855513691154",
+  "measurementId": "",
+  "oAuthClientId": "855513691154-gs8kqfa0h5m8arak5an37rn7g5m2u4uf.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
+}
