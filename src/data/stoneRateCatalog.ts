@@ -421,7 +421,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     category: '3Dバトル×建国RPG',
     currencyName: '魔晶石',
     currencyUnit: '個',
-    iconUrl: '',
+    iconUrl: 'https://play-lh.googleusercontent.com/X4Qr1tVzWs0PzEFzagknYMliA_S83QXoIpEkcpz2Cf15jQpWeJ5IkrefUUx38YvpEYr_6ipHhapuo5CoHUF2pw=w240-h480',
     isHandled: true,
     description: '転スラの世界を3Dバトルとテンペスト建国で体験できるファンタジーRPG。',
     order: 30,
