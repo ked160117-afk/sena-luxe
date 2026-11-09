@@ -224,8 +224,8 @@ export const LawView: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">運営責任者・所在地</span>
           <span className="sm:w-2/3 text-stone-300">
-            SENA LUXE 運営事務局<br />
-            ※架空情報の記載防止およびセキュリティの観点から、個別取引時の契約書面またはLINEトーク内にて請求があった場合に遅滞なく開示いたします。
+            ※事業者の氏名（名称）・住所・電話番号は、消費者から請求があった場合、購入申込み前に遅滞なく書面または電磁的記録で提供します。<br />
+            ※請求を受けた際に、遅滞なく提供できる体制を整えておく必要があります。
           </span>
         </div>
 
@@ -240,7 +240,7 @@ export const LawView: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">販売価格</span>
           <span className="sm:w-2/3 text-stone-300">
-            商品ごとの販売価格は、購入前に公式LINEでご案内し、税込・必要な費用を含む支払総額を確認いただきます。
+            商品ごとの販売価格およびお客様にご負担いただく費用は、購入前に公式LINEで提示し、支払総額をご確認いただきます。
           </span>
         </div>
 
@@ -269,7 +269,7 @@ export const LawView: React.FC = () => {
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span className="font-semibold text-white sm:w-1/3">返品・交換・キャンセル条件</span>
           <span className="sm:w-2/3 text-stone-300 leading-relaxed">
-            キャンセル・返品・返金の可否は、商品の性質、取引条件および適用される法令に基づいて取り扱います。商品説明と実際の内容に相違がある場合は、確認のうえ個別にご案内します。
+            返品・キャンセルの可否、条件、返金の取扱いは、購入前に商品ごとの条件として明示します。商品説明と実際の内容に相違がある場合は、適用される法令および取引条件に基づいて対応します。
           </span>
         </div>
       </div>
