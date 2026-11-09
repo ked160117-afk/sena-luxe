@@ -106,7 +106,7 @@ export const TopView: React.FC = () => {
 
               {/* Card Footer Actions */}
               <div className="pt-3.5 mt-3 border-t border-stone-800/80 space-y-1.5">
-                {!products.some((p) => p.gameId === game.id && p.status === '掲載中') && (
+                {!products.some((p) => p.gameId === game.id && p.status === '掲載中' && p.category === 'ゲーム内通貨・石垢') && (
                   <div className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1">
                     <Clock className="w-3 h-3 text-amber-400" />
                     <span>現在商品を準備中です</span>
@@ -197,7 +197,7 @@ export const TopView: React.FC = () => {
           </button>
         </div>
 
-        {products.filter((p) => p.status === '掲載中').length === 0 ? (
+        {products.filter((p) => p.status === '掲載中' && p.category === 'ゲーム内通貨・石垢').length === 0 ? (
           <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-10 text-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
               <Clock className="w-6 h-6" />
@@ -230,7 +230,7 @@ export const TopView: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products
-              .filter((p) => p.status === '掲載中')
+              .filter((p) => p.status === '掲載中' && p.category === 'ゲーム内通貨・石垢')
               .slice(0, 3)
               .map((item) => {
                 const game = games.find((g) => g.id === item.gameId);
