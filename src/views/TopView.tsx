@@ -11,7 +11,7 @@ import { ProductCardImage } from '../components/ProductCardImage';
 import { GameCardIcon } from '../components/GameCardIcon';
 
 export const TopView: React.FC = () => {
-  const { games, navigateToGameProducts, navigateToStoneRates, setCurrentView, products } = useStore();
+  const { games, stoneRates, navigateToGameProducts, navigateToStoneRates, setCurrentView, products } = useStore();
 
   return (
     <div className="space-y-16 pb-12 animate-fade-in">
@@ -250,9 +250,9 @@ export const TopView: React.FC = () => {
                           category={item.category}
                           gameName={item.gameName}
                           gameCode={item.gameCode}
-                          currencyName={game?.currencyName}
+                          currencyName={stoneRates.find((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true)?.currencyName}
                           imageUrl={item.imageUrl}
-                          currencyIconUrl={item.currencyIconUrl}
+                          currencyIconUrl={stoneRates.some((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true) ? game?.currencyIconUrl : undefined}
                           title={item.title}
                         />
                       </div>
