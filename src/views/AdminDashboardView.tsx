@@ -389,9 +389,10 @@ export const AdminDashboardView: React.FC = () => {
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
-      referencePrice: Number(editRateRefPrice) || editingRatePlan.referencePrice,
+      referencePrice: Number(editRateRefPrice) || 0,
       currentPrice: currPriceVal,
-      status: currPriceVal === null ? '価格確認中' : '取扱中',
+      status: currPriceVal === null ? '価格確認中' : '現在準備中',
+      isPreparation: true,
       notes: editRateNotes.trim() || undefined,
       confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
     });
@@ -415,10 +416,11 @@ export const AdminDashboardView: React.FC = () => {
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim() || '初期状態・即納対応',
-      referencePrice: Number(newRateRefPrice) || 3000,
+      referencePrice: Number(newRateRefPrice) || 0,
       currentPrice: currPriceVal,
       confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
-      status: currPriceVal === null ? '価格確認中' : '取扱中',
+      status: currPriceVal === null ? '価格確認中' : '現在準備中',
+      isPreparation: true,
     });
 
     setIsAddRateModalOpen(false);
@@ -844,10 +846,17 @@ export const AdminDashboardView: React.FC = () => {
                           <button
                             onClick={async () => {
                               const nextStatus = plan.status === '現在準備中' ? '取扱中' : '現在準備中';
+                              const canActivate =
+                                plan.currentPrice !== null &&
+                                plan.currentPrice > 0 &&
+                                Boolean(plan.planName?.trim()) &&
+                                Boolean(plan.currencyAmount?.trim()) &&
+                                Boolean(plan.conditions?.trim());
+                              if (nextStatus === '取扱中' && !canActivate) return;
                               await updateStoneRatePlan(plan.id, {
                                 status: nextStatus,
                                 stockStatus: '在庫要確認',
-                                isPreparation: nextStatus === '現在準備中',
+                                isPreparation: nextStatus !== '取扱中',
                               });
                             }}
                             className={`px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
@@ -855,7 +864,8 @@ export const AdminDashboardView: React.FC = () => {
                                 ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-800/60'
                                 : 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border-amber-700/60'
                             }`}
-                            title="個別ステータス切り替え"
+                            disabled={plan.status === '現在準備中' && !(plan.currentPrice !== null && plan.currentPrice > 0 && Boolean(plan.planName?.trim()) && Boolean(plan.currencyAmount?.trim()) && Boolean(plan.conditions?.trim()))}
+                            title="価格・商品名・通貨数量・条件を入力してから取扱中に変更できます"
                           >
                             {plan.status === '現在準備中' ? '取扱中に変更' : '準備中に変更'}
                           </button>
