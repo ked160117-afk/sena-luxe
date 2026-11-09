@@ -82,6 +82,7 @@ export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSyn
           status: '現在準備中',
           stockStatus: '在庫要確認',
           isPreparation: true,
+          verifiedForPublic: false,
         },
         { merge: true }
       );
@@ -359,21 +360,8 @@ export async function promoteCandidateDoc(candidate: GameTitle): Promise<void> {
       isHandled: true,
     });
 
-    // Add initial stone plan
-    await addStoneRatePlanDoc({
-      gameId: candidate.id,
-      gameCode: candidate.code,
-      gameName: candidate.name,
-      planName: `${candidate.shortName} 取扱開始記念プラン`,
-      currencyName: candidate.currencyName,
-      currencyAmount: '初期ストック大量',
-      conditions: '新規取扱開始・即納対応',
-      referencePrice: 3500,
-      currentPrice: 3200,
-      confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
-      status: '取扱中',
-      notes: '取扱開始に伴う特別提供',
-    });
+    // Do not create a sample plan or estimated price when a title is promoted.
+    // A real plan must be entered and explicitly verified by an admin.
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${COLLECTIONS.GAMES}/${candidate.id}`);
   }
