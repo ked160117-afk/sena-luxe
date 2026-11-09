@@ -272,9 +272,9 @@ export async function updateStoneRatePriceDoc(
   const now = new Date();
   const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
 
-  const oldPrice = existingPlan.currentPrice ?? existingPlan.referencePrice;
+  const oldPrice = existingPlan.currentPrice;
   const history =
-    newPrice !== null && newPrice !== oldPrice
+    oldPrice !== null && newPrice !== null && newPrice !== oldPrice
       ? [
           {
             date: dateStr,
@@ -290,7 +290,8 @@ export async function updateStoneRatePriceDoc(
     await updateDoc(planRef, {
       currentPrice: newPrice,
       confirmedDate: dateStr,
-      status: newPrice === null ? '価格確認中' : '取扱中',
+      status: newPrice === null ? '価格確認中' : '現在準備中',
+      isPreparation: true,
       priceHistory: history,
     });
   } catch (error) {
