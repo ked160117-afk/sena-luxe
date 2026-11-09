@@ -41,6 +41,7 @@ export interface ProductItem {
   price: number | null; // null represents '価格確認中'
   priceDisplay?: string; // e.g. "¥49,800" or "価格確認中"
   status: ProductStatus;
+  verifiedForPublic?: boolean;
   imageUrl?: string;
   currencyIconUrl?: string; // for stone accounts
   keyHighlights: string[]; // High-level highlights without revealing confidential account credentials
