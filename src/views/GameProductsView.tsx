@@ -134,15 +134,9 @@ export const GameProductsView: React.FC = () => {
           </div>
 
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="https://lin.ee/6uy8hu9"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-              <span>掲載開始はこのページでご案内します</span>
-            </a>
+            <div className="px-5 py-2.5 rounded-lg text-xs font-medium text-stone-400 bg-stone-900 border border-stone-800">
+              掲載開始はこのページでご案内します
+            </div>
             <button
               onClick={() => setCurrentView('faq')}
               className="px-5 py-2.5 rounded-lg text-xs font-medium text-stone-300 bg-stone-800 hover:bg-stone-700 transition-colors flex items-center gap-1.5"
