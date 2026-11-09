@@ -391,7 +391,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     name: 'ホロライブドリームス',
     shortName: 'ホロドリ',
     category: 'タレント育成RPG',
-    currencyName: '石',
+    currencyName: 'レッドダイヤ・ブルーダイヤ',
     currencyUnit: '個',
     iconUrl: 'https://play-lh.googleusercontent.com/j00IPpPSDv3cGqoKVIDf0qnCw6EbZQ4KpgMr10UWkf8Rm1qO9vCSoVhJwfCF1PbbKxV_Qt_eqZ_Sp4QMHuhwYBI=w240-h480',
     isHandled: true,
