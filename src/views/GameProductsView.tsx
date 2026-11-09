@@ -182,7 +182,7 @@ export const GameProductsView: React.FC = () => {
                       gameCode={item.gameCode}
                       currencyName={game?.currencyName}
                       imageUrl={item.imageUrl}
-                      currencyIconUrl={item.currencyIconUrl || game?.currencyIconUrl || game?.iconUrl}
+                      currencyIconUrl={item.currencyIconUrl || game?.currencyIconUrl}
                       title={item.title}
                     />
                   </div>
