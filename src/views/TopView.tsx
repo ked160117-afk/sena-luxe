@@ -205,7 +205,7 @@ export const TopView: React.FC = () => {
             <div className="space-y-1">
               <h3 className="text-base sm:text-lg font-semibold text-white">現在商品を準備中です</h3>
               <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-                SENA LUXEでは、実際に販売可能性と安全性が確認できた正規商品のみを掲載しております。<br className="hidden sm:inline" />
+                掲載準備が完了した石垢アカウントを商品ページに掲載します。<br className="hidden sm:inline" />
                 掲載中の商品がない場合は、現在商品を準備中です。掲載外商品の個別手配・取り寄せ・予約は承っておりません。
               </p>
             </div>
