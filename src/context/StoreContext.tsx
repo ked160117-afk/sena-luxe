@@ -485,6 +485,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             status: '現在準備中',
             stockStatus: '在庫要確認',
             isPreparation: true,
+            verifiedForPublic: false,
           },
           { merge: true }
         );
@@ -499,6 +500,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         status: '現在準備中',
         stockStatus: '在庫要確認',
         isPreparation: true,
+        verifiedForPublic: false,
       }))
     );
   };
