@@ -19,7 +19,7 @@ export const GamesView: React.FC = () => {
           <span className="text-[11px] font-cinzel tracking-widest text-[#d4af37] uppercase">HANDLED TITLES</span>
           <h1 className="text-2xl sm:text-4xl font-bold text-white mt-1">取扱ゲーム一覧</h1>
           <p className="text-xs sm:text-sm text-stone-400 mt-2 max-w-2xl">
-            SENA LUXEが品質・安全性を徹底検品した取扱タイトル一覧。ご希望のゲームタイトルより商品一覧または石垢専用料金表へお進みください。
+            石垢アカウントの掲載対象タイトル一覧です。各タイトルの掲載内容・在庫・価格は購入前にご確認ください。
           </p>
         </div>
 
