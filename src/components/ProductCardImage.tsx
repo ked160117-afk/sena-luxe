@@ -43,7 +43,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
           <img
             src={currencyIconUrl}
             alt={`${gameName} ${currencyName || '石垢'}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain p-3"
             loading="lazy"
             onError={() => setImgError(true)}
           />
