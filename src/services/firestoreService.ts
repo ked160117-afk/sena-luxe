@@ -55,42 +55,55 @@ const COLLECTIONS = {
  */
 export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSynced: number; ratesSynced: number }> {
   try {
-    console.log('Initiating bulk sync of games and stone rates to Firestore...');
-    const batch = writeBatch(db);
+    console.log('Initiating safe catalog sync to Firestore...');
+    const [gamesSnapshot, ratesSnapshot, sequencesSnapshot] = await Promise.all([
+      getDocs(collection(db, COLLECTIONS.GAMES)),
+      getDocs(collection(db, COLLECTIONS.STONE_RATES)),
+      getDocs(collection(db, COLLECTIONS.SEQUENCES)),
+    ]);
 
-    // 1. Sync Games
+    const existingGameIds = new Set(gamesSnapshot.docs.map((d) => d.id));
+    const existingRateIds = new Set(ratesSnapshot.docs.map((d) => d.id));
+    const existingSequenceIds = new Set(sequencesSnapshot.docs.map((d) => d.id));
+    const batch = writeBatch(db);
+    let gamesSynced = 0;
+    let ratesSynced = 0;
+
+    // Create only missing game records. Existing icons and admin edits are never overwritten.
     const allGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES];
     for (const game of allGames) {
-      const ref = doc(db, COLLECTIONS.GAMES, game.id);
-      batch.set(ref, game, { merge: true });
+      if (existingGameIds.has(game.id)) continue;
+      batch.set(doc(db, COLLECTIONS.GAMES, game.id), game);
+      gamesSynced += 1;
     }
 
-    // 2. Sync Sequences for all game codes
+    // Create only missing sequence ledgers. Existing numbering and retired numbers are preserved.
     for (const [code, seq] of Object.entries(INITIAL_SEQUENCES)) {
-      const ref = doc(db, COLLECTIONS.SEQUENCES, code);
-      // Use merge to prevent overwriting existing lastSequence or retired numbers
-      batch.set(ref, seq, { merge: true });
+      if (existingSequenceIds.has(code)) continue;
+      batch.set(doc(db, COLLECTIONS.SEQUENCES, code), seq);
     }
 
-    // 3. Sync Stone Rates (all 118 plans across 33 games + preserved plans)
+    // Create only missing stone plans in preparation state. Never overwrite prices or histories.
     for (const plan of INITIAL_STONE_RATES) {
-      const ref = doc(db, COLLECTIONS.STONE_RATES, plan.id);
-      batch.set(
-        ref,
-        {
-          ...plan,
-          status: '現在準備中',
-          stockStatus: '在庫要確認',
-          isPreparation: true,
-          verifiedForPublic: false,
-        },
-        { merge: true }
-      );
+      if (existingRateIds.has(plan.id)) continue;
+      batch.set(doc(db, COLLECTIONS.STONE_RATES, plan.id), {
+        ...plan,
+        referencePrice: 0,
+        currentPrice: null,
+        confirmedDate: '価格確認中',
+        status: '現在準備中',
+        stockStatus: '在庫要確認',
+        isPreparation: true,
+        verifiedForPublic: false,
+      });
+      ratesSynced += 1;
     }
 
-    await batch.commit();
-    console.log(`Firestore batch sync complete: ${allGames.length} games, ${INITIAL_STONE_RATES.length} rate plans.`);
-    return { gamesSynced: allGames.length, ratesSynced: INITIAL_STONE_RATES.length };
+    if (gamesSynced + ratesSynced > 0 || Object.keys(INITIAL_SEQUENCES).some((code) => !existingSequenceIds.has(code))) {
+      await batch.commit();
+    }
+    console.log(`Safe Firestore sync complete: ${gamesSynced} new games, ${ratesSynced} new rate plans. Existing records were preserved.`);
+    return { gamesSynced, ratesSynced };
   } catch (error) {
     console.warn('syncAllStoneRatesAndGamesToFirestore notice:', error);
     return { gamesSynced: 0, ratesSynced: 0 };
