@@ -11,19 +11,12 @@ import { Gem, History, ArrowUpRight, MessageCircle, ExternalLink, ShieldCheck, X
 import { ProductCardImage } from '../components/ProductCardImage';
 
 export const StoneRatesView: React.FC = () => {
-  const { stoneRates, games, selectedGameId, setSelectedGameId, setCurrentView } = useStore();
+  const { stoneRates, games, selectedGameId, setSelectedGameId, setCurrentView, copyToClipboardAndOpenModal } = useStore();
   const [activeHistoryPlan, setActiveHistoryPlan] = useState<StoneRatePlan | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Only explicitly verified and active plans are public.
-  const publishedPlans = stoneRates.filter(
-    (plan) =>
-      plan.verifiedForPublic === true &&
-      plan.status === '取扱中' &&
-      !plan.isPreparation &&
-      typeof plan.currentPrice === 'number' &&
-      plan.currentPrice > 0
-  );
+  // Show the complete stone-rate catalog. Unconfirmed prices remain clearly marked.
+  const publishedPlans = stoneRates;
   const plansForSelectedGame = publishedPlans.filter((plan) =>
     selectedGameId ? plan.gameId === selectedGameId : true
   );
@@ -56,7 +49,7 @@ export const StoneRatesView: React.FC = () => {
           <h1 className="text-2xl sm:text-4xl font-bold text-white">石垢専用料金表</h1>
           <p className="text-xs sm:text-sm text-stone-400 mt-2 max-w-3xl leading-relaxed">
             通常商品一覧とは分けて、石垢プランの内容を掲載しています。
-            価格・在庫・通貨数量は変動するため、購入前に公式LINEで最新の内容をご確認ください。
+            料金は確認済みの内容を掲載しています。在庫状況・商品内容の詳細・お支払いなど、不明点は公式LINEでお問い合わせください。
           </p>
         </div>
 
@@ -222,19 +215,17 @@ export const StoneRatesView: React.FC = () => {
                           {plan.accountType}
                         </span>
                       )}
-                      {/* Preparation state is shown until an admin verifies the plan */}
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded border bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40">
-                        {!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? '掲載準備中' : '要相談'}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60' : 'bg-[#d4af37]/10 text-[#d4af37] border-[#d4af37]/40'}`}>
+                        {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? '料金掲載中' : '価格確認中'}
                       </span>
-                      {/* Stock Status: 在庫要確認 */}
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-stone-900 text-stone-300 border border-stone-700">
-                        {plan.stockStatus || '在庫要確認'}
+                        在庫はLINEで確認
                       </span>
                     </div>
                   </div>
 
                   {/* Plan Title */}
-                  <h3 className="text-base font-semibold text-white">{!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? '石垢プラン（内容確認中）' : plan.planName}</h3>
+                  <h3 className="text-base font-semibold text-white">{plan.planName}</h3>
 
                   {/* Hide unverified quantities and conditions until the plan is confirmed */}
                   {!plan.verifiedForPublic || plan.isPreparation || plan.status !== '取扱中' ? (
@@ -280,15 +271,15 @@ export const StoneRatesView: React.FC = () => {
                       <span className="text-[10px] text-[#d4af37] block font-medium">販売価格</span>
                       <span className="text-lg font-bold font-mono text-[#f7e7ce]">¥{plan.currentPrice?.toLocaleString() ?? '確認中'}</span>
                       <p className="text-[11px] text-stone-400 leading-relaxed">
-                        在庫状況・引き継ぎ条件は購入前に公式LINEでご確認ください。
+                        在庫は公式LINEにてお問い合わせください。
                       </p>
                     </div>
                   ) : (
                     <div className="rounded-lg border border-stone-700 bg-stone-900/60 p-3 space-y-1">
                       <span className="text-[10px] text-amber-400 block font-medium">掲載状況</span>
-                      <span className="text-sm font-semibold text-stone-100">掲載準備中</span>
+                      <span className="text-sm font-semibold text-amber-300">価格確認中</span>
                       <p className="text-[11px] text-stone-400 leading-relaxed">
-                        内容確認が完了するまで、購入・個別問い合わせの受付は行っておりません。
+                        価格が確定していないプランです。公式LINEでお問い合わせください。
                       </p>
                     </div>
                   )}
@@ -305,22 +296,24 @@ export const StoneRatesView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Inquiry is available only for verified listed plans */}
-                  {plan.verifiedForPublic && !plan.isPreparation && plan.status === '取扱中' ? (
-                    <a
-                      href="https://lin.ee/6uy8hu9"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                      <span>掲載中の石垢についてLINEで問い合わせる</span>
-                    </a>
-                  ) : (
-                    <div className="w-full py-2.5 px-3 rounded-lg text-xs font-medium text-stone-400 bg-stone-900 border border-stone-800 text-center">
-                      掲載準備中
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const inquiryText = [
+                        '【SENA LUXE 石垢料金・在庫問い合わせ】',
+                        `ゲーム名：${plan.gameName}`,
+                        `プラン名：${plan.planName}`,
+                        `通貨・数量：${plan.currencyAmount || '確認中'}`,
+                        `掲載価格：${plan.verifiedForPublic && typeof plan.currentPrice === 'number' ? `¥${plan.currentPrice.toLocaleString()}` : '価格確認中'}`,
+                        '確認したい内容：在庫・商品内容・引き継ぎ方法など',
+                      ].join('\\n');
+                      copyToClipboardAndOpenModal(inquiryText, plan.gameName, '石垢料金表', plan.planName);
+                    }}
+                    className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
+                    <span>在庫は公式LINEにてお問い合わせください</span>
+                  </button>
                 </div>
               </div>
             );
@@ -338,7 +331,7 @@ export const StoneRatesView: React.FC = () => {
           このページは石垢アカウントの掲載情報を案内するものです。掲載情報だけで在庫や販売可能な状態を保証するものではありません。
         </p>
         <p className="leading-relaxed">
-          掲載中のプランについて、価格・在庫・通貨数量・アカウント内容を購入前に公式LINEでご確認ください。掲載準備中のプランは問い合わせ受付対象外です。確認できていない情報を確定情報としてご案内することはありません。
+          料金表には確認済みの価格を掲載し、未確認の価格は「価格確認中」と表示しています。在庫はすべて公式LINEでご確認ください。一覧にない商品や新しいゲームタイトルもご相談いただけます。
         </p>
       </div>
 
