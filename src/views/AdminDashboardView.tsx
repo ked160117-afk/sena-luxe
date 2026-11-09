@@ -128,7 +128,6 @@ export const AdminDashboardView: React.FC = () => {
   const [editRatePlanName, setEditRatePlanName] = useState('');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
-  const [editRateRefPrice, setEditRateRefPrice] = useState('');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
   const [editRateCurrPrice, setEditRateCurrPrice] = useState('');
   const [editRateNotes, setEditRateNotes] = useState('');
@@ -139,7 +138,6 @@ export const AdminDashboardView: React.FC = () => {
   const [newRatePlanName, setNewRatePlanName] = useState('');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
-  const [newRateRefPrice, setNewRateRefPrice] = useState('3500');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
   const [newRateCurrPrice, setNewRateCurrPrice] = useState('');
 
@@ -374,7 +372,6 @@ export const AdminDashboardView: React.FC = () => {
     setEditRatePlanName(isVerified ? plan.planName : '');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
-    setEditRateRefPrice(isVerified ? String(plan.referencePrice) : '0');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
     setEditRateCurrPrice(isVerified && plan.currentPrice !== null ? String(plan.currentPrice) : '');
     setEditRateNotes(isVerified ? plan.notes || '' : '');
@@ -390,7 +387,7 @@ export const AdminDashboardView: React.FC = () => {
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
-      referencePrice: Number(editRateRefPrice) || 0,
+      referencePrice: 0,
       currentPrice: currPriceVal,
       status: currPriceVal === null ? '価格確認中' : '取扱中',
       isPreparation: currPriceVal === null,
@@ -418,7 +415,7 @@ export const AdminDashboardView: React.FC = () => {
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim() || '初期状態・即納対応',
-      referencePrice: Number(newRateRefPrice) || 0,
+      referencePrice: 0,
       currentPrice: currPriceVal,
       confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
       status: currPriceVal === null ? '価格確認中' : '取扱中',
@@ -679,7 +676,7 @@ export const AdminDashboardView: React.FC = () => {
             <div>
               <h2 className="text-base sm:text-lg font-semibold text-white">石垢専用料金表管理</h2>
               <p className="text-xs text-stone-400">
-                全33タイトル・118プランの参考市場価格と現在価格の分離管理・未確認商品の「価格確認中」「要相談」「要確認」設定
+                登録済み石垢プランの商品内容・価格・在庫の確認と公開管理
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -687,7 +684,7 @@ export const AdminDashboardView: React.FC = () => {
                 onClick={handleBulkSetPreparation}
                 disabled={isBulkSettingPrep}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-600/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                title="全33タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更"
+                title="登録済みの石垢プランを一括で準備中に変更"
               >
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
                 <span>{isBulkSettingPrep ? '一括変更中...' : '全石垢プランを準備中に一括変更'}</span>
@@ -696,10 +693,10 @@ export const AdminDashboardView: React.FC = () => {
                 onClick={handleBulkSyncRates}
                 disabled={isSyncingRates}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 border border-[#d4af37]/40 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                title="初期マスタの全33タイトル・118プランをFirestoreへ一括反映"
+                title="登録済みの石垢プランをFirestoreへ同期"
               >
                 <Database className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>{isSyncingRates ? 'Firestore同期中...' : '料金表一括同期 (Firestoreへ反映)'}</span>
+                <span>{isSyncingRates ? 'Firestore同期中...' : '石垢プランをFirestoreへ同期'}</span>
               </button>
               <button
                 onClick={() => setIsAddRateModalOpen(true)}
@@ -731,7 +728,6 @@ export const AdminDashboardView: React.FC = () => {
                 <tr>
                   <th className="py-3 px-3 sm:px-4">ゲーム / プラン名</th>
                   <th className="py-3 px-3 sm:px-4">通貨数量・条件・端末</th>
-                  <th className="py-3 px-3 sm:px-4">参考市場価格</th>
                   <th className="py-3 px-3 sm:px-4">現在提供価格</th>
                   <th className="py-3 px-3 sm:px-4">ステータス</th>
                   <th className="py-3 px-3 sm:px-4">最終確認日</th>
@@ -765,9 +761,6 @@ export const AdminDashboardView: React.FC = () => {
                       ) : (
                         <div className="text-[11px] text-amber-400">数量・条件は未確認（編集画面で再入力）</div>
                       )}
-                    </td>
-                    <td className="py-3 px-3 sm:px-4 font-mono text-stone-400 whitespace-nowrap">
-                      {plan.verifiedForPublic && plan.referencePrice > 0 ? `¥${plan.referencePrice.toLocaleString()}` : '未確認・非公開'}
                     </td>
                     <td className="py-3 px-3 sm:px-4 font-mono whitespace-nowrap">
                       {plan.verifiedForPublic && plan.priceDisplay ? (
@@ -1788,17 +1781,7 @@ export const AdminDashboardView: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-stone-300 block mb-1 font-semibold">参考市場価格 (円)</label>
-                  <input
-                    type="number"
-                    required
-                    value={newRateRefPrice}
-                    onChange={(e) => setNewRateRefPrice(e.target.value)}
-                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-stone-300 font-semibold">現在価格 (円)</label>
@@ -1906,17 +1889,7 @@ export const AdminDashboardView: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-stone-300 block mb-1 font-semibold">参考市場価格 (円)</label>
-                  <input
-                    type="number"
-                    required
-                    value={editRateRefPrice}
-                    onChange={(e) => setEditRateRefPrice(e.target.value)}
-                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-stone-300 font-semibold">現在価格 (円)</label>
