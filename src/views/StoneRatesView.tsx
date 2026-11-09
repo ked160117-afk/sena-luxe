@@ -47,16 +47,16 @@ export const StoneRatesView: React.FC = () => {
           </div>
           <h1 className="text-2xl sm:text-4xl font-bold text-white">石垢専用料金表</h1>
           <p className="text-xs sm:text-sm text-stone-400 mt-2 max-w-3xl leading-relaxed">
-            通常商品一覧とは完全に分離された、全33タイトルのゲーム内通貨・石垢専用ベンチマークレート一覧です。
-            参考水準を基準に、実際に確認できた適正価格のみを掲載し、端末別条件や必要補足事項を正確に保持して公開しています。
+            通常商品一覧とは分けて、石垢プランの内容を掲載しています。
+            価格・在庫・通貨数量は変動するため、購入前に公式LINEで最新の内容をご確認ください。
           </p>
         </div>
 
-        {/* Benchmark Reference Source Badge */}
+        {/* Listing count only; no unverified benchmark claim */}
         <div className="rounded-lg bg-[#121316] border border-stone-800 p-3 text-xs text-stone-400 self-start md:self-end">
-          <div className="text-[10px] text-stone-500 uppercase font-cinzel">BENCHMARK SOURCE</div>
-          <div className="text-stone-300 font-medium">公式ベンチマーク料金連動</div>
-          <div className="text-[11px] text-stone-500 mt-0.5">登録プラン総数: {stoneRates.length}件</div>
+          <div className="text-[10px] text-stone-500 uppercase font-cinzel">LISTED PLANS</div>
+          <div className="text-stone-300 font-medium">掲載プラン</div>
+          <div className="text-[11px] text-stone-500 mt-0.5">{stoneRates.length}件</div>
         </div>
       </div>
 
@@ -254,61 +254,26 @@ export const StoneRatesView: React.FC = () => {
 
                 {/* Price Block & Action */}
                 <div className="pt-4 border-t border-stone-800/80 space-y-3">
-                  {/* Reference Price vs Current Price */}
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <span className="text-[10px] text-stone-500 block">参考市場価格</span>
-                      {plan.referencePrice > 0 ? (
-                        <span className="text-xs text-stone-400 font-mono">
-                          ¥{plan.referencePrice.toLocaleString()}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-stone-500">基準価格設定中</span>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-[10px] text-[#d4af37] block font-medium">現在提供価格</span>
-                      {plan.priceDisplay ? (
-                        <div className="flex items-baseline gap-1 justify-end">
-                          <span className="text-lg sm:text-xl font-bold font-mono text-[#f7e7ce]">
-                            {plan.priceDisplay}
-                          </span>
-                        </div>
-                      ) : plan.currentPrice !== null ? (
-                        <div className="flex items-baseline gap-1 justify-end">
-                          <span className="text-xl sm:text-2xl font-bold font-mono text-[#f7e7ce] tabular-nums">
-                            ¥{plan.currentPrice.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] text-stone-400 font-normal">(税込)</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm font-semibold text-amber-400">
-                          {plan.status === '要相談' ? '要相談' : '価格確認中'}
-                        </span>
-                      )}
-                    </div>
+                  {/* Price / stock are confirmed individually through LINE */}
+                  <div className="rounded-lg border border-[#d4af37]/30 bg-[#d4af37]/5 p-3 space-y-1">
+                    <span className="text-[10px] text-[#d4af37] block font-medium">価格・在庫</span>
+                    <span className="text-sm font-semibold text-stone-100">購入前に公式LINEで要確認</span>
+                    <p className="text-[11px] text-stone-400 leading-relaxed">
+                      未確認の価格や参考相場は掲載していません。商品内容・通貨数量・在庫とあわせてご確認ください。
+                    </p>
                   </div>
 
-                  {/* Price Confirmed Date & History Trigger */}
-                  <div className="flex items-center justify-between text-[11px] text-stone-400 pt-1">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-stone-500" />
-                      確認日: {plan.confirmedDate}
-                    </span>
-
-                    {plan.priceHistory && plan.priceHistory.length > 0 ? (
+                  {plan.priceHistory && plan.priceHistory.length > 0 && (
+                    <div className="flex justify-end text-[11px] pt-1">
                       <button
                         onClick={() => setActiveHistoryPlan(plan)}
                         className="text-[#d4af37] hover:underline flex items-center gap-1"
                       >
                         <History className="w-3 h-3" />
-                        <span>改定履歴 ({plan.priceHistory.length})</span>
+                        <span>価格改定履歴 ({plan.priceHistory.length})</span>
                       </button>
-                    ) : (
-                      <span className="text-stone-600 text-[10px]">改定履歴なし</span>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Order / Inquiry Button */}
                   <a
@@ -327,17 +292,17 @@ export const StoneRatesView: React.FC = () => {
         </div>
       )}
 
-      {/* Compliance / Benchmark Clarification */}
+      {/* Listing and confirmation policy */}
       <div className="rounded-xl bg-[#0e0f12] border border-stone-800 p-5 sm:p-6 text-xs text-stone-400 space-y-2">
         <div className="flex items-center gap-2 text-stone-200 font-semibold text-sm">
           <ShieldCheck className="w-4 h-4 text-[#d4af37]" />
-          <span>石垢専用料金表の運用方針と安全性</span>
+          <span>石垢プランの確認について</span>
         </div>
         <p className="leading-relaxed">
-          当店の石垢料金表は、提携する優良サプライヤー及び参考ベンチマーク（tools-a等）の相場価格を常時追従し、不当な高額販売や不正生成データを排除した安心価格でご案内しております。
+          このページは石垢アカウントの掲載情報を案内するものです。掲載情報だけで在庫や販売可能な状態を保証するものではありません。
         </p>
         <p className="leading-relaxed">
-          確認が取れていない価格につきましては「価格確認中」と明記し、適正な仕入れ確認後にのみ現在価格を更新いたします。また、すべての価格変更ログは改定履歴として保存・公開しております。
+          価格・在庫・通貨数量・アカウント内容は、購入前に公式LINEで個別に確認してください。確認できていない情報を確定情報としてご案内することはありません。
         </p>
       </div>
 
