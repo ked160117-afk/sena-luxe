@@ -367,9 +367,13 @@ const RAW_STONE_RATES: StoneRatePlan[] = [
 
 export const INITIAL_STONE_RATES: StoneRatePlan[] = RAW_STONE_RATES.map((plan) => ({
   ...plan,
+  referencePrice: 0,
+  currentPrice: null,
+  confirmedDate: '価格確認中',
   status: '現在準備中',
   stockStatus: '在庫要確認',
   isPreparation: true,
+  verifiedForPublic: false,
 }));
 
 export const INITIAL_SEQUENCES: Record<string, SerialSequence> = {
