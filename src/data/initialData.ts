@@ -464,7 +464,7 @@ export const INITIAL_SEQUENCES: Record<string, SerialSequence> = {
 
 export const INITIAL_SETTINGS: AdminSettings = {
   lineUrl: 'https://lin.ee/6uy8hu9',
-  shopNotice: '平素よりSENA LUXEをご愛顧いただき誠にありがとうございます。厳選プレミアムコレクションを順次ご案内しております。商品・在庫確認や個別のご相談は公式LINEより承っております。',
+  shopNotice: '石垢アカウントの掲載内容・価格・在庫は、購入前に公式LINEでご確認ください。掲載外商品の個別手配・取り寄せ・予約は承っておりません。',
   enableDirectLineCopy: false,
   contactDeskHours: '公式LINEにてご案内',
 };
