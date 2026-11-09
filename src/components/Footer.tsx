@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
           <div className="flex items-center gap-2.5 text-stone-300 text-xs">
             <ShieldCheck className="w-4 h-4 text-[#d4af37] shrink-0" />
-            <span>{settings.shopNotice}</span>
+            <span>石垢アカウントの掲載内容・価格・在庫は、購入前に公式LINEでご確認ください。掲載外商品の個別手配・取り寄せ・予約は承っておりません。</span>
           </div>
           <a
             href="https://lin.ee/6uy8hu9"
