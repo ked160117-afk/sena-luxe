@@ -261,8 +261,8 @@ export const TopView: React.FC = () => {
                       <p className="text-xs text-stone-400 mt-1 line-clamp-2 leading-relaxed">{item.summary}</p>
                       <div className="mt-4 pt-3 border-t border-stone-800/80 flex items-center justify-between">
                         <div className="text-xs text-stone-400">
-                          価格・在庫:{' '}
-                          <span className="font-medium text-amber-400">LINEで要確認</span>
+                          <span className="text-stone-400">販売価格（税込）</span>
+                          <span className="font-mono font-semibold text-[#f7e7ce]">¥{item.price?.toLocaleString() ?? '確認中'}</span>
                         </div>
                         <span className="text-[11px] text-emerald-400 px-2 py-0.5 bg-emerald-950/60 rounded border border-emerald-800/60">
                           {item.status}
