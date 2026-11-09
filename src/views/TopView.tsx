@@ -294,7 +294,7 @@ export const TopView: React.FC = () => {
           <div className="space-y-2 text-center md:text-left">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] text-xs font-medium">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>ご購入前のご確認・透明な安全管理</span>
+              <span>ご購入前の商品内容・取引条件の確認</span>
             </div>
             <h3 className="text-lg sm:text-xl font-bold text-white">
               お取引に関する注意事項 & よくあるご質問（FAQ）
