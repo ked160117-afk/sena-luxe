@@ -184,8 +184,8 @@ export const StoneRatesView: React.FC = () => {
                       category="ゲーム内通貨・石垢"
                       gameName={plan.gameName}
                       gameCode={plan.gameCode}
-                      currencyName={plan.currencyName}
-                      currencyIconUrl={game?.currencyIconUrl || undefined}
+                      currencyName={plan.verifiedForPublic ? plan.currencyName : undefined}
+                      currencyIconUrl={plan.verifiedForPublic ? game?.currencyIconUrl || undefined : undefined}
                       title={plan.planName}
                       className="w-full h-32 rounded-lg"
                     />
