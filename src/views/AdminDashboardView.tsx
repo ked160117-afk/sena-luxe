@@ -322,7 +322,7 @@ export const AdminDashboardView: React.FC = () => {
   const openEditProductModal = (product: ProductItem) => {
     setEditingProduct(product);
     setEditProdTitle(product.title);
-    setEditProdCategory(product.category);
+    setEditProdCategory('ゲーム内通貨・石垢');
     setEditProdIsPriceConfirmed(product.price !== null);
     setEditProdPrice(product.price !== null ? String(product.price) : '');
     setEditProdSummary(product.summary || '');
@@ -1564,10 +1564,7 @@ export const AdminDashboardView: React.FC = () => {
                   onChange={(e) => setEditProdCategory(e.target.value as ProductCategory)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                 >
-                  <option value="ゲームアカウント">ゲームアカウント</option>
                   <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
-                  <option value="育成済みデータ">育成済みデータ</option>
-                  <option value="限定キャラクター・アイテム">限定キャラクター・アイテム</option>
                 </select>
               </div>
 
