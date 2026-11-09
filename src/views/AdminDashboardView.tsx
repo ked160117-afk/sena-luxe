@@ -93,7 +93,7 @@ export const AdminDashboardView: React.FC = () => {
   // ==========================================
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
-  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲームアカウント');
+  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲーム内通貨・石垢');
   const [newProdTitle, setNewProdTitle] = useState('');
   const [newProdSummary, setNewProdSummary] = useState('');
   const [newProdIsPriceConfirmed, setNewProdIsPriceConfirmed] = useState(false); // default to 価格確認中
@@ -301,7 +301,7 @@ export const AdminDashboardView: React.FC = () => {
       gameId: newProdGameId,
       category: newProdCategory,
       title: newProdTitle.trim(),
-      summary: newProdSummary.trim() || '専任スタッフによる動作・安全性検証済みアカウント。',
+      summary: newProdSummary.trim(),
       price: newProdIsPriceConfirmed && newProdPrice ? Number(newProdPrice) : null,
       imageUrl: newProdImageUrl.trim() || undefined,
       keyHighlights: highlightsArr,
@@ -1381,10 +1381,7 @@ export const AdminDashboardView: React.FC = () => {
                     onChange={(e) => setNewProdCategory(e.target.value as ProductCategory)}
                     className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                   >
-                    <option value="ゲームアカウント">ゲームアカウント</option>
                     <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
-                    <option value="育成済みデータ">育成済みデータ</option>
-                    <option value="限定キャラクター・アイテム">限定キャラクター・アイテム</option>
                   </select>
                 </div>
               </div>
@@ -1394,7 +1391,7 @@ export const AdminDashboardView: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="例: 初期リセマラ・限定SSR共存アカウント"
+                  placeholder="例: 廻珠80,000個保有の石垢アカウント"
                   value={newProdTitle}
                   onChange={(e) => setNewProdTitle(e.target.value)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
