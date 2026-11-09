@@ -1,6 +1,6 @@
 /**
- * SENA LUXE - Listed Stone Account Inquiry
- * This page only directs users to ask about already-listed stone account products.
+ * SENA LUXE - Stone Account Inquiry and Consultation
+ * This page accepts inquiries about listed and unlisted stone account products.
  */
 import React from 'react';
 import { MessageCircle, Gem, ShieldCheck } from 'lucide-react';
