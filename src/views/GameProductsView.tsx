@@ -28,6 +28,7 @@ export const GameProductsView: React.FC = () => {
     selectedCategory,
     setSelectedCategory,
     setCurrentView,
+    copyToClipboardAndOpenModal,
   } = useStore();
 
   const selectedGame = games.find((g) => g.id === selectedGameId);
@@ -130,14 +131,23 @@ export const GameProductsView: React.FC = () => {
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
               {selectedGame ? `「${selectedGame.name}」の石垢アカウントは現在準備中です。` : '石垢アカウントは現在準備中です。'}
               <br className="hidden sm:inline" />
-              掲載準備が完了した石垢アカウントから掲載します。掲載外商品の個別手配・取り寄せ・予約は承っておりません。
+              掲載中の商品がない場合も、一覧にない商品や新しいゲームタイトルについて公式LINEからご相談いただけます。ご希望を伺い、取扱い・在庫を確認してご案内します。ゲームのプレイ代行・育成代行・通貨追加などの代行サービスは行っておりません。
             </p>
           </div>
 
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-            <div className="px-5 py-2.5 rounded-lg text-xs font-medium text-stone-400 bg-stone-900 border border-stone-800">
-              掲載開始はこのページでご案内します
-            </div>
+            <button
+              onClick={() => copyToClipboardAndOpenModal(
+                '【SENA LUXE 商品リクエスト】\\nゲームタイトル：\\n希望する石垢・商品内容：\\nご予算：\\nその他ご希望：',
+                selectedGame?.name || '未掲載タイトル',
+                '商品リクエスト',
+                '一覧外商品・新タイトルの相談'
+              )}
+              className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center gap-2"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>商品を探してもらう（LINE相談）</span>
+            </button>
             <button
               onClick={() => setCurrentView('faq')}
               className="px-5 py-2.5 rounded-lg text-xs font-medium text-stone-300 bg-stone-800 hover:bg-stone-700 transition-colors flex items-center gap-1.5"
@@ -214,15 +224,25 @@ export const GameProductsView: React.FC = () => {
                     </div>
                   </div>
 
-                  <a
-                    href="https://lin.ee/6uy8hu9"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const inquiryText = [
+                        '【SENA LUXE 商品問い合わせ】',
+                        `ゲーム名：${item.gameName}`,
+                        `商品番号：${item.productNumber}`,
+                        `商品名：${item.title}`,
+                        `商品内容：${item.summary}`,
+                        `掲載価格：${item.price != null ? `¥${item.price.toLocaleString()}` : '価格確認中'}`,
+                        '確認したい内容：在庫・商品内容・引き継ぎ方法など',
+                      ].join('\\n');
+                      copyToClipboardAndOpenModal(inquiryText, item.gameName, item.productNumber, item.title);
+                    }}
                     className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-2 shadow-sm"
                   >
                     <MessageCircle className="w-4 h-4 fill-black stroke-none" />
-                    <span>{item.category === 'ゲーム内通貨・石垢' ? 'LINEで在庫・購入について問い合わせる' : '商品詳細・お問い合わせ'}</span>
-                  </a>
+                    <span>在庫は公式LINEにてお問い合わせください</span>
+                  </button>
                 </div>
               </div>
             );
