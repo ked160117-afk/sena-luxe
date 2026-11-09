@@ -36,7 +36,7 @@ export const TopView: React.FC = () => {
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-stone-300 leading-relaxed font-sans mb-10">
             ゲーム内通貨を保有した石垢アカウントを掲載・販売する専門店です。<br className="hidden sm:inline" />
-            掲載商品の内容・在庫・価格は、ご購入前に公式LINEでご確認ください。
+            石垢の料金は専用料金表に掲載しています。在庫・商品内容・お支払いなど、不明点は公式LINEでご確認ください。
           </p>
 
           {/* Quick Action Buttons */}
@@ -149,7 +149,7 @@ export const TopView: React.FC = () => {
               <span className="text-[10px] tracking-widest text-[#d4af37] font-cinzel uppercase">EXCLUSIVE RATE TABLE</span>
               <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">石垢専用料金表</h3>
               <p className="text-xs sm:text-sm text-stone-300 mt-2 leading-relaxed">
-                掲載中の石垢アカウント情報をご案内します。価格・在庫・通貨数量は購入前に公式LINEでご確認ください。
+                ゲームタイトルごとに無償石の数量と料金を掲載しています。在庫は公式LINEにてお問い合わせください。
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-[#d4af37] group-hover:translate-x-1.5 transition-transform">
