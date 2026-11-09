@@ -307,6 +307,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const loadedRates: StoneRatePlan[] = snapshot.docs.map((d) => {
             const data = d.data() as StoneRatePlan;
             const confirmedForDisplay =
+              data.verifiedForPublic === true &&
               data.status === '取扱中' &&
               data.isPreparation === false &&
               typeof data.currentPrice === 'number' &&
@@ -319,6 +320,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               status: confirmedForDisplay ? '取扱中' : '現在準備中',
               stockStatus: data.stockStatus || '在庫要確認',
               isPreparation: !confirmedForDisplay,
+              verifiedForPublic: confirmedForDisplay,
             };
           });
           setStoneRates(loadedRates);
