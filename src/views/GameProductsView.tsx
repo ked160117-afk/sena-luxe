@@ -10,7 +10,7 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCategory, ProductStatus } from '../types';
-import { MessageCircle, ShieldAlert, Clock, ArrowRight, HelpCircle } from 'lucide-react';
+import { MessageCircle, ShieldAlert, Clock, ArrowRight } from 'lucide-react';
 import { ProductCardImage } from '../components/ProductCardImage';
 
 const CATEGORIES: (ProductCategory | 'ALL')[] = [
