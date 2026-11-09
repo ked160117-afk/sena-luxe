@@ -424,7 +424,7 @@ export const AdminDashboardView: React.FC = () => {
       isPreparation: !isVerifiedForPublic,
       verifiedForPublic: isVerifiedForPublic,
       notes: editRateNotes.trim() || undefined,
-      confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
+      confirmedDate: isVerifiedForPublic ? new Date().toISOString().split('T')[0].replace(/-/g, '/') : '価格確認中',
     });
 
     setEditingRatePlan(null);
