@@ -84,8 +84,8 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
             </span>
           </div>
 
-          <div className="text-[9px] font-mono tracking-widest text-[#d4af37]/70 uppercase">
-            AUTHENTIC CURRENCY
+          <div className="text-[9px] font-mono tracking-widest text-[#d4af37]/70">
+            通貨画像準備中
           </div>
         </div>
       </div>
