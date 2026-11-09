@@ -9,7 +9,7 @@ import { ArrowRight, Gem, ShoppingBag, MessageCircle, Sparkles } from 'lucide-re
 import { GameCardIcon } from '../components/GameCardIcon';
 
 export const GamesView: React.FC = () => {
-  const { games, candidateGames, navigateToGameProducts, navigateToStoneRates, setCurrentView } = useStore();
+  const { games, candidateGames, stoneRates, navigateToGameProducts, navigateToStoneRates, setCurrentView } = useStore();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12 animate-fade-in">
@@ -35,7 +35,9 @@ export const GamesView: React.FC = () => {
 
       {/* Handled Games 8 Titles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {games.map((game) => (
+        {games.map((game) => {
+          const currencyVerified = stoneRates.some((plan) => plan.gameId === game.id && plan.verifiedForPublic === true);
+          return (
           <div
             key={game.id}
             className="group rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/60 p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_10px_35px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.12)]"
@@ -49,7 +51,7 @@ export const GamesView: React.FC = () => {
                 {game.name}
               </h3>
               <div className="text-[11px] text-[#d4af37]/90 font-medium mt-1">
-                取扱通貨: {game.currencyName} ({game.currencyUnit})
+                {currencyVerified ? `取扱通貨: ${game.currencyName} (${game.currencyUnit})` : 'ゲーム内通貨情報確認中'}
               </div>
               <p className="text-xs text-stone-400 mt-2 line-clamp-3 leading-relaxed">
                 {game.description}
@@ -63,7 +65,7 @@ export const GamesView: React.FC = () => {
                 className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <ShoppingBag className="w-3.5 h-3.5" />
-                <span>通常商品一覧を見る</span>
+                <span>石垢商品一覧を見る</span>
               </button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -81,12 +83,13 @@ export const GamesView: React.FC = () => {
                   className="py-2 px-2 rounded-lg text-[11px] font-medium text-white bg-[#06C755]/20 hover:bg-[#06C755]/30 border border-[#06C755]/40 transition-colors flex items-center justify-center gap-1"
                 >
                   <MessageCircle className="w-3 h-3 text-[#06C755]" />
-                  <span>LINE相談</span>
+                  <span>LINE問い合わせ</span>
                 </a>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Candidate Teaser Strip */}
