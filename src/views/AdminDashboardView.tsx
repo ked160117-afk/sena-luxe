@@ -115,6 +115,8 @@ export const AdminDashboardView: React.FC = () => {
   const [editProdSummary, setEditProdSummary] = useState('');
   const [editProdHighlights, setEditProdHighlights] = useState('');
   const [editProdImageUrl, setEditProdImageUrl] = useState('');
+  const [editProdDevice, setEditProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
+  const [editProdVideoUrl, setEditProdVideoUrl] = useState('');
   const [editProdStatus, setEditProdStatus] = useState<ProductStatus>('掲載中');
   const [editProdOrder, setEditProdOrder] = useState<string>('0');
 
@@ -347,6 +349,8 @@ export const AdminDashboardView: React.FC = () => {
     setEditProdSummary(isVerified ? product.summary || '' : '');
     setEditProdHighlights(isVerified ? product.keyHighlights?.join('\n') || '' : '');
     setEditProdImageUrl(isVerified ? product.imageUrl || '' : '');
+    setEditProdDevice(product.deviceCompatibility || 'iOS・Android両方可');
+    setEditProdVideoUrl(product.videoUrl || '');
     setEditProdStatus(isVerified ? product.status : '掲載停止');
     setEditProdOrder(product.order !== undefined ? String(product.order) : '0');
   };
@@ -375,6 +379,8 @@ export const AdminDashboardView: React.FC = () => {
     await updateProduct(editingProduct.id, {
       title: editProdTitle.trim(),
       category: editProdCategory,
+      deviceCompatibility: editProdDevice,
+      videoUrl: editProdVideoUrl.trim() || undefined,
       price: isVerifiedForPublic ? Number(editProdPrice) : null,
       verifiedForPublic: isVerifiedForPublic,
       summary: isVerifiedForPublic ? editProdSummary.trim() : editingProduct.summary,
@@ -1432,6 +1438,14 @@ export const AdminDashboardView: React.FC = () => {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">OS</label>
+                <select value={editProdDevice} onChange={(e) => setEditProdDevice(e.target.value as NonNullable<ProductItem['deviceCompatibility']>)} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="iOSのみ">iOSのみ</option>
+                  <option value="Androidのみ">Androidのみ</option>
+                  <option value="iOS・Android両方可">iOS・Android両方可</option>
+                </select>
+              </div>
 
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">商品タイトル *</label>
@@ -1521,6 +1535,12 @@ export const AdminDashboardView: React.FC = () => {
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
                 />
                 <p className="text-[10px] text-stone-500">動画ファイルはFirestoreに直接保存せず、外部の動画URLを登録します。YouTube等の視聴ページURLではなく、MP4/WebMの直接URLを使用してください。</p>
+              </div>
+
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">商品動画（MP4 / WebM URL）</label>
+                <input type="url" placeholder="動画の直接URL (https://...)" value={editProdVideoUrl} onChange={(e) => setEditProdVideoUrl(e.target.value)} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]" />
+                <p className="text-[10px] text-stone-500">MP4/WebMの直接URLを指定してください。</p>
               </div>
 
               {/* Summary Description */}
