@@ -22,6 +22,23 @@ interface ProductCardImageProps {
   className?: string;
 }
 
+const getYouTubeVideoId = (value?: string): string | null => {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\\./, '').toLowerCase();
+    if (host === 'youtu.be') return url.pathname.split('/').filter(Boolean)[0] || null;
+    if (host.endsWith('youtube.com') || host === 'youtube-nocookie.com') {
+      if (url.pathname === '/watch') return url.searchParams.get('v');
+      const parts = url.pathname.split('/').filter(Boolean);
+      if (['embed', 'shorts', 'live'].includes(parts[0] || '')) return parts[1] || null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   category,
   gameName,
@@ -36,19 +53,31 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const isStoneCategory = category === 'ゲーム内通貨・石垢';
 
-  // Videos are loaded only when the product card is rendered; do not autoplay or preload the full file.
+  // YouTube unlisted links are the no-billing video-hosting path. Direct MP4/WebM URLs remain supported.
   if (videoUrl) {
+    const youtubeId = getYouTubeVideoId(videoUrl);
     return (
       <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
-        <video
-          src={videoUrl}
-          poster={imageUrl || undefined}
-          controls
-          playsInline
-          preload="none"
-          className="w-full h-full object-contain"
-          aria-label={`${gameName} 商品紹介動画`}
-        />
+        {youtubeId ? (
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
+            title={`${gameName} 商品紹介動画`}
+            className="w-full h-full"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : (
+          <video
+            src={videoUrl}
+            poster={imageUrl || undefined}
+            controls
+            playsInline
+            preload="none"
+            className="w-full h-full object-contain"
+            aria-label={`${gameName} 商品紹介動画`}
+          />
+        )}
         <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">
           VIDEO
         </div>
