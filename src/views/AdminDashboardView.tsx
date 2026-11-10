@@ -324,7 +324,7 @@ export const AdminDashboardView: React.FC = () => {
       e.target.value = '';
       return;
     }
-    if (file.size > 200 * 1024 * 1024) {
+    if (file.size >= 200 * 1024 * 1024) {
       alert('動画は200MB以下にしてください。長い画面録画は短くするか圧縮してください。');
       e.target.value = '';
       return;
