@@ -108,6 +108,8 @@ interface StoreContextType {
     summary: string;
     price: number | null;
     imageUrl?: string;
+    videoUrl?: string;
+    deviceCompatibility?: ProductItem['deviceCompatibility'];
     keyHighlights: string[];
     status?: ProductStatus;
     verifiedForPublic?: boolean;
@@ -473,6 +475,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       summary: data.summary,
       price: data.price,
       imageUrl: data.imageUrl,
+      videoUrl: data.videoUrl,
+      deviceCompatibility: data.deviceCompatibility,
       keyHighlights: data.keyHighlights,
       status: data.status,
       verifiedForPublic: data.verifiedForPublic,
