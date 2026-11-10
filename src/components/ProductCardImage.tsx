@@ -45,7 +45,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
           poster={imageUrl || undefined}
           controls
           playsInline
-          preload="metadata"
+          preload="none"
           className="w-full h-full object-contain"
           aria-label={`${gameName} 商品紹介動画`}
         />
@@ -67,6 +67,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
             alt={`${gameName} 石垢アカウント画像`}
             className="w-full h-full object-contain"
             loading="lazy"
+            decoding="async"
             onError={() => setFailedImageUrl(imageUrl)}
           />
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
@@ -85,6 +86,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
             alt={`${gameName} ${currencyName || 'ゲーム内通貨'}`}
             className="w-full h-full object-contain p-3"
             loading="lazy"
+            decoding="async"
             onError={() => setFailedImageUrl(currencyIconUrl)}
           />
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
