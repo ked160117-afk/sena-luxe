@@ -41,6 +41,13 @@ export const GameProductsView: React.FC = () => {
     return (p.category === 'ゲーム内通貨・石垢' || p.category === '引退垢') && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
   };
 
+  // Stone-rate plans shown directly inside the game's 「ゲーム内通貨・石垢」 category.
+  const visibleStoneRates = stoneRates.filter((plan) => {
+    const publicText = [plan.id, plan.gameName, plan.planName, plan.currencyName, plan.currencyAmount, plan.conditions, plan.deviceRequirement, plan.accountType, plan.notes].filter(Boolean).join(' ');
+    const isStoneOnly = !/(代行|作業|追加オプション|追加料金|追加費用|プレイ代行|育成代行|ガチャ代行|通貨追加)/i.test(publicText);
+    return isStoneOnly && (selectedGameId ? plan.gameId === selectedGameId : true);
+  });
+
   // Filter only active, publicly published stone-account products (excluding legacy services and 掲載停止)
   const filteredProducts = useMemo(() => {
     return products
@@ -129,7 +136,7 @@ export const GameProductsView: React.FC = () => {
       </div>
 
       {/* Product Grid or Preparation State */}
-      {filteredProducts.length === 0 ? (
+      {filteredProducts.length === 0 && !(selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0) ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
             <Clock className="w-6 h-6" />
@@ -166,7 +173,28 @@ export const GameProductsView: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-8">
+          {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0 && (
+            <section className="rounded-xl bg-[#111216] border border-[#d4af37]/30 overflow-hidden">
+              <div className="px-4 sm:px-5 py-4 bg-gradient-to-r from-[#201a0d] to-[#111216] border-b border-[#d4af37]/25 flex items-center gap-3">
+                {selectedGame?.currencyIconUrl ? <img src={selectedGame.currencyIconUrl} alt={`${selectedGame.name} ガチャ石アイコン`} className="w-9 h-9 rounded-lg object-contain bg-black/40 border border-[#d4af37]/30 p-1" /> : <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><span className="text-[#d4af37]">◆</span></div>}
+                <div><h2 className="text-base font-bold text-[#f7e7ce]">ゲーム内通貨・石垢 料金表</h2><p className="text-[11px] text-stone-400">掲載プラン・価格・お問い合わせ</p></div>
+              </div>
+              <div className="divide-y divide-stone-800">
+                {visibleStoneRates.map((plan) => {
+                  const confirmed = plan.verifiedForPublic === true && !plan.isPreparation && plan.status === '取扱中' && typeof plan.currentPrice === 'number' && plan.currentPrice > 0;
+                  const priceText = confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : plan.priceDisplay?.trim() ? `参考価格：${plan.priceDisplay}（要LINE確認）` : '価格確認中';
+                  return <div key={plan.id} className="px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-3 sm:gap-5 sm:items-center">
+                    <div className="min-w-0"><div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '石の数を確認中'}</div><div className="text-xs text-stone-400 mt-1">{plan.planName}</div></div>
+                    <div className="sm:text-right"><div className="text-[10px] text-stone-500">販売価格</div><div className="text-lg font-bold font-mono text-[#f7e7ce]">{priceText}</div><div className="text-[10px] text-stone-500">在庫はLINEにてご確認ください</div></div>
+                    <button type="button" onClick={() => copyToClipboardAndOpenModal([`ゲーム名：${plan.gameName}`,`石の数：${plan.currencyAmount || '確認中'}`,`値段：${priceText}`].join('\\n'), plan.gameName, '石垢料金表', plan.planName)} className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"><MessageCircle className="w-3.5 h-3.5" />問い合わせる</button>
+                  </div>;
+                })}
+              </div>
+              <div className="px-4 sm:px-5 py-2.5 bg-black/20 text-[11px] text-stone-400">掲載価格・石の数量は参考情報を含みます。購入前に公式LINEで内容と在庫をご確認ください。取り扱う石は全て無償石です。</div>
+            </section>
+          )}
+          {filteredProducts.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((item) => {
             const game = games.find((g) => g.id === item.gameId);
 
@@ -252,6 +280,7 @@ export const GameProductsView: React.FC = () => {
               </div>
             );
           })}
+          </div>}
         </div>
       )}
     </div>
