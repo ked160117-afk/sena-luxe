@@ -191,7 +191,7 @@ export const StoneRatesView: React.FC = () => {
                     return (
                       <div key={plan.id} className="px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-3 sm:gap-5 sm:items-center">
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '無償石の数量確認中'}</div>
+                          <div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '石の数を確認中'}</div>
                           <div className="text-xs text-stone-400 mt-1">{plan.planName}</div>
                           {plan.conditions && confirmed && <div className="text-[11px] text-stone-500 mt-1">{plan.conditions}</div>}
                         </div>
