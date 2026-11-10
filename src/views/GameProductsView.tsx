@@ -235,14 +235,11 @@ export const GameProductsView: React.FC = () => {
                     type="button"
                     onClick={() => {
                       const inquiryText = [
-                        '【SENA LUXE 商品問い合わせ】',
                         `ゲーム名：${item.gameName}`,
-                        `商品番号：${item.productNumber}`,
-                        `商品名：${item.title}`,
-                        `商品内容：${item.summary}`,
-                        `掲載価格：${item.price != null ? `¥${item.price.toLocaleString()}` : '価格確認中'}`,
-                        '確認したい内容：在庫・商品内容・引き継ぎ方法など',
-                      ].join('\\n');
+                        `指定キャラ名：${item.title}`,
+                        `石の数：${item.summary}`,
+                        `値段：${item.price != null ? `¥${item.price.toLocaleString()}` : '価格確認中'}`,
+                      ].join('\n');
                       copyToClipboardAndOpenModal(inquiryText, item.gameName, item.productNumber, item.title);
                     }}
                     className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-2 shadow-sm"
