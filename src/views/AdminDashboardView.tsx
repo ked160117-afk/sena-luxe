@@ -269,26 +269,42 @@ export const AdminDashboardView: React.FC = () => {
   const [tempContactHours, setTempContactHours] = useState(settings.contactDeskHours || '公式LINEにてご案内');
   const [settingsSavedToast, setSettingsSavedToast] = useState(false);
 
-  // Helper: Read image file as Data URL (mobile camera / photo roll)
+  // Compress product photos before storing them to keep Firestore documents and pages lighter.
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     onComplete: (dataUrl: string) => void
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) {
       alert('画像サイズは5MB以下にしてください。');
+      e.target.value = '';
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (typeof event.target?.result === 'string') {
-        onComplete(event.target.result);
-      }
+      if (typeof event.target?.result !== 'string') return;
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1280;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          onComplete(event.target!.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        onComplete(canvas.toDataURL('image/webp', 0.76));
+      };
+      img.onerror = () => onComplete(event.target!.result as string);
+      img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Handle Product Add
