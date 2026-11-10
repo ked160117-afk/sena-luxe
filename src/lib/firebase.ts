@@ -6,7 +6,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -14,7 +13,6 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 /* CRITICAL: Passing firestoreDatabaseId is mandatory for Named Databases */
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
-export const storage = getStorage(app);
 
 // Connection verification health check
 export async function testFirestoreConnection(): Promise<boolean> {
@@ -80,46 +78,3 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 
-/**
- * Upload a product screen-recording video to Firebase Storage.
- * Only authenticated administrators can upload; Storage rules enforce authorization.
- */
-export async function uploadProductVideo(
-  file: File,
-  onProgress?: (percent: number) => void
-): Promise<string> {
-  if (!auth.currentUser) {
-    throw new Error('動画をアップロードするには管理者ログインが必要です。');
-  }
-  if (!file.type.startsWith('video/')) {
-    throw new Error('動画ファイルを選択してください。');
-  }
-  const maxBytes = 200 * 1024 * 1024;
-  if (file.size > maxBytes) {
-    throw new Error('動画は200MB以下にしてください。');
-  }
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90) || 'recording.mp4';
-  const objectRef = ref(storage, `product-videos/${auth.currentUser.uid}/${Date.now()}-${safeName}`);
-  const task = uploadBytesResumable(objectRef, file, {
-    contentType: file.type || 'video/mp4',
-    cacheControl: 'public,max-age=31536000,immutable',
-  });
-  return await new Promise((resolve, reject) => {
-    task.on(
-      'state_changed',
-      (snapshot) => {
-        if (snapshot.totalBytes > 0) {
-          onProgress?.(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
-        }
-      },
-      reject,
-      async () => {
-        try {
-          resolve(await getDownloadURL(task.snapshot.ref));
-        } catch (error) {
-          reject(error);
-        }
-      }
-    );
-  });
-}
