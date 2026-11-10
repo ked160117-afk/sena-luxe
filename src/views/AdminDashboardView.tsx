@@ -293,7 +293,7 @@ export const AdminDashboardView: React.FC = () => {
     if (!newProdTitle.trim() || !newProdGameId) return;
 
     const isVerifiedForPublic =
-      newProdCategory === 'ゲーム内通貨・石垢' &&
+      (newProdCategory === 'ゲーム内通貨・石垢' || newProdCategory === '引退垢') &&
       newProdIsPriceConfirmed &&
       Boolean(newProdPrice.trim()) &&
       Number(newProdPrice) > 0 &&
@@ -310,7 +310,7 @@ export const AdminDashboardView: React.FC = () => {
 
     await addNewProduct({
       gameId: newProdGameId,
-      category: 'ゲーム内通貨・石垢',
+      category: newProdCategory,
       title: newProdTitle.trim(),
       summary: newProdSummary.trim(),
       price: isVerifiedForPublic ? Number(newProdPrice) : null,
@@ -335,7 +335,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerified = product.verifiedForPublic === true;
     setEditingProduct(product);
     setEditProdTitle(product.title);
-    setEditProdCategory('ゲーム内通貨・石垢');
+    setEditProdCategory(product.category);
     setEditProdIsPriceConfirmed(isVerified && product.price !== null);
     setEditProdPrice(isVerified && product.price !== null ? String(product.price) : '');
     setEditProdSummary(isVerified ? product.summary || '' : '');
@@ -351,7 +351,7 @@ export const AdminDashboardView: React.FC = () => {
     if (!editingProduct) return;
 
     const isVerifiedForPublic =
-      editProdCategory === 'ゲーム内通貨・石垢' &&
+      (editProdCategory === 'ゲーム内通貨・石垢' || editProdCategory === '引退垢') &&
       editProdIsPriceConfirmed &&
       Boolean(editProdPrice.trim()) &&
       Number(editProdPrice) > 0 &&
@@ -368,7 +368,7 @@ export const AdminDashboardView: React.FC = () => {
 
     await updateProduct(editingProduct.id, {
       title: editProdTitle.trim(),
-      category: 'ゲーム内通貨・石垢',
+      category: editProdCategory,
       price: isVerifiedForPublic ? Number(editProdPrice) : null,
       verifiedForPublic: isVerifiedForPublic,
       summary: isVerifiedForPublic ? editProdSummary.trim() : editingProduct.summary,
@@ -1410,6 +1410,7 @@ export const AdminDashboardView: React.FC = () => {
                     className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                   >
                     <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
+                    <option value="引退垢">引退垢</option>
                   </select>
                 </div>
               </div>
