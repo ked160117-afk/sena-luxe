@@ -59,6 +59,7 @@ export type AppView =
   | 'top'
   | 'games'
   | 'game_products'
+  | 'retired_accounts'
   | 'stone_rates'
   | 'candidates'
   | 'request'
