@@ -94,6 +94,8 @@ export const AdminDashboardView: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲーム内通貨・石垢');
+  const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
+  const [newProdVideoUrl, setNewProdVideoUrl] = useState('');
   const [newProdTitle, setNewProdTitle] = useState('');
   const [newProdSummary, setNewProdSummary] = useState('');
   const [newProdIsPriceConfirmed, setNewProdIsPriceConfirmed] = useState(false); // default to 価格確認中
@@ -311,6 +313,8 @@ export const AdminDashboardView: React.FC = () => {
     await addNewProduct({
       gameId: newProdGameId,
       category: newProdCategory,
+      deviceCompatibility: newProdDevice,
+      videoUrl: newProdVideoUrl.trim() || undefined,
       title: newProdTitle.trim(),
       summary: newProdSummary.trim(),
       price: isVerifiedForPublic ? Number(newProdPrice) : null,
@@ -325,6 +329,8 @@ export const AdminDashboardView: React.FC = () => {
     setNewProdSummary('');
     setNewProdHighlights('');
     setNewProdImageUrl('');
+    setNewProdVideoUrl('');
+    setNewProdDevice('iOS・Android両方可');
     setNewProdPrice('');
     setNewProdIsPriceConfirmed(false);
     setNewProdStatus('掲載停止');
@@ -1413,6 +1419,18 @@ export const AdminDashboardView: React.FC = () => {
                     <option value="引退垢">引退垢</option>
                   </select>
                 </div>
+                <div>
+                  <label className="text-stone-300 block mb-1 font-semibold">OS</label>
+                  <select
+                    value={newProdDevice}
+                    onChange={(e) => setNewProdDevice(e.target.value as NonNullable<ProductItem['deviceCompatibility']>)}
+                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                  >
+                    <option value="iOSのみ">iOSのみ</option>
+                    <option value="Androidのみ">Androidのみ</option>
+                    <option value="iOS・Android両方可">iOS・Android両方可</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1491,6 +1509,18 @@ export const AdminDashboardView: React.FC = () => {
                     </button>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-stone-300 block font-semibold">商品動画（MP4 / WebM URL）</label>
+                <input
+                  type="url"
+                  placeholder="動画URL (https://...) ※直接再生できるMP4/WebM"
+                  value={newProdVideoUrl}
+                  onChange={(e) => setNewProdVideoUrl(e.target.value)}
+                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
+                />
+                <p className="text-[10px] text-stone-500">動画ファイルはFirestoreに直接保存せず、外部の動画URLを登録します。YouTube等の視聴ページURLではなく、MP4/WebMの直接URLを使用してください。</p>
               </div>
 
               {/* Summary Description */}
