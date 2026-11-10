@@ -155,7 +155,7 @@ export const FaqNoticeView: React.FC = () => {
         </p>
       </div>
 
-      {/* SECTION 1: 石垢についての重要説明 */}
+      {/* SECTION 1: 石垢の仕様・事前確認事項 */}
       <section className="rounded-xl bg-gradient-to-br from-[#16171d] via-[#111216] to-[#0c0d10] border border-[#d4af37]/40 p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_rgba(0,0,0,0.6)]">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] shrink-0 mt-0.5">
@@ -166,17 +166,18 @@ export const FaqNoticeView: React.FC = () => {
               PRODUCT DEFINITION
             </span>
             <h2 className="text-lg sm:text-xl font-bold text-white mt-0.5">
-              石垢（ゲーム内通貨アカウント）についての重要説明
+              【重要】石垢の仕様・事前確認事項
             </h2>
+            <p className="text-xs text-stone-400 mt-1">ご購入前に必ずご確認ください</p>
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-lg bg-[#0a0b0e] border border-stone-800 space-y-3 text-xs sm:text-sm leading-relaxed text-stone-300">
-          <p className="font-semibold text-white flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#d4af37] shrink-0" />
-            取り扱っている石垢は全て無償石です。
+          <p>
+            当店で取り扱う「石垢」は、ゲーム内で無料で入手できる無償石・無償通貨のみを所持した新規または進行済みアカウント本体をお渡しする商品です。有償石・課金石・有料通貨は一切取り扱いません。
           </p>
-          <p>取り扱っている石垢は全て無償石です。</p>
+          <p>※お客様が現在プレイされている既存アカウントへのゲーム内通貨の追加は承っておりません。</p>
+          <p>※ゲーム運営会社の利用規約によるアカウント制限リスク、引き継ぎ時の通信環境の留意点、受取後のパスワード変更義務等がございます。</p>
         </div>
       </section>
 
