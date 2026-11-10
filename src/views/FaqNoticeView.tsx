@@ -98,9 +98,9 @@ export const FaqNoticeView: React.FC = () => {
     {
       id: 'faq-8',
       category: '商品仕様・石垢',
-      question: '自分のアカウントに石を追加できますか？',
+      question: '取り扱っている石垢は無償石ですか？',
       answer:
-        '当店では、お客様が現在プレイされている既存アカウントへの通貨追加は承っておりません。石・オーブ等のゲーム内通貨をあらかじめ所持したゲームアカウント本体の販売のみを行っております。',
+        '取り扱っている石垢は全て無償石です。',
     },
     {
       id: 'faq-9',
@@ -174,18 +174,9 @@ export const FaqNoticeView: React.FC = () => {
         <div className="p-4 sm:p-5 rounded-lg bg-[#0a0b0e] border border-stone-800 space-y-3 text-xs sm:text-sm leading-relaxed text-stone-300">
           <p className="font-semibold text-white flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#d4af37] shrink-0" />
-            当店は「ゲームアカウントそのもの」を販売しております
+            取り扱っている石垢は全て無償石です。
           </p>
-          <p>
-            「石垢」とは、ゲーム内で無料で入手できる石・通貨（魔法石、聖晶石、オーブ、ダイヤ、ジュエル等）をあらかじめ所持している<strong className="text-[#f7e7ce]">ゲームアカウント本体をお渡しする商品</strong>です。当店で取り扱う石・通貨は無償入手分のみで、有償石・課金石・有料通貨は一切取り扱いません。
-          </p>
-          <div className="p-3.5 rounded bg-amber-950/25 border border-amber-800/40 text-amber-200/90 text-xs flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <span>
-              <strong>【ご注意ください】</strong><br />
-              お客様が現在使用されている既存のゲームアカウントへの通貨追加は承っておりません。あらかじめ通貨がストックされた新規または進行済みアカウント本体を販売しております。
-            </span>
-          </div>
+          <p>取り扱っている石垢は全て無償石です。</p>
         </div>
       </section>
 
