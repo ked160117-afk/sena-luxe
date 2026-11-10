@@ -16,6 +16,7 @@ interface ProductCardImageProps {
   gameCode?: string;
   currencyName?: string;
   imageUrl?: string;
+  videoUrl?: string;
   currencyIconUrl?: string;
   title?: string;
   className?: string;
@@ -27,12 +28,33 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   gameCode,
   currencyName,
   imageUrl,
+  videoUrl,
   currencyIconUrl,
   title,
   className = 'w-full h-44',
 }) => {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const isStoneCategory = category === 'ゲーム内通貨・石垢';
+
+  // Videos are loaded only when the product card is rendered; do not autoplay or preload the full file.
+  if (videoUrl) {
+    return (
+      <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
+        <video
+          src={videoUrl}
+          poster={imageUrl || undefined}
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-contain"
+          aria-label={`${gameName} 商品紹介動画`}
+        />
+        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">
+          VIDEO
+        </div>
+      </div>
+    );
+  }
 
   // 1. Stone Account Category
   if (isStoneCategory) {
