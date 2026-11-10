@@ -458,6 +458,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     summary: string;
     price: number | null;
     imageUrl?: string;
+    videoUrl?: string;
+    deviceCompatibility?: ProductItem['deviceCompatibility'];
     keyHighlights: string[];
     status?: ProductStatus;
     verifiedForPublic?: boolean;
