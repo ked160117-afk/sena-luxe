@@ -16,6 +16,7 @@ import { ProductCardImage } from '../components/ProductCardImage';
 const CATEGORIES: (ProductCategory | 'ALL')[] = [
   'ALL',
   'ゲーム内通貨・石垢',
+  '引退垢',
 ];
 
 export const GameProductsView: React.FC = () => {
@@ -37,7 +38,7 @@ export const GameProductsView: React.FC = () => {
   // including records that may still exist in Firestore for historical/admin purposes.
   const isStoneAccountSale = (p: (typeof products)[number]) => {
     const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
-    return p.category === 'ゲーム内通貨・石垢' && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+    return (p.category === 'ゲーム内通貨・石垢' || p.category === '引退垢') && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
   };
 
   // Filter only active, publicly published stone-account products (excluding legacy services and 掲載停止)
@@ -66,11 +67,11 @@ export const GameProductsView: React.FC = () => {
               />
             ) : null}
             <h1 className="text-2xl sm:text-4xl font-bold text-white">
-              {selectedGame ? `${selectedGame.name} 石垢一覧` : '石垢アカウント一覧'}
+              {selectedGame ? `${selectedGame.name} 商品一覧` : '商品一覧'}
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-400 mt-2">
-            掲載中の石垢アカウントを表示しています。商品内容・在庫・価格は購入前にご確認ください。
+            掲載中の商品をカテゴリー別に表示しています。商品内容・在庫・価格は購入前にご確認ください。
           </p>
         </div>
 
