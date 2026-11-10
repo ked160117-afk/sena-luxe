@@ -206,14 +206,11 @@ export const StoneRatesView: React.FC = () => {
                           type="button"
                           onClick={() => {
                             const inquiryText = [
-                              '【SENA LUXE 石垢料金・在庫問い合わせ】',
                               `ゲーム名：${plan.gameName}`,
-                              `無償石の数・通貨数量：${plan.currencyAmount || '確認中'}`,
-                              `プラン名：${plan.planName}`,
-                              `掲載価格：${confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : plan.priceDisplay?.trim() ? `参考価格：${plan.priceDisplay}（要LINE確認）` : '価格確認中'}`,
-                              '確認したい内容：在庫・商品内容・引き継ぎ方法など',
-                            ].join('\\n');
-                            copyToClipboardAndOpenModal(inquiryText, plan.gameName, '無償石（無料入手分）石垢料金表', plan.planName);
+                              `石の数：${plan.currencyAmount || '確認中'}`,
+                              `値段：${confirmed ? `¥${plan.currentPrice!.toLocaleString()}` : plan.priceDisplay?.trim() ? `参考価格：${plan.priceDisplay}（要LINE確認）` : '価格確認中'}`,
+                            ].join('\n');
+                            copyToClipboardAndOpenModal(inquiryText, plan.gameName, '石垢料金表', plan.planName);
                           }}
                           className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
                         >
