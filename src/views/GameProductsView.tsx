@@ -220,14 +220,16 @@ export const GameProductsView: React.FC = () => {
                       gameCode={item.gameCode}
                       currencyName={stoneRates.find((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true)?.currencyName}
                       imageUrl={item.imageUrl}
+                      videoUrl={item.videoUrl}
                       currencyIconUrl={stoneRates.some((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true) ? item.currencyIconUrl || game?.currencyIconUrl : undefined}
                       title={item.title}
                     />
                   </div>
 
-                  {/* Game Name */}
-                  <div className="text-[11px] text-[#d4af37] font-medium mb-1">
-                    {item.gameName}
+                  {/* Game Name and OS compatibility */}
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="text-[11px] text-[#d4af37] font-medium">{item.gameName}</div>
+                    {item.deviceCompatibility && <span className="text-[10px] text-stone-300 border border-stone-700 rounded px-2 py-0.5 whitespace-nowrap">{item.deviceCompatibility}</span>}
                   </div>
 
                   {/* Title & Summary */}
