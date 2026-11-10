@@ -13,6 +13,7 @@ import { FloatingLineButton } from './components/FloatingLineButton';
 import { TopView } from './views/TopView';
 import { GamesView } from './views/GamesView';
 import { GameProductsView } from './views/GameProductsView';
+import { RetiredAccountsView } from './views/RetiredAccountsView';
 import { StoneRatesView } from './views/StoneRatesView';
 import { CandidatesView } from './views/CandidatesView';
 import { RequestView } from './views/RequestView';
@@ -32,6 +33,8 @@ const MainContent: React.FC = () => {
         return <GamesView />;
       case 'game_products':
         return <GameProductsView />;
+      case 'retired_accounts':
+        return <RetiredAccountsView />;
       case 'stone_rates':
         return <StoneRatesView />;
       case 'candidates':
