@@ -15,8 +15,23 @@ export const StoneRatesView: React.FC = () => {
   const [activeHistoryPlan, setActiveHistoryPlan] = useState<StoneRatePlan | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Show the complete stone-rate catalog. Unconfirmed prices remain clearly marked.
-  const publishedPlans = stoneRates;
+  // Public pages are strictly for stone-account sales. Hide legacy delegation,
+  // work-service, and add-on records even if they remain in Firestore.
+  const isStoneAccountOnlyPlan = (plan: StoneRatePlan) => {
+    const publicText = [
+      plan.id,
+      plan.gameName,
+      plan.planName,
+      plan.currencyName,
+      plan.currencyAmount,
+      plan.conditions,
+      plan.deviceRequirement,
+      plan.accountType,
+      plan.notes,
+    ].filter(Boolean).join(' ');
+    return !/(代行|作業|追加オプション|追加料金|追加費用|プレイ代行|育成代行|ガチャ代行|通貨追加)/i.test(publicText);
+  };
+  const publishedPlans = stoneRates.filter(isStoneAccountOnlyPlan);
   const plansForSelectedGame = publishedPlans.filter((plan) =>
     selectedGameId ? plan.gameId === selectedGameId : true
   );
@@ -130,10 +145,10 @@ export const StoneRatesView: React.FC = () => {
                   : 'bg-[#121316] text-stone-300 hover:text-white border border-stone-800'
               }`}
             >
-              全タイトル ({stoneRates.length})
+              全タイトル ({publishedPlans.length})
             </button>
             {games.map((g) => {
-              const count = stoneRates.filter((r) => r.gameId === g.id).length;
+              const count = publishedPlans.filter((r) => r.gameId === g.id).length;
               if (count === 0) return null;
               const isSelected = selectedGameId === g.id;
               return (
