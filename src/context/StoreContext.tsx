@@ -293,7 +293,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const data = d.data() as ProductItem;
             const verified =
               data.verifiedForPublic === true &&
-              data.category === 'ゲーム内通貨・石垢' &&
+              (data.category === 'ゲーム内通貨・石垢' || data.category === '引退垢') &&
               typeof data.price === 'number' &&
               data.price > 0 &&
               Boolean(data.title?.trim()) &&
@@ -494,7 +494,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
     const target = products.find((p) => p.id === id);
     if (!target) return;
-    if (status === '掲載中' && (!target.verifiedForPublic || target.category !== 'ゲーム内通貨・石垢' || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
+    if (status === '掲載中' && (!target.verifiedForPublic || (target.category !== 'ゲーム内通貨・石垢' && target.category !== '引退垢') || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
     await updateProductDoc(id, { status });
   };
 
