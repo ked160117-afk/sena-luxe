@@ -24,6 +24,7 @@ export interface GameTitle {
 export type ProductCategory =
   | 'ゲームアカウント'
   | 'ゲーム内通貨・石垢'
+  | '引退垢'
   | '育成済みデータ'
   | '限定キャラクター・アイテム';
 
