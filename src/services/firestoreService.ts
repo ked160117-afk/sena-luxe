@@ -152,6 +152,8 @@ export async function createProductAtomic(data: {
   summary: string;
   price: number | null;
   imageUrl?: string;
+  videoUrl?: string;
+  deviceCompatibility?: ProductItem['deviceCompatibility'];
   currencyIconUrl?: string;
   keyHighlights: string[];
   status?: ProductStatus;
@@ -194,6 +196,8 @@ export async function createProductAtomic(data: {
         status: data.status || '掲載停止',
         verifiedForPublic: data.verifiedForPublic === true,
         imageUrl: data.imageUrl,
+        videoUrl: data.videoUrl,
+        deviceCompatibility: data.deviceCompatibility,
         currencyIconUrl: data.currencyIconUrl,
         keyHighlights: data.keyHighlights,
         createdAt: nowStr,
