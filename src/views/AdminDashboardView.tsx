@@ -14,6 +14,7 @@ import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore } from '../services/firestoreService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
+import { uploadProductVideo } from '../lib/firebase';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
   ShieldCheck,
@@ -75,6 +76,8 @@ export const AdminDashboardView: React.FC = () => {
   // File input refs for mobile photo upload
   const newProductFileInputRef = useRef<HTMLInputElement>(null);
   const editProductFileInputRef = useRef<HTMLInputElement>(null);
+  const newProductVideoInputRef = useRef<HTMLInputElement>(null);
+  const editProductVideoInputRef = useRef<HTMLInputElement>(null);
   const newGameFileInputRef = useRef<HTMLInputElement>(null);
   const gameIconFileInputRef = useRef<HTMLInputElement>(null);
   const currencyIconFileInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +99,8 @@ export const AdminDashboardView: React.FC = () => {
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲーム内通貨・石垢');
   const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
   const [newProdVideoUrl, setNewProdVideoUrl] = useState('');
+  const [newVideoUploadProgress, setNewVideoUploadProgress] = useState<number | null>(null);
+  const [editVideoUploadProgress, setEditVideoUploadProgress] = useState<number | null>(null);
   const [newProdTitle, setNewProdTitle] = useState('');
   const [newProdSummary, setNewProdSummary] = useState('');
   const [newProdIsPriceConfirmed, setNewProdIsPriceConfirmed] = useState(false); // default to 価格確認中
@@ -305,6 +310,37 @@ export const AdminDashboardView: React.FC = () => {
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  const handleProductVideoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onComplete: (url: string) => void,
+    setProgress: (value: number | null) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      alert('画面録画などの動画ファイルを選択してください。');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      alert('動画は200MB以下にしてください。長い画面録画は短くするか圧縮してください。');
+      e.target.value = '';
+      return;
+    }
+    setProgress(0);
+    try {
+      const url = await uploadProductVideo(file, setProgress);
+      onComplete(url);
+      alert('動画のアップロードが完了しました。');
+    } catch (error) {
+      console.error('Product video upload failed:', error);
+      alert(error instanceof Error ? error.message : '動画のアップロードに失敗しました。Firebase Storageの有効化と権限を確認してください。');
+    } finally {
+      setProgress(null);
+      e.target.value = '';
+    }
   };
 
   // Handle Product Add
@@ -1541,22 +1577,27 @@ export const AdminDashboardView: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-1">
-                <label className="text-stone-300 block font-semibold">商品動画（MP4 / WebM URL）</label>
-                <input
-                  type="url"
-                  placeholder="動画URL (https://...) ※直接再生できるMP4/WebM"
-                  value={newProdVideoUrl}
-                  onChange={(e) => setNewProdVideoUrl(e.target.value)}
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
-                />
-                <p className="text-[10px] text-stone-500">動画ファイルはFirestoreに直接保存せず、外部の動画URLを登録します。YouTube等の視聴ページURLではなく、MP4/WebMの直接URLを使用してください。</p>
+              <div className="space-y-2">
+                <label className="text-stone-300 block font-semibold">商品動画（画面録画・スマホ動画）</label>
+                <input ref={newProductVideoInputRef} type="file" accept="video/*" onChange={(e) => handleProductVideoUpload(e, setNewProdVideoUrl, setNewVideoUploadProgress)} className="hidden" />
+                <button type="button" onClick={() => newProductVideoInputRef.current?.click()} disabled={newVideoUploadProgress !== null} className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 disabled:opacity-50">
+                  <Upload className="w-3.5 h-3.5 text-[#d4af37]" /><span>画面録画・動画を選択してアップロード</span>
+                </button>
+                {newVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画アップロード中：{newVideoUploadProgress}%</p>}
+                {newProdVideoUrl && <div className="space-y-1"><video src={newProdVideoUrl} controls playsInline preload="none" className="w-full max-h-48 rounded-lg bg-black" /><button type="button" onClick={() => setNewProdVideoUrl('')} className="text-xs text-rose-400">動画を解除</button></div>}
+                <p className="text-[10px] text-stone-500">MP4などの動画・最大200MB。アップロードした動画は商品に保存されます。</p>
               </div>
 
-              <div>
-                <label className="text-stone-300 block mb-1 font-semibold">商品動画（MP4 / WebM URL）</label>
-                <input type="url" placeholder="動画の直接URL (https://...)" value={editProdVideoUrl} onChange={(e) => setEditProdVideoUrl(e.target.value)} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]" />
-                <p className="text-[10px] text-stone-500">MP4/WebMの直接URLを指定してください。</p>
+
+              <div className="space-y-2">
+                <label className="text-stone-300 block font-semibold">商品動画（画面録画・スマホ動画）</label>
+                <input ref={editProductVideoInputRef} type="file" accept="video/*" onChange={(e) => handleProductVideoUpload(e, setEditProdVideoUrl, setEditVideoUploadProgress)} className="hidden" />
+                <button type="button" onClick={() => editProductVideoInputRef.current?.click()} disabled={editVideoUploadProgress !== null} className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 disabled:opacity-50">
+                  <Upload className="w-3.5 h-3.5 text-[#d4af37]" /><span>画面録画・動画を選択してアップロード</span>
+                </button>
+                {editVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画アップロード中：{editVideoUploadProgress}%</p>}
+                {editProdVideoUrl && <div className="space-y-1"><video src={editProdVideoUrl} controls playsInline preload="none" className="w-full max-h-48 rounded-lg bg-black" /><button type="button" onClick={() => setEditProdVideoUrl('')} className="text-xs text-rose-400">動画を解除</button></div>}
+                <p className="text-[10px] text-stone-500">MP4などの動画・最大200MB。アップロードした動画は商品に保存されます。</p>
               </div>
 
               {/* Summary Description */}
