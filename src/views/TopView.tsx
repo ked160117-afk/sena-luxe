@@ -12,6 +12,11 @@ import { GameCardIcon } from '../components/GameCardIcon';
 
 export const TopView: React.FC = () => {
   const { games, stoneRates, navigateToGameProducts, navigateToStoneRates, setCurrentView, products } = useStore();
+  // Public-facing product surfaces must never show legacy delegation/work-service records.
+  const publicStoneAccountProducts = products.filter((p) => {
+    const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
+    return p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢' && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+  });
 
   return (
     <div className="space-y-16 pb-12 animate-fade-in">
@@ -106,7 +111,7 @@ export const TopView: React.FC = () => {
 
               {/* Card Footer Actions */}
               <div className="pt-3.5 mt-3 border-t border-stone-800/80 space-y-1.5">
-                {!products.some((p) => p.gameId === game.id && p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢') && (
+                {!publicStoneAccountProducts.some((p) => p.gameId === game.id) && (
                   <div className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1">
                     <Clock className="w-3 h-3 text-amber-400" />
                     <span>現在商品を準備中です</span>
@@ -197,7 +202,7 @@ export const TopView: React.FC = () => {
           </button>
         </div>
 
-        {products.filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢').length === 0 ? (
+        {publicStoneAccountProducts.length === 0 ? (
           <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-10 text-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
               <Clock className="w-6 h-6" />
