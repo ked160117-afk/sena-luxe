@@ -2431,4 +2431,48 @@ export const BULK_REGISTERED_STONE_RATES: StoneRatePlan[] = [
     status: '取扱中',
     priceHistory: [],
   },
+  // 34-40. 引退垢カテゴリー用の追加ゲーム（石垢料金プランは作成しない）
+  {
+    id: 'game-kitaou', code: 'KTO', name: 'キタキタ王様', shortName: 'キタキタ王様',
+    category: '合成RPG', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://www.4gamer.net/games/044/G104419/screenshot_3.jpg',
+    isHandled: true, description: '運と戦略を組み合わせて戦う合成RPG。', order: 34,
+  },
+  {
+    id: 'game-czn', code: 'CZN', name: 'カオスゼロナイトメア', shortName: 'カオゼロ',
+    category: 'カオスループRPG', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/5d/cc/c5/5dccc5bb-2156-690e-f31b-e15b6de1179f/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg',
+    isHandled: true, description: '選択が物語を導くカオスループRPG。', order: 35,
+  },
+  {
+    id: 'game-baki-tsp', code: 'BAKI', name: '刃牙 THE STRONGEST PROOF', shortName: '刃牙 TSP',
+    category: '格闘・育成シミュレーション', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/fb/07/35/fb0735cf-575c-0685-6551-bed226c97bb0/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
+    isHandled: true, description: '刃牙の世界を舞台に最強を目指す育成ゲーム。', order: 36,
+  },
+  {
+    id: 'game-crows-unlimited', code: 'CRWU', name: 'クローズ×WORST UNLIMITED', shortName: 'クローズアンリミ',
+    category: 'シネマティックバトル', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://unlimited.spgames.jp/common/images/appliicon.png',
+    isHandled: true, description: 'クローズ×WORSTのキャラクターが登場するシネマティックバトル。', order: 37,
+  },
+  {
+    id: 'game-racing-master', code: 'RACE', name: 'レーシングマスター', shortName: 'レーシングマスター',
+    category: 'リアルレーシング', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://dl.memuplay.com/new_market/img/com.netease.dfjsna.icon.2025-07-12-03-49-36.png',
+    isHandled: true, description: '実在車種を収録した本格リアルレーシングゲーム。', order: 38,
+  },
+  {
+    id: 'game-twinklestar', code: 'TSKN', name: 'ティンクルスターナイツ', shortName: 'クルスタ',
+    category: '変身ヒロイン×本格バトルRPG', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://play-lh.googleusercontent.com/thYXSAVvr5SYZ5Wsmh_607SuQb14muUa7XDquaIuoK9cFc7ju3qd-IbxdoLl0Ols-jxwfBC6ZmaX2tW-FIQtWOg=w240-h480',
+    isHandled: true, description: '星騎士たちを育成して戦う本格バトルRPG。', order: 39,
+  },
+  {
+    id: 'game-hxh-nen-survivor', code: 'HNXS', name: 'HUNTER×HUNTER NEN×SURVIVOR', shortName: 'ネンサバ',
+    category: 'サバイバーアクション', currencyName: '対象外', currencyUnit: '—',
+    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/4a/03/9e/4a039e4e-e289-926c-ceba-69e79521cb68/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png',
+    isHandled: true, description: '念能力を駆使して戦うサバイバーアクション。', order: 40,
+  },
+
 ];
