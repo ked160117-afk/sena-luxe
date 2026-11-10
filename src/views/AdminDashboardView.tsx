@@ -1589,17 +1589,6 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
 
-              <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品動画（画面録画・スマホ動画）</label>
-                <input ref={editProductVideoInputRef} type="file" accept="video/*" onChange={(e) => handleProductVideoUpload(e, setEditProdVideoUrl, setEditVideoUploadProgress)} className="hidden" />
-                <button type="button" onClick={() => editProductVideoInputRef.current?.click()} disabled={editVideoUploadProgress !== null} className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 disabled:opacity-50">
-                  <Upload className="w-3.5 h-3.5 text-[#d4af37]" /><span>画面録画・動画を選択してアップロード</span>
-                </button>
-                {editVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画アップロード中：{editVideoUploadProgress}%</p>}
-                {editProdVideoUrl && <div className="space-y-1"><video src={editProdVideoUrl} controls playsInline preload="none" className="w-full max-h-48 rounded-lg bg-black" /><button type="button" onClick={() => setEditProdVideoUrl('')} className="text-xs text-rose-400">動画を解除</button></div>}
-                <p className="text-[10px] text-stone-500">MP4などの動画・最大200MB。アップロードした動画は商品に保存されます。</p>
-              </div>
-
               {/* Summary Description */}
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">概要説明 (商品説明)</label>
@@ -1780,6 +1769,17 @@ export const AdminDashboardView: React.FC = () => {
                     </button>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-stone-300 block font-semibold">商品動画（画面録画・スマホ動画）</label>
+                <input ref={editProductVideoInputRef} type="file" accept="video/*" onChange={(e) => handleProductVideoUpload(e, setEditProdVideoUrl, setEditVideoUploadProgress)} className="hidden" />
+                <button type="button" onClick={() => editProductVideoInputRef.current?.click()} disabled={editVideoUploadProgress !== null} className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 disabled:opacity-50">
+                  <Upload className="w-3.5 h-3.5 text-[#d4af37]" /><span>画面録画・動画を選択してアップロード</span>
+                </button>
+                {editVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画アップロード中：{editVideoUploadProgress}%</p>}
+                {editProdVideoUrl && <div className="space-y-1"><video src={editProdVideoUrl} controls playsInline preload="none" className="w-full max-h-48 rounded-lg bg-black" /><button type="button" onClick={() => setEditProdVideoUrl('')} className="text-xs text-rose-400">動画を解除</button></div>}
+                <p className="text-[10px] text-stone-500">MP4などの動画・最大200MB。アップロードした動画は商品に保存されます。</p>
               </div>
 
               {/* Summary Description */}
