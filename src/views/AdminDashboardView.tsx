@@ -1594,6 +1594,7 @@ export const AdminDashboardView: React.FC = () => {
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                 >
                   <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
+                  <option value="引退垢">引退垢</option>
                 </select>
               </div>
 
