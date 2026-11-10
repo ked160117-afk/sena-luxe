@@ -44,6 +44,19 @@ export const TopView: React.FC = () => {
             石垢の料金は専用料金表に掲載しています。在庫・商品内容・お支払いなど、不明点は公式LINEでご確認ください。
           </p>
 
+          {/* Featured retired account collection entry */}
+          <div className="mb-5">
+            <button
+              type="button"
+              onClick={() => setCurrentView('retired_accounts')}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm sm:text-base font-bold text-black bg-gradient-to-r from-[#f4df91] via-[#d4af37] to-[#b88920] border border-[#f7e7ce]/60 shadow-[0_4px_22px_rgba(212,175,55,0.22)] hover:brightness-110 transition"
+            >
+              <Sparkles className="w-4 h-4" />
+              おすすめ‼️引退垢一覧‼️
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm">
             <button
