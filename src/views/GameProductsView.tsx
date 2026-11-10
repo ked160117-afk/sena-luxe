@@ -33,10 +33,17 @@ export const GameProductsView: React.FC = () => {
 
   const selectedGame = games.find((g) => g.id === selectedGameId);
 
-  // Filter only active, publicly published products (excluding 掲載停止)
+  // Public catalog is strictly stone-account sales only. Hide legacy delegation/work-service records,
+  // including records that may still exist in Firestore for historical/admin purposes.
+  const isStoneAccountSale = (p: (typeof products)[number]) => {
+    const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
+    return p.category === 'ゲーム内通貨・石垢' && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+  };
+
+  // Filter only active, publicly published stone-account products (excluding legacy services and 掲載停止)
   const filteredProducts = useMemo(() => {
     return products
-      .filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢')
+      .filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && isStoneAccountSale(p))
       .filter((p) => {
         const matchesGame = selectedGameId ? p.gameId === selectedGameId : true;
         const matchesCat = selectedCategory === 'ALL' ? true : p.category === selectedCategory;
@@ -80,7 +87,7 @@ export const GameProductsView: React.FC = () => {
           >
             <option value="ALL">すべてのゲーム</option>
             {games.map((g) => {
-              const count = products.filter((p) => p.gameId === g.id && p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢').length;
+              const count = products.filter((p) => p.gameId === g.id && p.status === '掲載中' && p.verifiedForPublic === true && isStoneAccountSale(p)).length;
               return (
                 <option key={g.id} value={g.id}>
                   {g.name} ({count > 0 ? `${count}件` : '準備中'})
