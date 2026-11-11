@@ -296,6 +296,13 @@ const COLLECTIONS = {
  */
 export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSynced: number; ratesSynced: number }> {
   try {
+    // Defense in depth: this helper reads canonical games, rates, and sequence ledgers.
+    // Do not rely only on the dashboard being hidden from non-admin users.
+    const user = auth.currentUser;
+    if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+      throw new Error('マスターカタログの同期には管理者認証が必要です。');
+    }
+
     console.log('Initiating safe catalog sync to Firestore...');
     const [gamesSnapshot, ratesSnapshot, sequencesSnapshot] = await Promise.all([
       getDocs(collection(db, COLLECTIONS.GAMES)),
