@@ -16,8 +16,10 @@ import {
 } from 'firebase/firestore';
 import { readFile } from 'node:fs/promises';
 
-const PROJECT_ID = 'sena-luxe-rules-test';
-const DATABASE_ID = 'ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699';
+// The Firestore Emulator currently cannot reliably bind rules to the production named database.
+// These automated tests validate the rules against an isolated demo project's default database.
+// The production named database still requires a separate controlled verification before release.
+const PROJECT_ID = 'demo-sena-luxe-rules-test';
 const ADMIN_UID = 'cjUzsc6SK4ZBrsddvFQjuhPphBA2';
 const ACTIVE_GENERATION = 'catalog-test-active';
 const INACTIVE_GENERATION = 'catalog-test-staging';
@@ -88,7 +90,7 @@ const publicSettings = {
 
 async function seedFixtures() {
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    const db = context.firestore(DATABASE_ID);
+    const db = context.firestore();
     await setDoc(doc(db, 'publicCatalogControl/active'), {
       generationId: ACTIVE_GENERATION,
       publishedAt: '2026-11-12T00:00:00.000Z',
@@ -125,10 +127,10 @@ before(async () => {
     projectId: PROJECT_ID,
     firestore: { rules },
   });
-  publicDb = testEnv.unauthenticatedContext().firestore(DATABASE_ID);
+  publicDb = testEnv.unauthenticatedContext().firestore();
   otherUserDb = testEnv.authenticatedContext('ordinary-user', {
     email: 'ordinary@example.com',
-  }).firestore(DATABASE_ID);
+  }).firestore();
   adminDb = testEnv.authenticatedContext(ADMIN_UID, {
     email: 'ked160117@gmail.com',
   }).firestore(DATABASE_ID);
