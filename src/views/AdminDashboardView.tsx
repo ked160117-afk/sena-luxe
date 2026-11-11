@@ -168,7 +168,7 @@ export const AdminDashboardView: React.FC = () => {
 
   // Bulk set all stone rates to preparation status
   const handleBulkSetPreparation = async () => {
-    if (!window.confirm('全33タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更しますか？\n（価格や商品データは維持されます）')) {
+    if (!window.confirm('全43タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更しますか？\n（価格や商品データは維持されます）')) {
       return;
     }
     setIsBulkSettingPrep(true);
