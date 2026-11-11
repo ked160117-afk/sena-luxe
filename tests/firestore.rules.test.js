@@ -185,6 +185,8 @@ test('anonymous and ordinary users cannot write catalog data or admin controls',
   await assertFails(setDoc(doc(publicDb, 'publicCatalogGenerations/attacker/products/p1'), publicProduct));
   await assertFails(setDoc(doc(publicDb, 'products/attacker-draft'), { title: 'attack' }));
   await assertFails(getDoc(doc(otherUserDb, 'products/private-draft')));
+  await assertFails(getDoc(doc(otherUserDb, 'publicCatalogControl/publishSequence')));
+  await assertFails(setDoc(doc(otherUserDb, 'publicCatalogControl/publishSequence'), { revision: 99, updatedAt: 'now' }));
   await assertFails(setDoc(doc(otherUserDb, 'admins/ordinary-user'), {
     uid: 'ordinary-user',
     email: 'ordinary@example.com',
@@ -230,6 +232,7 @@ test('public request intake permits only valid create and denies read/update/del
 test('authorized admin can read canonical data and publish schema-valid public documents', async () => {
   await assertSucceeds(getDoc(doc(adminDb, 'products/private-draft')));
   await assertSucceeds(getDoc(doc(adminDb, 'stoneRates/private-rate')));
+  await assertSucceeds(getDoc(doc(adminDb, 'publicCatalogControl/publishSequence')));
   await assertSucceeds(setDoc(doc(adminDb, 'products/admin-created'), { title: '管理者商品' }));
 
   const root = `publicCatalogGenerations/${ACTIVE_GENERATION}`;
