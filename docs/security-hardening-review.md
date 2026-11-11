@@ -54,7 +54,7 @@ Required before enforcement:
 - Never enable enforcement until the app has been verified to send valid App Check tokens.
 
 ### High — security Rules tests are added but not yet verified
-The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, and admin publication allowlists. The emulator suite uses an isolated demo project/default database; it does not validate the production named database. The publication revision fence has been implemented in draft code and rules, but still requires emulator and concurrent-run verification.
+The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, and admin publication allowlists. The emulator suite uses an isolated demo project/default database; it does not validate the production named database. The publication revision fence has been implemented in draft code and rules. The revision is reserved before reading the canonical snapshot, and final activation is transactionally refused if a later revision is already active. Emulator and concurrent-run verification are still pending.
 
 Remaining:
 - Observe a successful CI emulator run and inspect its test output.
@@ -88,7 +88,7 @@ Review Cloudflare-served response headers (CSP, frame restrictions, MIME sniffin
 | Product videos/chunks | Denied | Read/write | Draft rules + client guard |
 | App Check | Enforced only after valid setup | Enforced only after valid setup | Not configured |
 | Security Rules emulator tests | Test cases authored; results pending | Test cases authored; results pending | Added to branch CI on isolated emulator default DB; named production DB still unverified |
-| Public mirror atomic switch | Read active generation only | Publish staged generation | Not implemented |
+| Public mirror atomic switch | Read active generation only | Publish staged generation with monotonic revision fence | Implemented in draft code/rules; emulator and concurrent execution tests pending |
 
 ## Release gates
 
