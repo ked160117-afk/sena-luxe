@@ -6,7 +6,8 @@
  * - For other categories: Uses admin-registered authentic image, or high-end verified placeholder
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getProductVideoBlob } from '../services/firestoreService';
 import { ProductCategory } from '../types';
 import { Gem, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
 
@@ -17,27 +18,11 @@ interface ProductCardImageProps {
   currencyName?: string;
   imageUrl?: string;
   videoUrl?: string;
+  videoStorageId?: string;
   currencyIconUrl?: string;
   title?: string;
   className?: string;
 }
-
-const getYouTubeVideoId = (value?: string): string | null => {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    const host = url.hostname.replace(/^www\./, '').toLowerCase();
-    if (host === 'youtu.be') return url.pathname.split('/').filter(Boolean)[0] || null;
-    if (host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtube-nocookie.com') {
-      if (url.pathname === '/watch') return url.searchParams.get('v');
-      const parts = url.pathname.split('/').filter(Boolean);
-      if (['embed', 'shorts', 'live'].includes(parts[0] || '')) return parts[1] || null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-};
 
 export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   category,
@@ -46,41 +31,57 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   currencyName,
   imageUrl,
   videoUrl,
+  videoStorageId,
   currencyIconUrl,
   title,
   className = 'w-full h-44',
 }) => {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const [videoObjectUrl, setVideoObjectUrl] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState('');
+  useEffect(() => () => { if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl); }, [videoObjectUrl]);
+
+  const loadStoredVideo = async () => {
+    if (!videoStorageId || videoLoading || videoObjectUrl) return;
+    setVideoLoading(true);
+    setVideoError('');
+    try {
+      const blob = await getProductVideoBlob(videoStorageId);
+      setVideoObjectUrl(URL.createObjectURL(blob));
+    } catch (error) {
+      setVideoError(error instanceof Error ? error.message : '動画を読み込めませんでした。');
+    } finally {
+      setVideoLoading(false);
+    }
+  };
   const isStoneCategory = category === 'ゲーム内通貨・石垢';
 
-  // YouTube unlisted links are the no-billing video-hosting path. Direct MP4/WebM URLs remain supported.
-  if (videoUrl) {
-    const youtubeId = getYouTubeVideoId(videoUrl);
+  // Stored videos are fetched only after a visitor explicitly presses play.
+  if (videoStorageId) {
     return (
       <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
-        {youtubeId ? (
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${youtubeId}`}
-            title={`${gameName} 商品紹介動画`}
-            className="w-full h-full"
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
+        {videoObjectUrl ? (
+          <video src={videoObjectUrl} poster={imageUrl || undefined} controls playsInline preload="metadata" className="w-full h-full object-contain" aria-label={`${gameName} 商品紹介動画`} />
         ) : (
-          <video
-            src={videoUrl}
-            poster={imageUrl || undefined}
-            controls
-            playsInline
-            preload="none"
-            className="w-full h-full object-contain"
-            aria-label={`${gameName} 商品紹介動画`}
-          />
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center">
+            <button type="button" onClick={loadStoredVideo} disabled={videoLoading} className="px-5 py-2.5 rounded-lg bg-[#d4af37] text-black text-xs font-bold disabled:opacity-60">
+              {videoLoading ? '動画を読み込み中…' : '商品動画を再生'}
+            </button>
+            {videoError && <p className="text-[10px] text-rose-300">{videoError}</p>}
+          </div>
         )}
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">
-          VIDEO
-        </div>
+        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">VIDEO</div>
+      </div>
+    );
+  }
+
+  // Legacy direct MP4/WebM links remain supported for previously registered products.
+  if (videoUrl) {
+    return (
+      <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
+        <video src={videoUrl} poster={imageUrl || undefined} controls playsInline preload="none" className="w-full h-full object-contain" aria-label={`${gameName} 商品紹介動画`} />
+        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">VIDEO</div>
       </div>
     );
   }
