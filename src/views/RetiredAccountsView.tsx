@@ -25,10 +25,10 @@ export const RetiredAccountsView: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-8 animate-fade-in">
       <section className="text-center border-b border-[#d4af37]/20 pb-8">
-        <span className="text-[11px] font-cinzel tracking-[0.2em] text-[#d4af37] uppercase">RETIRED ACCOUNT COLLECTION</span>
-        <h1 className="text-2xl sm:text-4xl font-bold text-white mt-2">おすすめ‼️引退垢一覧‼️</h1>
+        <span className="text-[11px] font-cinzel tracking-[0.2em] text-[#d4af37] uppercase">FEATURED RETIRED ACCOUNTS</span>
+        <h1 className="text-2xl sm:text-4xl font-bold text-white mt-2">おすすめ引退アカウント</h1>
         <p className="text-xs sm:text-sm text-stone-400 mt-3 leading-relaxed">
-          ゲームタイトルを横断して、掲載中の引退垢だけをまとめています。
+          ゲームタイトルを横断して、掲載中の引退アカウントを、ゲームタイトルを問わずご覧いただけます。
           <br />商品内容・在庫・価格はご購入前に公式LINEでご確認ください。
         </p>
       </section>
