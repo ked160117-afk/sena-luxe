@@ -478,10 +478,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
-    const target = products.find((p) => p.id === id);
+    const target = adminProducts.find((p) => p.id === id);
     if (!target) return;
     if (status === '掲載中' && (!target.verifiedForPublic || (target.category !== 'ゲーム内通貨・石垢' && target.category !== '引退垢') || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
     await updateProductDoc(id, { status });
+    await refreshPublicMirrors();
   };
 
   // Stone Rate Actions
