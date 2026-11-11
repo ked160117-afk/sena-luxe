@@ -268,6 +268,19 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     contactDeskHours: typeof sourceSettings.contactDeskHours === 'string' ? sourceSettings.contactDeskHours : '公式LINEにてご案内',
   };
 
+  // Reserve a monotonically increasing publication revision before staging.
+  // If two admins publish concurrently, the older reservation can never replace
+  // a newer generation that has already become active.
+  const publishSequenceRef = doc(db, 'publicCatalogControl', 'publishSequence');
+  const publishRevision = await runTransaction(db, async (transaction) => {
+    const sequenceSnapshot = await transaction.get(publishSequenceRef);
+    const nextRevision = (sequenceSnapshot.exists() && typeof sequenceSnapshot.data().revision === 'number'
+      ? sequenceSnapshot.data().revision
+      : 0) + 1;
+    transaction.set(publishSequenceRef, { revision: nextRevision, updatedAt: new Date().toISOString() });
+    return nextRevision;
+  });
+
   // Build an immutable generation. The public pointer is switched only after
   // every collection and the settings document have been committed successfully.
   const generationId = `catalog-${Date.now()}-${crypto.randomUUID()}`;
@@ -297,13 +310,24 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     createdAt: new Date().toISOString(),
   });
 
-  // Single-document publication boundary: clients switch only after the snapshot is complete.
-  await setDoc(doc(db, 'publicCatalogControl', 'active'), {
-    generationId,
-    publishedAt: new Date().toISOString(),
-    games: publicGames.length,
-    products: publicProducts.length,
-    rates: publicRates.length,
+  // Atomic publication fence: a slower, older publisher cannot overwrite a
+  // generation reserved by a later concurrent publish.
+  const activePointerRef = doc(db, 'publicCatalogControl', 'active');
+  const activated = await runTransaction(db, async (transaction) => {
+    const activeSnapshot = await transaction.get(activePointerRef);
+    const activeRevision = activeSnapshot.exists() && typeof activeSnapshot.data().publishRevision === 'number'
+      ? activeSnapshot.data().publishRevision
+      : 0;
+    if (activeRevision >= publishRevision) return false;
+    transaction.set(activePointerRef, {
+      generationId,
+      publishRevision,
+      publishedAt: new Date().toISOString(),
+      games: publicGames.length,
+      products: publicProducts.length,
+      rates: publicRates.length,
+    });
+    return true;
   });
 
   // Previous generations are intentionally retained for rollback. No cleanup is
@@ -314,6 +338,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     rates: publicRates.length,
     settings: 1,
     generationId,
+    activated,
   };
 }
 const COLLECTIONS = {
