@@ -127,29 +127,64 @@ service cloud.firestore {
       request.resource.data.contactDeskHours.size() <= 200;
     }
 
-    // Sanitized public mirrors. Only allowlisted display fields are readable by visitors.
+    // A single pointer publishes a complete immutable catalog generation.
+    function isActiveGeneration(generationId) {
+      return exists(/databases/$(database)/documents/publicCatalogControl/active) &&
+        get(/databases/$(database)/documents/publicCatalogControl/active).data.generationId == generationId;
+    }
+
+    match /publicCatalogControl/{controlId} {
+      allow read: if controlId == 'active';
+      allow create, update: if isAdmin() &&
+        controlId == 'active' &&
+        request.resource.data.keys().hasOnly(['generationId', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.keys().hasAll(['generationId', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.generationId is string &&
+        request.resource.data.generationId.size() <= 120 &&
+        request.resource.data.publishedAt is string &&
+        request.resource.data.games is int &&
+        request.resource.data.products is int &&
+        request.resource.data.rates is int;
+      allow delete: if false;
+    }
+
+    match /publicCatalogGenerations/{generationId} {
+      allow read, write: if isAdmin();
+      match /games/{gameId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicGame(gameId);
+        allow delete: if isAdmin();
+      }
+      match /products/{productId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicProduct(productId);
+        allow delete: if isAdmin();
+      }
+      match /stoneRates/{rateId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicStoneRate(rateId);
+        allow delete: if isAdmin();
+      }
+      match /settings/{settingId} {
+        allow read: if isActiveGeneration(generationId) && settingId == 'general';
+        allow create, update: if isAdmin() && settingId == 'general' && validPublicSettings();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Legacy flat mirrors are no longer used by the storefront.
+    // Keep them private while old generations remain available for rollback.
     match /publicGames/{gameId} {
-      allow read: if true;
-      allow create, update: if isAdmin() && validPublicGame(gameId);
-      allow delete: if isAdmin();
+      allow read, write: if isAdmin();
     }
-
     match /publicProducts/{productId} {
-      allow read: if true;
-      allow create, update: if isAdmin() && validPublicProduct(productId);
-      allow delete: if isAdmin();
+      allow read, write: if isAdmin();
     }
-
     match /publicStoneRates/{rateId} {
-      allow read: if true;
-      allow create, update: if isAdmin() && validPublicStoneRate(rateId);
-      allow delete: if isAdmin();
+      allow read, write: if isAdmin();
     }
-
     match /publicSettings/{settingId} {
-      allow read: if true;
-      allow create, update: if isAdmin() && settingId == 'general' && validPublicSettings();
-      allow delete: if isAdmin() && settingId == 'general';
+      allow read, write: if isAdmin();
     }
 
     // Canonical game catalog, including candidates and internal fields: admin only.
