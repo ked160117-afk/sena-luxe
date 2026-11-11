@@ -52,7 +52,7 @@ export const TopView: React.FC = () => {
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm sm:text-base font-bold text-black bg-gradient-to-r from-[#f4df91] via-[#d4af37] to-[#b88920] border border-[#f7e7ce]/60 shadow-[0_4px_22px_rgba(212,175,55,0.22)] hover:brightness-110 transition"
             >
               <Sparkles className="w-4 h-4" />
-              おすすめ‼️引退垢一覧‼️
+              おすすめ引退アカウント
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
