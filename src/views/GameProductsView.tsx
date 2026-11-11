@@ -143,12 +143,12 @@ export const GameProductsView: React.FC = () => {
           </div>
           <div className="space-y-1.5">
             <h3 className="text-base sm:text-lg font-semibold text-white">
-              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0
+              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
                 ? '現在石垢の取り扱いはしておりません。'
                 : '現在商品を準備中です'}
             </h3>
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0
+              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
                 ? 'ご用意できましたら対応します。'
                 : selectedGame ? `「${selectedGame.name}」の商品は現在準備中です。` : '商品は現在準備中です。'}
               <br className="hidden sm:inline" />
@@ -240,12 +240,9 @@ export const GameProductsView: React.FC = () => {
                   </div>
 
                   {/* Title & Summary */}
-                  <div className="flex items-center gap-2 mt-1.5">
-                    {game?.iconUrl && <img src={game.iconUrl} alt="" loading="lazy" className="w-7 h-7 rounded-md object-cover border border-stone-700 shrink-0" />}
-                    <h3 className="text-sm sm:text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors line-clamp-2">
-                      {item.title}
-                    </h3>
-                  </div>
+                  <h3 className="text-sm sm:text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors line-clamp-2">
+                    {item.title}
+                  </h3>
                   <p className="text-xs text-stone-400 mt-1.5 line-clamp-2 leading-relaxed">
                     {item.summary}
                   </p>
