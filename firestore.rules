@@ -25,6 +25,23 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Sanitized public mirrors. Only allowlisted display fields are written by the
+    // admin-only migration/service. Canonical collections remain separately governed.
+    match /publicGames/{gameId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /publicProducts/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /publicStoneRates/{rateId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Games Catalog: Publicly readable, admin writable
     match /games/{gameId} {
       allow read: if true;
