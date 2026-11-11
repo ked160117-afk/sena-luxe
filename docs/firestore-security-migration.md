@@ -70,3 +70,27 @@ This task is complete only when code is merged, rules are published to the corre
 
 - The migration builder now copies only `lineUrl`, `shopNotice`, `enableDirectLineCopy`, and `contactDeskHours` from `settings/general` to `publicSettings/general`.
 - No other settings fields are copied. The public listener has not yet been switched; keep canonical rules unchanged until listener migration and validation are complete.
+
+
+## Write-path audit (2026-11-12)
+
+The following application write paths were confirmed during source inspection. They currently write canonical collections and do not yet maintain the corresponding public mirror in the same operation:
+
+- Products: createProductAtomic, updateProductDoc, deleteProductDoc, and the status toggle routed through updateProductDoc.
+- Stone rates: updateStoneRatePriceDoc, updateStoneRateDoc, addStoneRatePlanDoc, and the direct batch in StoreContext.setAllStoneRatesPreparation.
+- Games: addGameDoc, updateGameDoc, promoteCandidateDoc, and candidate creation routed through updateGameDoc.
+- Public settings: saveSettingsDoc.
+- The current mirror builder is a one-time/manual rebuild. It is not a live synchronization mechanism.
+
+Important consequence: switching listeners or tightening rules before every write path is updated would cause stale or missing public catalog data. In particular, the current price-change operation intentionally marks a rate as unverified/preparation; its public mirror must be removed as part of that same logical change. A later verification/publish action must add it back only after all eligibility checks pass.
+
+## Next implementation gates
+
+1. Separate public mirror state from admin canonical state in StoreContext; do not let public listeners and admin listeners race to update the same React state.
+2. Move public listeners to the four mirror locations. Preserve the existing public fallback behavior only where it does not fabricate inventory or pricing.
+3. Add safe mirror synchronization for every write path above, including unpublish/delete and all bulk operations. Prefer a single Firestore transaction/batch for canonical and mirror changes where the operation permits it; otherwise implement an explicit retry/rebuild strategy and do not tighten rules until reconciliation is proven.
+4. Keep video metadata/chunks private. Public product mirrors deliberately omit videoUrl and videoStorageId; verify that public product cards do not depend on Firestore-hosted video playback before any rule publication.
+5. Run build/type checks and focused tests for public browsing, admin CRUD, product numbering, price history preservation, and logout/login state reset.
+6. Only then execute the mirror rebuild and test actual anonymous/admin access against the exact named database.
+
+No application listener or mutation behavior was changed by this audit note. This document is still on the draft branch only.
