@@ -278,7 +278,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       });
       const loadedIds = new Set(loadedGames.map((game) => game.id));
-      const missingInitialGames = INITIAL_GAMES.filter((game) => !loadedIds.has(game.id));
+      const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].filter((game) => !loadedIds.has(game.id));
       const merged = [...loadedGames, ...missingInitialGames].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
       setAllGames(merged);
     }, (error) => {
