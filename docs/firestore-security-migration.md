@@ -39,7 +39,7 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 - Video metadata and chunks remain private until an approved publishing design ties them to a currently public product. Do not make the existing entire video collection public.
 
 ## Migration sequence (do not skip)
-1. Implemented on the draft branch: an admin-only mirror builder writes allowlisted `publicGames`, `publicProducts`, and `publicStoneRates`; matching draft rules permit public reads and admin writes. This has not been deployed or executed against the live database.
+1. Implemented on the draft branch: an admin-only mirror builder writes allowlisted `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`; matching draft rules permit public reads and admin writes. This has not been deployed or executed against the live database.
 2. Pending: update public website listeners to use only `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings`.
 3. Pending: separate admin-only canonical listeners from public mirror listeners.
 4. Pending: update every create/edit/publish/unpublish/delete operation to maintain mirrors atomically or with safe retry/reconciliation.
