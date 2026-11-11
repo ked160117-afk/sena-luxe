@@ -44,6 +44,12 @@ const PRODUCT_VIDEO_COLLECTION = 'productVideos';
 const PRODUCT_VIDEO_MAX_BYTES = 15 * 1024 * 1024;
 const PRODUCT_VIDEO_CHUNK_BYTES = 300 * 1024;
 
+const PROHIBITED_SERVICE_TEXT = /(代行|作業サービス|作業代行|プレイ代行|育成代行|ガチャ代行|通貨追加|追加オプション|追加料金|追加費用)/i;
+
+function containsProhibitedServiceText(values: unknown[]): boolean {
+  return values.some((value) => typeof value === 'string' && PROHIBITED_SERVICE_TEXT.test(value));
+}
+
 // Client-side guard for clearer failures; Firestore Security Rules remain the real boundary.
 async function requireAdminForVideoAccess(): Promise<void> {
   const user = auth.currentUser;
@@ -204,7 +210,8 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       typeof product.price === 'number' &&
       product.price > 0 &&
       Boolean(product.title?.trim()) &&
-      Boolean(product.summary?.trim())
+      Boolean(product.summary?.trim()) &&
+      !containsProhibitedServiceText([product.category, product.title, product.summary, ...(product.keyHighlights || [])])
     )
     .map((product) => ({
       id: product.id,
@@ -236,7 +243,8 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       rate.currentPrice > 0 &&
       Boolean(rate.currencyAmount?.trim()) &&
       Boolean(rate.planName?.trim()) &&
-      Boolean(rate.conditions?.trim())
+      Boolean(rate.conditions?.trim()) &&
+      !containsProhibitedServiceText([rate.id, rate.gameName, rate.planName, rate.currencyName, rate.currencyAmount, rate.conditions, rate.deviceRequirement, rate.accountType, rate.notes])
     )
     .map((rate) => ({
       id: rate.id,
