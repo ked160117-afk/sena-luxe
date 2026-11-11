@@ -92,6 +92,7 @@ async function seedFixtures() {
     const db = context.firestore();
     await setDoc(doc(db, 'publicCatalogControl/active'), {
       generationId: ACTIVE_GENERATION,
+      publishRevision: 1,
       publishedAt: '2026-11-12T00:00:00.000Z',
       games: 1,
       products: 1,
@@ -258,5 +259,48 @@ test('authorized admin can read canonical data and publish schema-valid public d
     role: 'super_admin',
     createdAt: 'now',
     updatedAt: 'now',
+  }));
+});
+
+
+test('authorized admin can publish only allowlisted games, rates, settings, and pointer fields', async () => {
+  const root = `publicCatalogGenerations/${ACTIVE_GENERATION}`;
+
+  await assertSucceeds(setDoc(doc(adminDb, `${root}/games/admin-game`), {
+    ...publicGame,
+    id: 'admin-game',
+  }));
+  await assertFails(setDoc(doc(adminDb, `${root}/games/leaky-game`), {
+    ...publicGame,
+    id: 'leaky-game',
+    privateNote: 'must be rejected',
+  }));
+
+  await assertSucceeds(setDoc(doc(adminDb, `${root}/stoneRates/admin-rate`), {
+    ...publicRate,
+    id: 'admin-rate',
+  }));
+  await assertFails(setDoc(doc(adminDb, `${root}/stoneRates/leaky-rate`), {
+    ...publicRate,
+    id: 'leaky-rate',
+    priceHistory: [100, 200],
+  }));
+
+  await assertSucceeds(setDoc(doc(adminDb, `${root}/settings/general`), publicSettings));
+  await assertFails(setDoc(doc(adminDb, `${root}/settings/general`), {
+    ...publicSettings,
+    privateAdminNotice: 'must be rejected',
+  }));
+
+  await assertSucceeds(updateDoc(doc(adminDb, 'publicCatalogControl/active'), {
+    generationId: 'catalog-test-next',
+    publishRevision: 2,
+    publishedAt: '2026-11-12T00:01:00.000Z',
+    games: 1,
+    products: 1,
+    rates: 1,
+  }));
+  await assertFails(updateDoc(doc(adminDb, 'publicCatalogControl/active'), {
+    privateAdminNote: 'must be rejected',
   }));
 });
