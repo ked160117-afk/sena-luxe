@@ -229,6 +229,7 @@ export const GameProductsView: React.FC = () => {
                       videoUrl={item.videoUrl}
                       videoStorageId={item.videoStorageId}
                       currencyIconUrl={stoneRates.some((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true) ? item.currencyIconUrl || game?.currencyIconUrl : undefined}
+                      gameIconUrl={game?.iconUrl}
                       title={item.title}
                     />
                   </div>
@@ -240,9 +241,12 @@ export const GameProductsView: React.FC = () => {
                   </div>
 
                   {/* Title & Summary */}
-                  <h3 className="text-sm sm:text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors line-clamp-2">
-                    {item.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {game?.iconUrl && <img src={game.iconUrl} alt="" loading="lazy" decoding="async" className="w-7 h-7 rounded-md object-cover border border-stone-700 shrink-0" />}
+                    <h3 className="text-sm sm:text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors line-clamp-2">
+                      {item.title}
+                    </h3>
+                  </div>
                   <p className="text-xs text-stone-400 mt-1.5 line-clamp-2 leading-relaxed">
                     {item.summary}
                   </p>
