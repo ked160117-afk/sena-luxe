@@ -39,6 +39,101 @@ import {
   INITIAL_SETTINGS,
 } from '../data/initialData';
 
+
+const PRODUCT_VIDEO_COLLECTION = 'productVideos';
+const PRODUCT_VIDEO_MAX_BYTES = 15 * 1024 * 1024;
+const PRODUCT_VIDEO_CHUNK_BYTES = 300 * 1024;
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+/**
+ * Store a short product video directly from the admin device in Firestore.
+ * This intentionally uses the existing Firestore service, not Firebase Storage,
+ * Cloudflare R2, YouTube, or any paid video provider.
+ */
+export async function uploadProductVideoToFirestore(
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<string> {
+  if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
+  if (!file.type.startsWith('video/')) throw new Error('動画ファイルを選択してください。');
+  if (file.size <= 0 || file.size > PRODUCT_VIDEO_MAX_BYTES) {
+    throw new Error('動画は15MB以下にしてください。スマホ側で短く録画するか、画質を下げてください。');
+  }
+
+  const videoId = `video-${Date.now()}-${crypto.randomUUID()}`;
+  const chunkCount = Math.ceil(file.size / PRODUCT_VIDEO_CHUNK_BYTES);
+  const chunksRef = collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks');
+
+  for (let batchStart = 0; batchStart < chunkCount; batchStart += 5) {
+    const batch = writeBatch(db);
+    const batchEnd = Math.min(batchStart + 5, chunkCount);
+    for (let index = batchStart; index < batchEnd; index += 1) {
+      const start = index * PRODUCT_VIDEO_CHUNK_BYTES;
+      const end = Math.min(start + PRODUCT_VIDEO_CHUNK_BYTES, file.size);
+      const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
+      batch.set(doc(chunksRef, String(index).padStart(4, '0')), {
+        index,
+        data: bytesToBase64(bytes),
+      });
+    }
+    await batch.commit();
+    onProgress?.(Math.round((batchEnd / chunkCount) * 95));
+  }
+
+  await setDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId), {
+    id: videoId,
+    contentType: file.type || 'video/mp4',
+    fileName: file.name.slice(0, 120),
+    fileSize: file.size,
+    chunkCount,
+    createdAt: new Date().toISOString(),
+  });
+  onProgress?.(100);
+  return videoId;
+}
+
+/** Fetch a saved video only when a visitor presses the play button. */
+export async function getProductVideoBlob(videoId: string): Promise<Blob> {
+  const metadata = await getDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
+  if (!metadata.exists()) throw new Error('登録動画が見つかりません。');
+  const details = metadata.data();
+  const chunkSnapshot = await getDocs(collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks'));
+  const ordered = chunkSnapshot.docs
+    .map((snapshot) => snapshot.data() as { index: number; data: string })
+    .sort((a, b) => a.index - b.index);
+
+  if (ordered.length !== Number(details.chunkCount)) {
+    throw new Error('動画データが不足しています。管理画面から再登録してください。');
+  }
+
+  const parts = ordered.map((chunk) => {
+    const binary = atob(chunk.data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  });
+  return new Blob(parts, { type: details.contentType || 'video/mp4' });
+}
+
+/** Remove a video after it has been replaced or its product is deleted. */
+export async function deleteProductVideoFromFirestore(videoId: string): Promise<void> {
+  const chunks = await getDocs(collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks'));
+  for (let start = 0; start < chunks.docs.length; start += 400) {
+    const batch = writeBatch(db);
+    chunks.docs.slice(start, start + 400).forEach((snapshot) => batch.delete(snapshot.ref));
+    await batch.commit();
+  }
+  await deleteDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
+}
+
+
 const COLLECTIONS = {
   GAMES: 'games',
   PRODUCTS: 'products',
