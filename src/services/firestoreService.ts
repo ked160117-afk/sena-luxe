@@ -373,6 +373,13 @@ export async function deleteProductDoc(product: ProductItem, reason: string = 'ç
 
       transaction.delete(prodRef);
     });
+    if (product.videoStorageId) {
+      try {
+        await deleteProductVideoFromFirestore(product.videoStorageId);
+      } catch (videoError) {
+        console.warn('Deleted product but could not remove its video chunks:', videoError);
+      }
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${COLLECTIONS.PRODUCTS}/${product.id}`);
   }
