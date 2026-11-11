@@ -199,15 +199,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView, selectedGameId]);
 
-  // Initialize and test connection
+  // Initialize and test connection only. Canonical catalog seeding is deferred
+  // until the authenticated user has passed the admin check below.
   useEffect(() => {
     async function initConnection() {
       const ok = await testFirestoreConnection();
       setIsFirestoreConnected(ok);
-      if (ok) {
-        // Attempt initial seed if empty
-        await seedInitialDataIfEmpty();
-      }
     }
     initConnection();
   }, []);
@@ -221,6 +218,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsAdminLoggedIn(isAdmin);
         if (isAdmin) {
           await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
+          // Only an authenticated administrator may read or seed canonical collections.
+          await seedInitialDataIfEmpty();
         }
       } else {
         setIsAdminLoggedIn(false);
