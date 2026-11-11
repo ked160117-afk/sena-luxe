@@ -10,6 +10,7 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 - Public catalog listeners use dedicated mirror collections, not canonical product/game/rate/settings collections.
 - Admin dashboard listeners use separate canonical state and are attached only after the app's admin check.
 - Draft rules make canonical games, products, stone rates, settings, sequence ledgers, admin records, and product videos admin-only.
+- Draft rules enforce exact field allowlists on public mirror writes, with basic type, length, price, category, status, and verification checks; an admin cannot accidentally add arbitrary private fields to a public mirror document.
 - Draft admin-record rules no longer allow one admin to grant or edit another user's role: a legacy bootstrap admin may create only their own strictly shaped record; client updates/deletes and cross-user role creation are denied.
 - Public mirrors are written by an admin-only builder using explicit field allowlists.
 - Public request creation now has an exact field allowlist, required fields, bounded string lengths, a document-ID match, and a fixed initial status. Public reads/updates/deletes remain denied.
