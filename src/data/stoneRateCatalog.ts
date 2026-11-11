@@ -524,7 +524,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     isHandled: true, description: '選択が物語を導くカオスループRPG。', order: 35,
   },
   {
-    id: 'game-baki-tsp', code: 'BAKI', name: '刃牙 THE STRONGEST PROOF', shortName: '刃牙 TSP',
+    id: 'game-baki-tsp', code: 'BAKI', name: '刃牙 THE STRONGEST PROOF', shortName: 'ストプル',
     category: '格闘・育成シミュレーション', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/fb/07/35/fb0735cf-575c-0685-6551-bed226c97bb0/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
     isHandled: true, description: '刃牙の世界を舞台に最強を目指す育成ゲーム。', order: 36,
@@ -550,7 +550,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
   {
     id: 'game-hxh-nen-survivor', code: 'HNXS', name: 'HUNTER×HUNTER NEN×SURVIVOR', shortName: 'ネンサバ',
     category: 'サバイバーアクション', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/4a/03/9e/4a039e4e-e289-926c-ceba-69e79521cb68/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/0x0ss-85.png',
+    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/2e/dd/d82edd00-efce-9113-e757-1fef4c03082d/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
     isHandled: true, description: '念能力を駆使して戦うサバイバーアクション。', order: 40,
   },
 ];
