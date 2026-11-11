@@ -12,7 +12,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
-import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore } from '../services/firestoreService';
+import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore } from '../services/firestoreService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
@@ -75,6 +75,8 @@ export const AdminDashboardView: React.FC = () => {
   // File input refs for mobile photo upload
   const newProductFileInputRef = useRef<HTMLInputElement>(null);
   const editProductFileInputRef = useRef<HTMLInputElement>(null);
+  const newProductVideoInputRef = useRef<HTMLInputElement>(null);
+  const editProductVideoInputRef = useRef<HTMLInputElement>(null);
   const newGameFileInputRef = useRef<HTMLInputElement>(null);
   const gameIconFileInputRef = useRef<HTMLInputElement>(null);
   const currencyIconFileInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +97,8 @@ export const AdminDashboardView: React.FC = () => {
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲーム内通貨・石垢');
   const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
-  const [newProdVideoUrl, setNewProdVideoUrl] = useState('');
+  const [newProdVideoFile, setNewProdVideoFile] = useState<File | null>(null);
+  const [newVideoUploadProgress, setNewVideoUploadProgress] = useState<number | null>(null);
   const [newProdTitle, setNewProdTitle] = useState('');
   const [newProdSummary, setNewProdSummary] = useState('');
   const [newProdIsPriceConfirmed, setNewProdIsPriceConfirmed] = useState(false); // default to 価格確認中
@@ -116,7 +119,8 @@ export const AdminDashboardView: React.FC = () => {
   const [editProdHighlights, setEditProdHighlights] = useState('');
   const [editProdImageUrl, setEditProdImageUrl] = useState('');
   const [editProdDevice, setEditProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
-  const [editProdVideoUrl, setEditProdVideoUrl] = useState('');
+  const [editProdVideoFile, setEditProdVideoFile] = useState<File | null>(null);
+  const [editVideoUploadProgress, setEditVideoUploadProgress] = useState<number | null>(null);
   const [editProdStatus, setEditProdStatus] = useState<ProductStatus>('掲載中');
   const [editProdOrder, setEditProdOrder] = useState<string>('0');
 
@@ -329,11 +333,10 @@ export const AdminDashboardView: React.FC = () => {
       .map((s) => s.trim())
       .filter(Boolean);
 
-    await addNewProduct({
+    const createdProduct = await addNewProduct({
       gameId: newProdGameId,
       category: newProdCategory,
       deviceCompatibility: newProdDevice,
-      videoUrl: newProdVideoUrl.trim() || undefined,
       title: newProdTitle.trim(),
       summary: newProdSummary.trim(),
       price: isVerifiedForPublic ? Number(newProdPrice) : null,
@@ -343,12 +346,26 @@ export const AdminDashboardView: React.FC = () => {
       status: isVerifiedForPublic ? newProdStatus : '掲載停止',
     });
 
+    if (newProdVideoFile) {
+      try {
+        setNewVideoUploadProgress(0);
+        const videoStorageId = await uploadProductVideoToFirestore(newProdVideoFile, setNewVideoUploadProgress);
+        await updateProduct(createdProduct.id, { videoStorageId });
+      } catch (error) {
+        console.error('Product video upload failed:', error);
+        window.alert('商品情報は登録されましたが、動画の登録に失敗しました。動画サイズとFirebaseの利用枠・ルールを確認してください。');
+      } finally {
+        setNewVideoUploadProgress(null);
+      }
+    }
+
     setIsProductModalOpen(false);
     setNewProdTitle('');
     setNewProdSummary('');
     setNewProdHighlights('');
     setNewProdImageUrl('');
-    setNewProdVideoUrl('');
+    setNewProdVideoFile(null);
+    if (newProductVideoInputRef.current) newProductVideoInputRef.current.value = '';
     setNewProdDevice('iOS・Android両方可');
     setNewProdPrice('');
     setNewProdIsPriceConfirmed(false);
@@ -367,7 +384,8 @@ export const AdminDashboardView: React.FC = () => {
     setEditProdHighlights(isVerified ? product.keyHighlights?.join('\n') || '' : '');
     setEditProdImageUrl(isVerified ? product.imageUrl || '' : '');
     setEditProdDevice(product.deviceCompatibility || 'iOS・Android両方可');
-    setEditProdVideoUrl(product.videoUrl || '');
+    setEditProdVideoFile(null);
+    if (editProductVideoInputRef.current) editProductVideoInputRef.current.value = '';
     setEditProdStatus(isVerified ? product.status : '掲載停止');
     setEditProdOrder(product.order !== undefined ? String(product.order) : '0');
   };
@@ -393,11 +411,25 @@ export const AdminDashboardView: React.FC = () => {
       .map((s) => s.trim())
       .filter(Boolean);
 
+    let videoStorageId = editingProduct.videoStorageId;
+    if (editProdVideoFile) {
+      try {
+        setEditVideoUploadProgress(0);
+        videoStorageId = await uploadProductVideoToFirestore(editProdVideoFile, setEditVideoUploadProgress);
+      } catch (error) {
+        console.error('Product video upload failed:', error);
+        window.alert('動画の登録に失敗したため、商品情報は変更していません。動画サイズとFirebaseの利用枠・ルールを確認してください。');
+        setEditVideoUploadProgress(null);
+        return;
+      }
+    }
+
     await updateProduct(editingProduct.id, {
       title: editProdTitle.trim(),
       category: editProdCategory,
       deviceCompatibility: editProdDevice,
-      videoUrl: editProdVideoUrl.trim() || undefined,
+      videoStorageId,
+      videoUrl: editProdVideoFile ? undefined : editingProduct.videoUrl,
       price: isVerifiedForPublic ? Number(editProdPrice) : null,
       verifiedForPublic: isVerifiedForPublic,
       summary: isVerifiedForPublic ? editProdSummary.trim() : editingProduct.summary,
@@ -407,6 +439,14 @@ export const AdminDashboardView: React.FC = () => {
       order: editProdOrder ? Number(editProdOrder) : 0,
     });
 
+    if (editProdVideoFile && editingProduct.videoStorageId) {
+      try {
+        await deleteProductVideoFromFirestore(editingProduct.videoStorageId);
+      } catch (error) {
+        console.warn('Old product video cleanup failed:', error);
+      }
+    }
+    setEditVideoUploadProgress(null);
     setEditingProduct(null);
   };
 
@@ -1543,16 +1583,17 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品動画（無料登録）</label>
+                <label className="text-stone-300 block font-semibold">商品動画（端末から直接登録）</label>
                 <input
-                  type="url"
-                  value={newProdVideoUrl}
-                  onChange={(e) => setNewProdVideoUrl(e.target.value)}
-                  placeholder="YouTubeの限定公開URLを貼り付け"
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-sm"
+                  ref={newProductVideoInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setNewProdVideoFile(e.target.files?.[0] || null)}
+                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-xs file:mr-3 file:rounded file:border-0 file:bg-[#d4af37] file:px-3 file:py-1 file:text-black"
                 />
-                <p className="text-[10px] text-stone-500 leading-relaxed">スマホの画面録画をYouTubeアプリから「限定公開」でアップロードし、そのURLを貼り付けてください。動画の保存料金はかかりません。URLを知っている人は視聴できるため、個人情報・ログイン情報は録画しないでください。</p>
-                {newProdVideoUrl && <a href={newProdVideoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#d4af37] underline">登録した動画URLを確認</a>}
+                {newProdVideoFile && <p className="text-xs text-stone-300">{newProdVideoFile.name}（{(newProdVideoFile.size / 1024 / 1024).toFixed(1)}MB）</p>}
+                <p className="text-[10px] text-stone-500 leading-relaxed">スマホ内の画面録画を直接選択できます。1本15MB以下。動画データは既存のFirestore無料枠に分割保存し、再生時のみ読み込みます。無料枠を超えると保存・再生が停止する方式で、課金プランへの自動変更は行いません。</p>
+                {newVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画を保存中：{newVideoUploadProgress}%</p>}
               </div>
 
 
@@ -1739,16 +1780,18 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品動画（無料登録）</label>
+                <label className="text-stone-300 block font-semibold">商品動画（端末から直接登録）</label>
+                {editingProduct?.videoStorageId && !editProdVideoFile && <p className="text-xs text-emerald-400">動画登録済み</p>}
                 <input
-                  type="url"
-                  value={editProdVideoUrl}
-                  onChange={(e) => setEditProdVideoUrl(e.target.value)}
-                  placeholder="YouTubeの限定公開URLを貼り付け"
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-sm"
+                  ref={editProductVideoInputRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setEditProdVideoFile(e.target.files?.[0] || null)}
+                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-xs file:mr-3 file:rounded file:border-0 file:bg-[#d4af37] file:px-3 file:py-1 file:text-black"
                 />
-                <p className="text-[10px] text-stone-500 leading-relaxed">YouTubeの限定公開URLを貼り付けます。URLを知っている人は視聴できるため、個人情報・ログイン情報は録画しないでください。</p>
-                {editProdVideoUrl && <a href={editProdVideoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#d4af37] underline">登録した動画URLを確認</a>}
+                {editProdVideoFile && <p className="text-xs text-stone-300">{editProdVideoFile.name}（{(editProdVideoFile.size / 1024 / 1024).toFixed(1)}MB）</p>}
+                <p className="text-[10px] text-stone-500 leading-relaxed">新しい動画を選ぶと差し替えます。1本15MB以下。保存先は既存Firestoreの無料枠です。</p>
+                {editVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画を保存中：{editVideoUploadProgress}%</p>}
               </div>
 
               {/* Summary Description */}
