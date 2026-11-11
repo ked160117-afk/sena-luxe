@@ -12,7 +12,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
-import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore } from '../services/firestoreService';
+import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, rebuildPublicCatalogMirrors, uploadProductVideoToFirestore, deleteProductVideoFromFirestore } from '../services/firestoreService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
@@ -151,6 +151,7 @@ export const AdminDashboardView: React.FC = () => {
 
   // Bulk Sync to Firestore State
   const [isSyncingRates, setIsSyncingRates] = useState(false);
+  const [isBuildingPublicCatalog, setIsBuildingPublicCatalog] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleBulkSyncRates = async () => {
@@ -163,6 +164,20 @@ export const AdminDashboardView: React.FC = () => {
       setSyncFeedback('Firestoreへの一括同期に失敗しました。');
     } finally {
       setIsSyncingRates(false);
+    }
+  };
+
+  const handleBuildPublicCatalog = async () => {
+    if (!window.confirm('公開専用カタログを作成・更新します。公開条件を満たした商品・料金だけを複製し、非公開になった公開用データは削除します。元の商品・価格履歴・商品番号台帳は変更しません。続行しますか？')) return;
+    setIsBuildingPublicCatalog(true);
+    setSyncFeedback(null);
+    try {
+      const result = await rebuildPublicCatalogMirrors();
+      setSyncFeedback(`公開専用データを準備しました。ゲームタイトル ${result.games}件・商品 ${result.products}件・石垢料金 ${result.rates}件。まだサイトの読み取り先やFirebaseルールは変更していません。`);
+    } catch (error) {
+      setSyncFeedback(error instanceof Error ? error.message : '公開専用カタログの作成に失敗しました。');
+    } finally {
+      setIsBuildingPublicCatalog(false);
     }
   };
 
@@ -810,6 +825,15 @@ export const AdminDashboardView: React.FC = () => {
               >
                 <Database className="w-3.5 h-3.5 text-[#d4af37]" />
                 <span>{isSyncingRates ? 'Firestore同期中...' : '石垢プランをFirestoreへ同期'}</span>
+              </button>
+              <button
+                onClick={handleBuildPublicCatalog}
+                disabled={isBuildingPublicCatalog}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-700/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                title="公開条件を満たしたデータだけを公開専用コレクションへ複製"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>{isBuildingPublicCatalog ? '公開データ作成中...' : '公開専用データを準備'}</span>
               </button>
               <button
                 onClick={() => setIsAddRateModalOpen(true)}
