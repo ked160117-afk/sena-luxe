@@ -25,8 +25,8 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 The builder now writes a new immutable generation under `publicCatalogGenerations/{generationId}`, writes its settings and count metadata, then switches the single `publicCatalogControl/active` document only after all batches commit. Public listeners follow that pointer; draft rules allow public reads only when the generation ID matches the active pointer. Older generations are retained for rollback and are not automatically deleted.
 
 Remaining checks before this can be considered production-ready:
-- Run Firestore Rules emulator tests to prove active generation reads succeed and inactive/staging generation reads fail.
-- Verify Firestore rules support the active-pointer `get()` for collection queries as expected, including the exact named database.
+- Firestore Rules Emulator tests have now been added on this branch for the exact named database ID, including active/inactive generation reads, canonical/private collection denial, request schema validation, non-admin access denial, and admin publication allowlists. These tests are wired into CI but have not yet been observed passing.
+- Verify the emulator actually exercises the named database and that Firestore rules support the active-pointer `get()` for collection queries as expected.
 - Test failure before pointer update: the previous active generation must remain visible.
 - Test pointer switch and rollback with concurrent admin publish attempts.
 - Verify generation document paths and public listener behavior in a real browser.
@@ -53,14 +53,13 @@ Required before enforcement:
 - Monitor metrics before enabling enforcement for the exact named Firestore database.
 - Never enable enforcement until the app has been verified to send valid App Check tokens.
 
-### High — security Rules tests are not yet automated
-The repository currently has no Firebase emulator configuration or Rules unit-test dependency. A successful TypeScript/build workflow does not prove anonymous access is denied.
+### High — security Rules tests are added but not yet verified
+The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, admin publication allowlists, and the configured named database ID.
 
-Required:
-- Add Firebase Emulator + `@firebase/rules-unit-testing` tests.
-- Test anonymous and admin reads/writes for every collection and subcollection.
-- Test the named database configuration, not just the default database.
-- Include request-schema abuse tests and cross-user admin-document tests.
+Remaining:
+- Observe a successful CI emulator run and inspect its test output.
+- Confirm the emulator test context targets the named database ID rather than silently testing only `(default)`.
+- Expand coverage after validating the first run, including every collection/subcollection and failure/rollback scenarios.
 
 ### High — public video playback is intentionally disabled by the privacy split
 Public product mirrors omit `videoUrl` and `videoStorageId`. Video metadata/chunks are admin-only. The client video helpers now reject non-admin access. This protects private videos but means the existing public product-card video path cannot be treated as supported until a separate safe public-video publishing design is implemented and tested.
@@ -88,14 +87,14 @@ Review Cloudflare-served response headers (CSP, frame restrictions, MIME sniffin
 | Admin records | No list/read of others; no write | Controlled admin access | Draft rules only |
 | Product videos/chunks | Denied | Read/write | Draft rules + client guard |
 | App Check | Enforced only after valid setup | Enforced only after valid setup | Not configured |
-| Security Rules emulator tests | Denied/allowed cases verified | Authorized cases verified | Not implemented |
+| Security Rules emulator tests | Test cases authored; results pending | Test cases authored; results pending | Added to branch CI; not yet observed passing |
 | Public mirror atomic switch | Read active generation only | Publish staged generation | Not implemented |
 
 ## Release gates
 
 1. Complete staged/versioned mirror publication and rollback.
 2. Audit all Firestore reads/writes across the repository and all external/public routes.
-3. Implement Rules emulator tests and pass them.
+3. Run and pass the new Rules emulator tests, then expand coverage for rollback and concurrent publishing.
 4. Verify admin identity, MFA, and recovery before changing legacy authorization fallbacks.
 5. Configure App Check and observe valid traffic before enforcement.
 6. Verify public product browsing and admin CRUD, video behavior, request intake, numbering, price history, logout/login, and error recovery.
