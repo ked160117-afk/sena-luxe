@@ -217,6 +217,13 @@ export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSyn
 // Seed master data if collections are empty or need update
 export async function seedInitialDataIfEmpty(): Promise<void> {
   try {
+    // Defense in depth: never inspect or seed canonical collections from a public session.
+    const user = auth.currentUser;
+    if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+      console.info('Skipping canonical Firestore seed: administrator authentication required.');
+      return;
+    }
+
     const gamesSnapshot = await getDocs(collection(db, COLLECTIONS.GAMES));
     const ratesSnapshot = await getDocs(collection(db, COLLECTIONS.STONE_RATES));
 
