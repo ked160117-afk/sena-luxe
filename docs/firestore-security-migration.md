@@ -97,3 +97,8 @@ Important consequence: switching listeners or tightening rules before every writ
 7. Only then execute the controlled mirror migration and test actual anonymous/admin access against the exact named database.
 
 No application listener or mutation behavior was changed by this audit note. This document is still on the draft branch only.
+
+
+## Public request write hardening (2026-11-12)
+
+The draft rules now validate public request creation against an exact field allowlist and bounded string lengths. Clients cannot submit extra fields such as `adminNotes` or choose a non-initial status; the document ID must match the `id` field. Reads, updates, and deletes remain admin-only. This reduces malformed/oversized writes but is not rate limiting or bot protection. Firebase App Check and abuse controls remain a separate release gate.
