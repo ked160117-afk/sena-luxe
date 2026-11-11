@@ -183,7 +183,17 @@ export const GameProductsView: React.FC = () => {
           {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0 && (
             <section className="rounded-xl bg-[#111216] border border-[#d4af37]/30 overflow-hidden">
               <div className="px-4 sm:px-5 py-4 bg-gradient-to-r from-[#201a0d] to-[#111216] border-b border-[#d4af37]/25 flex items-center gap-3">
-                {selectedGame?.currencyIconUrl ? <img src={selectedGame.currencyIconUrl} alt={`${selectedGame.name} ガチャ石アイコン`} className="w-9 h-9 rounded-lg object-contain bg-black/40 border border-[#d4af37]/30 p-1" /> : <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><span className="text-[#d4af37]">◆</span></div>}
+                {selectedGame?.currencyIconUrl || selectedGame?.iconUrl ? (
+                  <img
+                    src={selectedGame.currencyIconUrl || selectedGame.iconUrl}
+                    alt={`${selectedGame.name} ${selectedGame.currencyIconUrl ? 'ガチャ石アイコン' : 'アプリアイコン'}`}
+                    className="w-9 h-9 rounded-lg object-contain bg-black/40 border border-[#d4af37]/30 p-1"
+                    onError={(event) => {
+                      if (selectedGame.iconUrl && event.currentTarget.src !== selectedGame.iconUrl) event.currentTarget.src = selectedGame.iconUrl;
+                      else event.currentTarget.style.visibility = 'hidden';
+                    }}
+                  />
+                ) : <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><span className="text-[#d4af37]">◆</span></div>}
                 <div><h2 className="text-base font-bold text-[#f7e7ce]">ゲーム内通貨・石垢 料金表</h2><p className="text-[11px] text-stone-400">掲載プラン・価格・お問い合わせ</p></div>
               </div>
               <div className="divide-y divide-stone-800">
