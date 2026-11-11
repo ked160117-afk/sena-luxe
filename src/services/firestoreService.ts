@@ -44,6 +44,14 @@ const PRODUCT_VIDEO_COLLECTION = 'productVideos';
 const PRODUCT_VIDEO_MAX_BYTES = 15 * 1024 * 1024;
 const PRODUCT_VIDEO_CHUNK_BYTES = 300 * 1024;
 
+// Client-side guard for clearer failures; Firestore Security Rules remain the real boundary.
+async function requireAdminForVideoAccess(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+    throw new Error('動画データへのアクセスには管理者認証が必要です。');
+  }
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -61,7 +69,7 @@ export async function uploadProductVideoToFirestore(
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<string> {
-  if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
+  await requireAdminForVideoAccess();
   if (!file.type.startsWith('video/')) throw new Error('動画ファイルを選択してください。');
   if (file.size <= 0 || file.size > PRODUCT_VIDEO_MAX_BYTES) {
     throw new Error('動画は15MB以下にしてください。スマホ側で短く録画するか、画質を下げてください。');
@@ -110,6 +118,7 @@ export async function uploadProductVideoToFirestore(
 
 /** Fetch a saved video only when a visitor presses the play button. */
 export async function getProductVideoBlob(videoId: string): Promise<Blob> {
+  await requireAdminForVideoAccess();
   const metadata = await getDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
   if (!metadata.exists()) throw new Error('登録動画が見つかりません。');
   const details = metadata.data();
@@ -133,6 +142,7 @@ export async function getProductVideoBlob(videoId: string): Promise<Blob> {
 
 /** Remove a video after it has been replaced or its product is deleted. */
 export async function deleteProductVideoFromFirestore(videoId: string): Promise<void> {
+  await requireAdminForVideoAccess();
   const chunks = await getDocs(collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks'));
   for (let start = 0; start < chunks.docs.length; start += 400) {
     const batch = writeBatch(db);
@@ -668,7 +678,7 @@ export async function promoteCandidateDoc(candidate: GameTitle): Promise<void> {
 export async function submitGameRequestDoc(
   req: Omit<GameRequestItem, 'id' | 'createdAt' | 'status'>
 ): Promise<GameRequestItem> {
-  const newId = `req-${Date.now()}`;
+  const newId = `req-${crypto.randomUUID()}`;
   const newItem: GameRequestItem = {
     ...req,
     id: newId,
