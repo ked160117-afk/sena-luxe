@@ -1,6 +1,6 @@
 # Firestore privacy hardening migration plan
 
-Status: public/admin listener split and initial mirror refresh hooks are implemented on a draft branch. The refresh mechanism is not atomic and is not production-ready. No production Firestore rules or data have been changed.
+Status: public/admin listener split and immutable generation publisher are implemented on a draft branch. The active-pointer design is not yet emulator-tested or production-ready. No production Firestore rules or data have been changed.
 
 ## Goal
 Prevent unauthenticated visitors from reading private product drafts, unlisted products, internal price history, inquiry records, sequence ledgers, admin settings, and admin records directly from Firestore. Publicly displayed catalog fields remain public by design.
@@ -82,13 +82,13 @@ The following application write paths were confirmed during source inspection. T
 - Stone rates: updateStoneRatePriceDoc, updateStoneRateDoc, addStoneRatePlanDoc, and the direct batch in StoreContext.setAllStoneRatesPreparation.
 - Games: addGameDoc, updateGameDoc, promoteCandidateDoc, and candidate creation routed through updateGameDoc.
 - Public settings: saveSettingsDoc.
-- The current mirror builder is a one-time/manual rebuild. It is not a live synchronization mechanism.
+- The generation publisher is triggered by admin mutations and the admin dashboard; it creates an immutable snapshot then atomically switches the active pointer. Previous generations are retained for rollback.
 
 Important consequence: switching listeners or tightening rules before every write path is updated would cause stale or missing public catalog data. In particular, the current price-change operation intentionally marks a rate as unverified/preparation; its public mirror must be removed as part of that same logical change. A later verification/publish action must add it back only after all eligibility checks pass.
 
 ## Next implementation gates
 
-1. Replace the current in-place mirror rebuild with a staged/versioned publication mechanism; ensure public clients can read only the active generation and cannot enumerate staging data.
+1. Verify the staged/versioned publication mechanism with emulator tests; ensure public clients can read only the active generation and cannot enumerate staging data.
 2. Audit every public-facing component for reliance on omitted private fields, especially videoUrl/videoStorageId and settings fields.
 3. Make all mutations keep public mirrors consistent; cover unpublish/delete, category/verification/price changes, bulk preparation, and settings changes. Include retries/reconciliation for partial failures.
 4. Audit all Firestore reads outside StoreContext and firestoreService, including direct reads of `requests`, `sequences`, `admins`, and `test`.
