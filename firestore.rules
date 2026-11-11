@@ -85,9 +85,9 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Connection Health Check
+    // Connection Health Check is not part of the public catalog.
     match /test/{docId} {
-      allow read: if true;
+      allow read, write: if isAdmin();
     }
   }
 }
