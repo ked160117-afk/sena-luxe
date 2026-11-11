@@ -21,16 +21,17 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 
 ## Confirmed risks and release blockers
 
-### Critical — public mirror refresh is not atomic
-The current mirror builder writes multiple batches directly into the live public mirror collections and removes stale rows. A failure between batches can leave a mixed or partial public catalog. Mutation wrappers call this rebuild after the canonical write, so a successful canonical mutation followed by a failed rebuild can temporarily leave stale public content.
+### Critical — generation publication is implemented in draft code but not yet proven safe
+The builder now writes a new immutable generation under `publicCatalogGenerations/{generationId}`, writes its settings and count metadata, then switches the single `publicCatalogControl/active` document only after all batches commit. Public listeners follow that pointer; draft rules allow public reads only when the generation ID matches the active pointer. Older generations are retained for rollback and are not automatically deleted.
 
-Required before production:
-- Replace this with a staged/versioned generation and a single active-generation pointer, or another publication design with a single safe commit boundary.
-- Ensure rules expose only the active generation, not staging generations.
-- Verify the staged snapshot before switching the pointer.
-- Retain the previous active generation for rollback until the new one is verified.
+Remaining checks before this can be considered production-ready:
+- Run Firestore Rules emulator tests to prove active generation reads succeed and inactive/staging generation reads fail.
+- Verify Firestore rules support the active-pointer `get()` for collection queries as expected, including the exact named database.
+- Test failure before pointer update: the previous active generation must remain visible.
+- Test pointer switch and rollback with concurrent admin publish attempts.
+- Verify generation document paths and public listener behavior in a real browser.
 
-Do not run the current in-place rebuild against production and do not publish restrictive rules yet.
+Do not run this against production or publish restrictive rules until those tests pass.
 
 ### High — admin authorization has legacy hard-coded fallbacks
 The current admin check accepts a hard-coded email or UID in addition to an `admins/{uid}` record. This was retained to avoid locking the existing owner out during migration. It is a long-term privilege-management risk and should be replaced by a verified admin allowlist or server-issued custom claims only after the actual owner account and recovery path are verified.
