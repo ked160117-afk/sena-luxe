@@ -143,6 +143,143 @@ export async function deleteProductVideoFromFirestore(videoId: string): Promise<
 }
 
 
+
+/**
+ * Build sanitized, read-only public mirrors from canonical records.
+ * This is an admin-triggered migration step only; it never modifies canonical data.
+ * Product videos, private notes, price history, requests, settings, and sequence ledgers
+ * are deliberately excluded.
+ */
+export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number }> {
+  const user = auth.currentUser;
+  if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+    throw new Error('公開カタログの同期には管理者認証が必要です。');
+  }
+
+  const [gamesSnap, productsSnap, ratesSnap, publicGamesSnap, publicProductsSnap, publicRatesSnap] = await Promise.all([
+    getDocs(collection(db, 'games')),
+    getDocs(collection(db, 'products')),
+    getDocs(collection(db, 'stoneRates')),
+    getDocs(collection(db, 'publicGames')),
+    getDocs(collection(db, 'publicProducts')),
+    getDocs(collection(db, 'publicStoneRates')),
+  ]);
+
+  const publicGames = gamesSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as GameTitle))
+    .filter((game) => game.isHandled === true)
+    .map((game) => ({
+      id: game.id,
+      code: game.code,
+      name: game.name,
+      shortName: game.shortName,
+      category: game.category,
+      currencyName: game.currencyName,
+      currencyUnit: game.currencyUnit,
+      iconUrl: game.iconUrl || '',
+      currencyIconUrl: game.currencyIconUrl || '',
+      isHandled: true,
+      description: game.description || '',
+      order: game.order ?? 999,
+    }));
+
+  const publicProducts = productsSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as ProductItem))
+    .filter((product) =>
+      product.verifiedForPublic === true &&
+      product.status === '掲載中' &&
+      (product.category === 'ゲーム内通貨・石垢' || product.category === '引退垢') &&
+      typeof product.price === 'number' &&
+      product.price > 0 &&
+      Boolean(product.title?.trim()) &&
+      Boolean(product.summary?.trim())
+    )
+    .map((product) => ({
+      id: product.id,
+      productNumber: product.productNumber,
+      gameId: product.gameId,
+      gameCode: product.gameCode,
+      gameName: product.gameName,
+      category: product.category,
+      title: product.title,
+      summary: product.summary,
+      price: product.price,
+      status: '掲載中' as const,
+      verifiedForPublic: true,
+      imageUrl: product.imageUrl || '',
+      deviceCompatibility: product.deviceCompatibility || '',
+      keyHighlights: Array.isArray(product.keyHighlights) ? product.keyHighlights.slice(0, 5) : [],
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      order: product.order ?? 0,
+    }));
+
+  const publicRates = ratesSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as StoneRatePlan))
+    .filter((rate) =>
+      rate.verifiedForPublic === true &&
+      rate.status === '取扱中' &&
+      rate.isPreparation === false &&
+      typeof rate.currentPrice === 'number' &&
+      rate.currentPrice > 0 &&
+      Boolean(rate.currencyAmount?.trim()) &&
+      Boolean(rate.planName?.trim()) &&
+      Boolean(rate.conditions?.trim())
+    )
+    .map((rate) => ({
+      id: rate.id,
+      gameId: rate.gameId,
+      gameCode: rate.gameCode,
+      gameName: rate.gameName,
+      planName: rate.planName,
+      currencyName: rate.currencyName,
+      currencyAmount: rate.currencyAmount,
+      conditions: rate.conditions,
+      currentPrice: rate.currentPrice,
+      confirmedDate: rate.confirmedDate,
+      status: '取扱中' as const,
+      stockStatus: '在庫要確認',
+      isPreparation: false,
+      verifiedForPublic: true,
+    }));
+
+  const desired = [
+    { collectionName: 'publicGames', rows: publicGames, existing: publicGamesSnap.docs },
+    { collectionName: 'publicProducts', rows: publicProducts, existing: publicProductsSnap.docs },
+    { collectionName: 'publicStoneRates', rows: publicRates, existing: publicRatesSnap.docs },
+  ];
+
+  let batch = writeBatch(db);
+  let operationCount = 0;
+  const commitIfNeeded = async () => {
+    if (operationCount >= 400) {
+      await batch.commit();
+      batch = writeBatch(db);
+      operationCount = 0;
+    }
+  };
+
+  for (const group of desired) {
+    const allowedIds = new Set(group.rows.map((row) => row.id));
+    for (const row of group.rows) {
+      batch.set(doc(db, group.collectionName, row.id), row);
+      operationCount += 1;
+      await commitIfNeeded();
+    }
+    // Remove stale public mirrors only; canonical source records are untouched.
+    for (const stale of group.existing) {
+      if (!allowedIds.has(stale.id)) {
+        batch.delete(stale.ref);
+        operationCount += 1;
+        await commitIfNeeded();
+      }
+    }
+  }
+  if (operationCount > 0) await batch.commit();
+
+  return { games: publicGames.length, products: publicProducts.length, rates: publicRates.length };
+}
+
 const COLLECTIONS = {
   GAMES: 'games',
   PRODUCTS: 'products',
