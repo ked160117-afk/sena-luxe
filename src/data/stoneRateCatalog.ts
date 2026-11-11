@@ -514,13 +514,13 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
   {
     id: 'game-kitaou', code: 'KTO', name: 'キタキタ王様', shortName: 'キタキタ王様',
     category: '合成RPG', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://www.4gamer.net/games/044/G104419/screenshot_3.jpg',
+    iconUrl: 'https://play-lh.googleusercontent.com/Tlhi5Z83quBhHfqHUbeKpk3REscVwNqmGYoWTRFkNiOd5fWI6SjlD5WWqH04dhQulAS6j9ce7X3ma97AttUUWQ=w240-h480',
     isHandled: true, description: '運と戦略を組み合わせて戦う合成RPG。', order: 37,
   },
   {
     id: 'game-czn', code: 'CZN', name: 'カオスゼロナイトメア', shortName: 'カオゼロ',
     category: 'カオスループRPG', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/5d/cc/c5/5dccc5bb-2156-690e-f31b-e15b6de1179f/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg',
+    iconUrl: 'https://play-lh.googleusercontent.com/zSANiqdzop4Rf5--2B_dc1LiAbpmK33fpzZCmiVBlD6OKanMuZky5K-uxpC9PmnqKluITyIPdtu-remzPqRn_Q=w240-h480',
     isHandled: true, description: '選択が物語を導くカオスループRPG。', order: 38,
   },
   {
@@ -550,7 +550,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
   {
     id: 'game-hxh-nen-survivor', code: 'HNXS', name: 'HUNTER×HUNTER NEN×SURVIVOR', shortName: 'ネンサバ',
     category: 'サバイバーアクション', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/2e/dd/d82edd00-efce-9113-e757-1fef4c03082d/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
+    iconUrl: 'https://play-lh.googleusercontent.com/bO10Dq7vGdMM1uzYzBUxwVuypXFNQJodwq5-ujSI4x2sV2P8UxSvPRH6oRoCjF2Zxy3SKKWYze-tLycUdvZKIw=w240-h480',
     isHandled: true, description: '念能力を駆使して戦うサバイバーアクション。', order: 43,
   },
 ];
