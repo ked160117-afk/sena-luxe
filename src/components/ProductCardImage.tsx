@@ -20,6 +20,7 @@ interface ProductCardImageProps {
   videoUrl?: string;
   videoStorageId?: string;
   currencyIconUrl?: string;
+  gameIconUrl?: string;
   title?: string;
   className?: string;
 }
@@ -33,6 +34,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   videoUrl,
   videoStorageId,
   currencyIconUrl,
+  gameIconUrl,
   title,
   className = 'w-full h-44',
 }) => {
@@ -122,6 +124,23 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
           <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
             石垢
           </div>
+        </div>
+      );
+    }
+
+    // If the currency image is missing or unavailable, always identify the game with its app icon.
+    if (gameIconUrl && failedImageUrl !== gameIconUrl) {
+      return (
+        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 flex items-center justify-center ${className}`}>
+          <img
+            src={gameIconUrl}
+            alt={`${gameName} アプリアイコン`}
+            className="w-full h-full object-contain p-3"
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailedImageUrl(gameIconUrl)}
+          />
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">石垢</div>
         </div>
       );
     }
