@@ -64,3 +64,9 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 
 ## Completion criteria
 This task is complete only when code is merged, rules are published to the correct named database, the migration has run, and anonymous-vs-admin access tests plus real site checks have passed. A GitHub branch or successful build alone is not completion.
+
+
+## Public settings mirror
+
+- The migration builder now copies only `lineUrl`, `shopNotice`, `enableDirectLineCopy`, and `contactDeskHours` from `settings/general` to `publicSettings/general`.
+- No other settings fields are copied. The public listener has not yet been switched; keep canonical rules unchanged until listener migration and validation are complete.
