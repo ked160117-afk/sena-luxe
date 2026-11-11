@@ -28,7 +28,7 @@ export const RetiredAccountsView: React.FC = () => {
         <span className="text-[11px] font-cinzel tracking-[0.2em] text-[#d4af37] uppercase">FEATURED RETIRED ACCOUNTS</span>
         <h1 className="text-2xl sm:text-4xl font-bold text-white mt-2">おすすめ引退アカウント</h1>
         <p className="text-xs sm:text-sm text-stone-400 mt-3 leading-relaxed">
-          ゲームタイトルを横断して、掲載中の引退アカウントを、ゲームタイトルを問わずご覧いただけます。
+          ゲームタイトルを問わず、掲載中の引退アカウントをまとめてご覧いただけます。
           <br />商品内容・在庫・価格はご購入前に公式LINEでご確認ください。
         </p>
       </section>
