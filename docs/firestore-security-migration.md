@@ -1,6 +1,6 @@
 # Firestore privacy hardening migration plan
 
-Status: design checkpoint only. This document does not change production Firestore rules or data.
+Status: implementation in progress on a draft branch. No production Firestore rules or data have been changed.
 
 ## Goal
 Prevent unauthenticated visitors from reading private product drafts, unlisted products, internal price history, inquiry records, sequence ledgers, admin settings, and admin records directly from Firestore. Publicly displayed catalog fields remain public by design.
@@ -39,11 +39,11 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 - Video metadata and chunks remain private until an approved publishing design ties them to a currently public product. Do not make the existing entire video collection public.
 
 ## Migration sequence (do not skip)
-1. Implement allowlisted public mirror builders and admin-only migration tooling. Do not change existing rules yet.
-2. Update public website listeners to use only `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings`.
-3. Update admin dashboard listeners to read canonical collections only after admin authorization.
-4. Update every create/edit/publish/unpublish/delete operation to maintain the mirror. Use batches/transactions where possible; handle Firestore batch limits and avoid silent local-only success.
-5. Run a one-time admin migration that copies only eligible records. It must be idempotent and must not modify canonical records, prices, price histories, product numbers, or sequence ledgers.
+1. Implemented on the draft branch: an admin-only mirror builder writes allowlisted `publicGames`, `publicProducts`, and `publicStoneRates`; matching draft rules permit public reads and admin writes. This has not been deployed or executed against the live database.
+2. Pending: update public website listeners to use only `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings`.
+3. Pending: separate admin-only canonical listeners from public mirror listeners.
+4. Pending: update every create/edit/publish/unpublish/delete operation to maintain mirrors atomically or with safe retry/reconciliation.
+5. Pending: execute the admin migration after the website read path and rules are ready. The builder is idempotent and does not modify canonical records, prices, price histories, product numbers, or sequence ledgers.
 6. Test anonymous reads and writes, admin reads/writes, and the public site against the exact named database.
 7. Only after the public site and admin dashboard pass those tests, publish restrictive rules to the exact named database. Never publish to `(default)` by mistake.
 8. Verify direct unauthenticated reads of canonical collections are denied, while public mirrors remain readable and the site continues to work.
