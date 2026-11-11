@@ -22,13 +22,13 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 ## Confirmed risks and release blockers
 
 ### Critical — generation publication is implemented in draft code but not yet proven safe
-The builder now writes a new immutable generation under `publicCatalogGenerations/{generationId}`, writes its settings and count metadata, then switches the single `publicCatalogControl/active` document only after all batches commit. Public listeners follow that pointer; draft rules allow public reads only when the generation ID matches the active pointer. Older generations are retained for rollback and are not automatically deleted.
+The builder now writes a new immutable generation under `publicCatalogGenerations/{generationId}`, writes its settings and count metadata, then switches the single `publicCatalogControl/active` document only after all batches commit. A separate admin-only monotonic publish revision is reserved before staging; the final pointer switch runs in a transaction and refuses to replace a pointer with an equal/newer revision. This fences the previously identified out-of-order concurrent publisher race. Public listeners follow the pointer; draft rules allow public reads only when the generation ID matches the active pointer. Older generations are retained for rollback and are not automatically deleted.
 
 Remaining checks before this can be considered production-ready:
 - Firestore Rules Emulator tests have now been added on this branch using an isolated `demo-` project and the emulator's default database. They cover active/inactive generation reads, canonical/private collection denial, request schema validation, non-admin access denial, and admin publication allowlists. These tests are wired into CI but have not yet been observed passing.
 - The emulator does not currently provide a reliable way to apply the configured rules to the production named database ID. Therefore these tests are a rules-logic check, not proof of the named production database's deployed rules. A separate controlled verification of the exact named database remains mandatory.
 - Test failure before pointer update: the previous active generation must remain visible.
-- Test pointer switch and rollback with concurrent admin publish attempts.
+- Add emulator coverage for the publish revision fence and test pointer switch/rollback with concurrent admin publish attempts.
 - Verify generation document paths and public listener behavior in a real browser.
 
 Do not run this against production or publish restrictive rules until those tests pass.
@@ -54,7 +54,7 @@ Required before enforcement:
 - Never enable enforcement until the app has been verified to send valid App Check tokens.
 
 ### High — security Rules tests are added but not yet verified
-The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, and admin publication allowlists. The emulator suite uses an isolated demo project/default database; it does not validate the production named database.
+The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, and admin publication allowlists. The emulator suite uses an isolated demo project/default database; it does not validate the production named database. The publication revision fence has been implemented in draft code and rules, but still requires emulator and concurrent-run verification.
 
 Remaining:
 - Observe a successful CI emulator run and inspect its test output.
