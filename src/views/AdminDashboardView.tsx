@@ -174,7 +174,7 @@ export const AdminDashboardView: React.FC = () => {
     try {
       const result = await rebuildPublicCatalogMirrors();
       setSyncFeedback(result.activated
-        ? `公開専用データを準備しました。ゲームタイトル ${result.games}件・商品 ${result.products}件・石垢料金 ${result.rates}件・公開設定 ${result.settings}件。公開切替はまだ実行していません。`
+        ? `公開専用データを作成し、有効化しました。ゲームタイトル ${result.games}件・商品 ${result.products}件・石垢料金 ${result.rates}件・公開設定 ${result.settings}件。Firebase本番ルールの変更・本番サイトへの反映とは別です。`
         : `新しい公開データは作成しましたが、より新しい更新が先に公開されたため、今回のデータは有効化していません。現在の公開内容は維持されています。`);
     } catch (error) {
       setSyncFeedback(error instanceof Error ? error.message : '公開専用カタログの作成に失敗しました。');
