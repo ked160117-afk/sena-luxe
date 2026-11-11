@@ -1,15 +1,16 @@
 # Firestore privacy hardening migration plan
 
-Status: implementation in progress on a draft branch. No production Firestore rules or data have been changed.
+Status: public/admin listener split and initial mirror refresh hooks are implemented on a draft branch. The refresh mechanism is not atomic and is not production-ready. No production Firestore rules or data have been changed.
 
 ## Goal
 Prevent unauthenticated visitors from reading private product drafts, unlisted products, internal price history, inquiry records, sequence ledgers, admin settings, and admin records directly from Firestore. Publicly displayed catalog fields remain public by design.
 
 ## Confirmed current behavior
 - The app connects to the named database configured in `firebase-applet-config.json`: `ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699`.
-- Public listeners currently subscribe to `games`, `products`, `stoneRates`, and `settings/general`.
-- The rules currently allow public reads of `games`, `products`, `stoneRates`, `productVideos` and its chunks, `settings`, and `test`.
-- Product visibility and stone-rate visibility are filtered in the browser after the full collection has already been downloaded. Client-side filtering is not a security boundary.
+- On the draft branch, public listeners now subscribe to `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`; admin-only listeners subscribe to canonical collections after admin authorization.
+- Production rules have not been changed and still allow public reads of canonical `games`, `products`, `stoneRates`, `productVideos` and its chunks, `settings`, and `test`.
+- Draft rules restrict canonical catalog/settings/video reads to admins and expose only the public mirror collections, but these rules have not been published.
+- `testFirestoreConnection()` performs a server read of `test/connection`; it returns true for permission-denied and other non-offline errors, so the draft admin-only `test` rule does not currently block general visitors. This check proves reachability only weakly and is not an authorization test.
 - `requests` permits public creates but restricts reads and management to admins. `sequences` is admin-only.
 - Admin recognition currently includes a hard-coded email and UID fallback as well as `admins/{uid}`; preserve account access during any change and review this bootstrap path separately.
 
@@ -40,13 +41,14 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 
 ## Migration sequence (do not skip)
 1. Implemented on the draft branch: an admin-only mirror builder writes allowlisted `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`; matching draft rules permit public reads and admin writes. This has not been deployed or executed against the live database.
-2. Pending: update public website listeners to use only `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings`.
-3. Pending: separate admin-only canonical listeners from public mirror listeners.
-4. Pending: update every create/edit/publish/unpublish/delete operation to maintain mirrors atomically or with safe retry/reconciliation.
-5. Pending: execute the admin migration after the website read path and rules are ready. The builder is idempotent and does not modify canonical records, prices, price histories, product numbers, or sequence ledgers.
-6. Test anonymous reads and writes, admin reads/writes, and the public site against the exact named database.
-7. Only after the public site and admin dashboard pass those tests, publish restrictive rules to the exact named database. Never publish to `(default)` by mistake.
-8. Verify direct unauthenticated reads of canonical collections are denied, while public mirrors remain readable and the site continues to work.
+2. Completed on the draft branch: public website listeners now read only `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`.
+3. Completed on the draft branch: separate admin-only canonical listeners feed the admin dashboard after admin authorization; private state is cleared on logout/auth loss.
+4. Partially implemented only: mutation wrappers trigger a full mirror rebuild after canonical writes. This is non-atomic, may leave stale or partially refreshed mirrors if a later batch fails, and must be replaced or made safely recoverable before production.
+5. Pending: replace the in-place multi-batch rebuild with a staged/versioned generation and a single active-generation pointer (or another demonstrably safe atomic publication design). Do not run the current builder against production yet.
+6. Pending: execute a controlled migration only after the publication design and write paths are tested. The current builder does not modify canonical records, prices, price histories, product numbers, or sequence ledgers, but can rewrite public mirror collections.
+7. Pending: test anonymous reads and writes, admin reads/writes, CRUD/publish/unpublish, numbering, price history, logout/login, and the public site against the exact named database.
+8. Only after all tests pass, separately approve and publish restrictive rules to the exact named database. Never publish to `(default)` by mistake.
+9. Verify direct unauthenticated reads of canonical collections are denied, while only approved public mirrors remain readable and the site continues to work.
 
 ## Required security-rule principles
 - Default deny for every collection.
@@ -68,8 +70,8 @@ This task is complete only when code is merged, rules are published to the corre
 
 ## Public settings mirror
 
-- The migration builder now copies only `lineUrl`, `shopNotice`, `enableDirectLineCopy`, and `contactDeskHours` from `settings/general` to `publicSettings/general`.
-- No other settings fields are copied. The public listener has not yet been switched; keep canonical rules unchanged until listener migration and validation are complete.
+- The migration builder copies only `lineUrl`, `shopNotice`, `enableDirectLineCopy`, and `contactDeskHours` from `settings/general` to `publicSettings/general`.
+- The public listener has been switched on the draft branch. No other settings fields are copied. Production rules remain unchanged.
 
 
 ## Write-path audit (2026-11-12)
@@ -86,11 +88,12 @@ Important consequence: switching listeners or tightening rules before every writ
 
 ## Next implementation gates
 
-1. Separate public mirror state from admin canonical state in StoreContext; do not let public listeners and admin listeners race to update the same React state.
-2. Move public listeners to the four mirror locations. Preserve the existing public fallback behavior only where it does not fabricate inventory or pricing.
-3. Add safe mirror synchronization for every write path above, including unpublish/delete and all bulk operations. Prefer a single Firestore transaction/batch for canonical and mirror changes where the operation permits it; otherwise implement an explicit retry/rebuild strategy and do not tighten rules until reconciliation is proven.
-4. Keep video metadata/chunks private. Public product mirrors deliberately omit videoUrl and videoStorageId; verify that public product cards do not depend on Firestore-hosted video playback before any rule publication.
-5. Run build/type checks and focused tests for public browsing, admin CRUD, product numbering, price history preservation, and logout/login state reset.
-6. Only then execute the mirror rebuild and test actual anonymous/admin access against the exact named database.
+1. Replace the current in-place mirror rebuild with a staged/versioned publication mechanism; ensure public clients can read only the active generation and cannot enumerate staging data.
+2. Audit every public-facing component for reliance on omitted private fields, especially videoUrl/videoStorageId and settings fields.
+3. Make all mutations keep public mirrors consistent; cover unpublish/delete, category/verification/price changes, bulk preparation, and settings changes. Include retries/reconciliation for partial failures.
+4. Audit all Firestore reads outside StoreContext and firestoreService, including direct reads of `requests`, `sequences`, `admins`, and `test`.
+5. Add automated Firestore Rules tests (emulator if available) for anonymous and admin read/write permissions.
+6. Run build/type checks and focused tests for public browsing, admin CRUD, product numbering, price history preservation, and logout/login state reset.
+7. Only then execute the controlled mirror migration and test actual anonymous/admin access against the exact named database.
 
 No application listener or mutation behavior was changed by this audit note. This document is still on the draft branch only.
