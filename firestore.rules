@@ -66,7 +66,6 @@ service cloud.firestore {
       allow read, create, update, delete: if isAdmin();
       match /chunks/{chunkId} {
         allow read, create, update, delete: if isAdmin();
-        allow create, update, delete: if isAdmin();
       }
     }
 
