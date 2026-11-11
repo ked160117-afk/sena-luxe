@@ -538,7 +538,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
   {
     id: 'game-racing-master', code: 'RACE', name: 'レーシングマスター', shortName: 'レーシングマスター',
     category: 'リアルレーシング', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://dl.memuplay.com/new_market/img/com.netease.dfjsna.icon.2025-07-12-03-49-36.png',
+    iconUrl: 'https://play-lh.googleusercontent.com/GtROMzs4rL96ay2R3X7kueRZcC8qEUGpsk4GqHGGrpg4mEohu7F4DmPTwR2HKp5Hwqxk8JkMWObyhihg9u9bYg=w240-h480',
     isHandled: true, description: '実在車種を収録した本格リアルレーシングゲーム。', order: 38,
   },
   {
