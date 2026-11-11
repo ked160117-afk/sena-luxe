@@ -166,21 +166,18 @@ export async function deleteProductVideoFromFirestore(videoId: string): Promise<
  * Product videos, private notes, price history, requests, settings, and sequence ledgers
  * are deliberately excluded.
  */
-export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number }> {
+export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number; generationId: string }> {
   const user = auth.currentUser;
   if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
     throw new Error('公開カタログの同期には管理者認証が必要です。');
   }
 
-  const [gamesSnap, productsSnap, ratesSnap, settingsSnap, publicGamesSnap, publicProductsSnap, publicRatesSnap, publicSettingsSnap] = await Promise.all([
+  // Read canonical data first. No canonical record is changed by this publisher.
+  const [gamesSnap, productsSnap, ratesSnap, settingsSnap] = await Promise.all([
     getDocs(collection(db, 'games')),
     getDocs(collection(db, 'products')),
     getDocs(collection(db, 'stoneRates')),
     getDoc(doc(db, 'settings', 'general')),
-    getDocs(collection(db, 'publicGames')),
-    getDocs(collection(db, 'publicProducts')),
-    getDocs(collection(db, 'publicStoneRates')),
-    getDoc(doc(db, 'publicSettings', 'general')),
   ]);
 
   const publicGames = gamesSnap.docs
@@ -263,7 +260,6 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       verifiedForPublic: true,
     }));
 
-  // Only fields intended for customer-facing display are copied. Internal settings stay private.
   const sourceSettings = settingsSnap.exists() ? settingsSnap.data() : {};
   const publicSettings = {
     lineUrl: typeof sourceSettings.lineUrl === 'string' ? sourceSettings.lineUrl : '',
@@ -272,46 +268,54 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     contactDeskHours: typeof sourceSettings.contactDeskHours === 'string' ? sourceSettings.contactDeskHours : '公式LINEにてご案内',
   };
 
-  const desired = [
-    { collectionName: 'publicGames', rows: publicGames, existing: publicGamesSnap.docs },
-    { collectionName: 'publicProducts', rows: publicProducts, existing: publicProductsSnap.docs },
-    { collectionName: 'publicStoneRates', rows: publicRates, existing: publicRatesSnap.docs },
+  // Build an immutable generation. The public pointer is switched only after
+  // every collection and the settings document have been committed successfully.
+  const generationId = `catalog-${Date.now()}-${crypto.randomUUID()}`;
+  const generationRef = (kind: string, id: string) =>
+    doc(db, 'publicCatalogGenerations', generationId, kind, id);
+  const rows: Array<{ kind: string; id: string; data: Record<string, unknown> }> = [
+    ...publicGames.map((row) => ({ kind: 'games', id: row.id, data: row as unknown as Record<string, unknown> })),
+    ...publicProducts.map((row) => ({ kind: 'products', id: row.id, data: row as unknown as Record<string, unknown> })),
+    ...publicRates.map((row) => ({ kind: 'stoneRates', id: row.id, data: row as unknown as Record<string, unknown> })),
   ];
 
-  let batch = writeBatch(db);
-  let operationCount = 0;
-  const commitIfNeeded = async () => {
-    if (operationCount >= 400) {
-      await batch.commit();
-      batch = writeBatch(db);
-      operationCount = 0;
-    }
-  };
-
-  for (const group of desired) {
-    const allowedIds = new Set(group.rows.map((row) => row.id));
-    for (const row of group.rows) {
-      batch.set(doc(db, group.collectionName, row.id), row);
-      operationCount += 1;
-      await commitIfNeeded();
-    }
-    // Remove stale public mirrors only; canonical source records are untouched.
-    for (const stale of group.existing) {
-      if (!allowedIds.has(stale.id)) {
-        batch.delete(stale.ref);
-        operationCount += 1;
-        await commitIfNeeded();
-      }
-    }
+  for (let offset = 0; offset < rows.length; offset += 400) {
+    const batch = writeBatch(db);
+    rows.slice(offset, offset + 400).forEach((row) => {
+      batch.set(generationRef(row.kind, row.id), row.data);
+    });
+    await batch.commit();
   }
-  if (operationCount > 0) await batch.commit();
 
-  // Settings are a single explicitly allowlisted public document.
-  await setDoc(doc(db, 'publicSettings', 'general'), publicSettings);
+  await setDoc(doc(db, 'publicCatalogGenerations', generationId, 'settings', 'general'), publicSettings);
+  await setDoc(doc(db, 'publicCatalogGenerations', generationId), {
+    generationId,
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+    settings: 1,
+    createdAt: new Date().toISOString(),
+  });
 
-  return { games: publicGames.length, products: publicProducts.length, rates: publicRates.length, settings: 1 };
+  // Single-document publication boundary: clients switch only after the snapshot is complete.
+  await setDoc(doc(db, 'publicCatalogControl', 'active'), {
+    generationId,
+    publishedAt: new Date().toISOString(),
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+  });
+
+  // Previous generations are intentionally retained for rollback. No cleanup is
+  // performed here, so a failed publish cannot delete the last known-good catalog.
+  return {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+    settings: 1,
+    generationId,
+  };
 }
-
 const COLLECTIONS = {
   GAMES: 'games',
   PRODUCTS: 'products',
