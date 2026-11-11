@@ -19,10 +19,21 @@ service cloud.firestore {
       );
     }
 
-    // Admins collection: Used for Role-Based Access Control (RBAC)
+    // Admin role records are not an admin-management API.
+    // A legacy bootstrap admin may create only their own record; no client may
+    // grant, edit, or revoke another user's admin role.
     match /admins/{adminId} {
       allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
-      allow write: if isAdmin();
+      allow create: if isAdmin() &&
+        request.auth.uid == adminId &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.keys().hasAll(['uid', 'email', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.role == 'super_admin' &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.updatedAt is string;
+      allow update, delete: if false;
     }
 
     // Sanitized public mirrors. Only allowlisted display fields are readable by visitors.
