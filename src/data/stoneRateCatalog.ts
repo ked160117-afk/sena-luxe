@@ -526,13 +526,13 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
   {
     id: 'game-baki-tsp', code: 'BAKI', name: '刃牙 THE STRONGEST PROOF', shortName: 'ストプル',
     category: '格闘・育成シミュレーション', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/fb/07/35/fb0735cf-575c-0685-6551-bed226c97bb0/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
+    iconUrl: 'https://play-lh.googleusercontent.com/KFVDyLwsGNvi2euku2YE8HuqNLzouUd51QJtmShjTGEGdUAU9bjKVTxJooKUnu-XAIsiH3LdiqHv9Lf1NOB2=w240-h480',
     isHandled: true, description: '刃牙の世界を舞台に最強を目指す育成ゲーム。', order: 39,
   },
   {
     id: 'game-crows-unlimited', code: 'CRWU', name: 'クローズ×WORST UNLIMITED', shortName: 'クローズアンリミ',
     category: 'シネマティックバトル', currencyName: '対象外', currencyUnit: '—',
-    iconUrl: 'https://unlimited.spgames.jp/common/images/appliicon.png',
+    iconUrl: 'https://play-lh.googleusercontent.com/7M730Dl7aJv23TJVNpqr708YTUKqwFeYB9beH3S-fKzqMYskhpIpR-d7n2GPw77vxsG_VZtGX1Dhnoe26aVR=w240-h480',
     isHandled: true, description: 'クローズ×WORSTのキャラクターが登場するシネマティックバトル。', order: 40,
   },
   {
