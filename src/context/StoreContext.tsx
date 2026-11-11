@@ -48,8 +48,6 @@ import {
 import {
   INITIAL_GAMES,
   INITIAL_CANDIDATE_GAMES,
-  INITIAL_PRODUCTS,
-  INITIAL_STONE_RATES,
   INITIAL_SEQUENCES,
   INITIAL_SETTINGS,
 } from '../data/initialData';
@@ -524,6 +522,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       await refreshPublicMirrors();
     } catch (err) {
       console.warn('Batch preparation update notice:', err);
+      throw err;
     }
     setAdminStoneRates((prev) =>
       prev.map((p) => ({
