@@ -71,32 +71,41 @@ export async function uploadProductVideoToFirestore(
   const chunkCount = Math.ceil(file.size / PRODUCT_VIDEO_CHUNK_BYTES);
   const chunksRef = collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks');
 
-  for (let batchStart = 0; batchStart < chunkCount; batchStart += 5) {
-    const batch = writeBatch(db);
-    const batchEnd = Math.min(batchStart + 5, chunkCount);
-    for (let index = batchStart; index < batchEnd; index += 1) {
-      const start = index * PRODUCT_VIDEO_CHUNK_BYTES;
-      const end = Math.min(start + PRODUCT_VIDEO_CHUNK_BYTES, file.size);
-      const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
-      batch.set(doc(chunksRef, String(index).padStart(4, '0')), {
-        index,
-        data: bytesToBase64(bytes),
-      });
+  try {
+    for (let batchStart = 0; batchStart < chunkCount; batchStart += 5) {
+      const batch = writeBatch(db);
+      const batchEnd = Math.min(batchStart + 5, chunkCount);
+      for (let index = batchStart; index < batchEnd; index += 1) {
+        const start = index * PRODUCT_VIDEO_CHUNK_BYTES;
+        const end = Math.min(start + PRODUCT_VIDEO_CHUNK_BYTES, file.size);
+        const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
+        batch.set(doc(chunksRef, String(index).padStart(4, '0')), {
+          index,
+          data: bytesToBase64(bytes),
+        });
+      }
+      await batch.commit();
+      onProgress?.(Math.round((batchEnd / chunkCount) * 95));
     }
-    await batch.commit();
-    onProgress?.(Math.round((batchEnd / chunkCount) * 95));
-  }
 
-  await setDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId), {
-    id: videoId,
-    contentType: file.type || 'video/mp4',
-    fileName: file.name.slice(0, 120),
-    fileSize: file.size,
-    chunkCount,
-    createdAt: new Date().toISOString(),
-  });
-  onProgress?.(100);
-  return videoId;
+    await setDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId), {
+      id: videoId,
+      contentType: file.type || 'video/mp4',
+      fileName: file.name.slice(0, 120),
+      fileSize: file.size,
+      chunkCount,
+      createdAt: new Date().toISOString(),
+    });
+    onProgress?.(100);
+    return videoId;
+  } catch (error) {
+    try {
+      await deleteProductVideoFromFirestore(videoId);
+    } catch (cleanupError) {
+      console.warn('Could not clean incomplete video upload:', cleanupError);
+    }
+    throw error;
+  }
 }
 
 /** Fetch a saved video only when a visitor presses the play button. */
