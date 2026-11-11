@@ -74,9 +74,40 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Customer Procurement Requests: Anyone can submit (create), only admin can read & manage
+    // Customer requests: public create only with a bounded, exact field schema.
+    // No client may set adminNotes, status, or arbitrary extra/private fields.
+    function validPublicRequest(requestId) {
+      return request.resource.data.keys().hasAll([
+          'id', 'gameTitle', 'requestType', 'desiredQuantity',
+          'budget', 'contactNotes', 'createdAt', 'status'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'gameTitle', 'requestType', 'desiredQuantity',
+          'budget', 'contactNotes', 'createdAt', 'status'
+        ]) &&
+        request.resource.data.id == requestId &&
+        request.resource.data.id is string &&
+        request.resource.data.id.size() <= 80 &&
+        request.resource.data.gameTitle is string &&
+        request.resource.data.gameTitle.size() > 0 &&
+        request.resource.data.gameTitle.size() <= 120 &&
+        request.resource.data.requestType is string &&
+        request.resource.data.requestType.size() > 0 &&
+        request.resource.data.requestType.size() <= 80 &&
+        request.resource.data.desiredQuantity is string &&
+        request.resource.data.desiredQuantity.size() <= 120 &&
+        request.resource.data.budget is string &&
+        request.resource.data.budget.size() <= 80 &&
+        request.resource.data.contactNotes is string &&
+        request.resource.data.contactNotes.size() <= 1000 &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.createdAt.size() <= 40 &&
+        request.resource.data.status == '受付済';
+    }
+
+    // Public users may submit a bounded request, but cannot read or mutate requests.
     match /requests/{requestId} {
-      allow create: if true;
+      allow create: if validPublicRequest(requestId);
       allow read, update, delete: if isAdmin();
     }
 
