@@ -202,11 +202,22 @@ export const StoneRatesView: React.FC = () => {
             return (
               <section key={gameId} className="rounded-xl bg-[#111216] border border-[#d4af37]/30 overflow-hidden">
                 <div className="px-4 sm:px-5 py-4 bg-gradient-to-r from-[#201a0d] to-[#111216] border-b border-[#d4af37]/25 flex items-center gap-2">
-                  {games.find((game) => game.id === gameId)?.currencyIconUrl ? (
-                    <img src={games.find((game) => game.id === gameId)!.currencyIconUrl} alt={`${gameName} ガチャ石アイコン`} className="w-9 h-9 rounded-lg object-contain bg-black/40 border border-[#d4af37]/30 p-1" loading="lazy" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><Gem className="w-5 h-5 text-[#d4af37]" /></div>
-                  )}
+                  {(() => {
+                    const game = games.find((entry) => entry.id === gameId);
+                    const iconUrl = game?.currencyIconUrl || game?.iconUrl;
+                    return iconUrl ? (
+                      <img
+                        src={iconUrl}
+                        alt={`${gameName} ${game?.currencyIconUrl ? 'ガチャ石アイコン' : 'アプリアイコン'}`}
+                        className="w-9 h-9 rounded-lg object-contain bg-black/40 border border-[#d4af37]/30 p-1"
+                        loading="lazy"
+                        onError={(event) => {
+                          if (game?.iconUrl && event.currentTarget.src !== game.iconUrl) event.currentTarget.src = game.iconUrl;
+                          else event.currentTarget.style.visibility = 'hidden';
+                        }}
+                      />
+                    ) : <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><Gem className="w-5 h-5 text-[#d4af37]" /></div>;
+                  })()}
                   <h2 className="text-base sm:text-lg font-bold text-[#f7e7ce]">{gameName}</h2>
                 </div>
                 <div className="divide-y divide-stone-800">
