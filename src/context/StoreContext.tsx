@@ -259,88 +259,117 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => unsubscribe();
   }, []);
 
-  // Public realtime listeners read only sanitized mirror collections.
-  // Canonical collections are never subscribed to by an anonymous storefront session.
+  // Public listeners follow one active immutable catalog generation.
+  // The generation pointer changes only after the full snapshot is written.
   useEffect(() => {
-    const unsubGames = onSnapshot(collection(db, 'publicGames'), (snapshot) => {
-      const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
-        const data = d.data() as GameTitle;
-        const fallback = INITIAL_GAMES.find((g) => g.code.toUpperCase() === data.code?.toUpperCase());
-        return {
-          ...data,
-          id: d.id,
-          description: data.description || fallback?.description || '',
-          iconUrl: data.iconUrl || fallback?.iconUrl || '',
-          currencyIconUrl: data.currencyIconUrl || fallback?.currencyIconUrl || '',
-          isHandled: true,
-        };
-      });
-      const loadedIds = new Set(loadedGames.map((game) => game.id));
-      const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].filter((game) => !loadedIds.has(game.id));
-      const merged = [...loadedGames, ...missingInitialGames].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-      setAllGames(merged);
-    }, (error) => {
-      console.warn('Public games listener note:', error.message);
-      setAllGames([...INITIAL_GAMES]);
-    });
+    let generationUnsubscribers: Array<() => void> = [];
+    let activeGenerationId: string | null = null;
 
-    const unsubProducts = onSnapshot(collection(db, 'publicProducts'), (snapshot) => {
-      const loaded: ProductItem[] = snapshot.docs.map((d) => ({
-        ...(d.data() as ProductItem),
-        id: d.id,
-        status: '掲載中',
-        verifiedForPublic: true,
-      }));
-      loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setProducts(loaded);
-    }, (error) => {
-      console.warn('Public products listener note:', error.message);
+    const clearGenerationListeners = () => {
+      generationUnsubscribers.forEach((unsubscribe) => unsubscribe());
+      generationUnsubscribers = [];
+    };
+    const resetPublicCatalog = () => {
+      setAllGames([...INITIAL_GAMES].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
       setProducts([]);
-    });
-
-    const unsubRates = onSnapshot(collection(db, 'publicStoneRates'), (snapshot) => {
-      const loaded: StoneRatePlan[] = snapshot.docs.map((d) => ({
-        ...(d.data() as StoneRatePlan),
-        id: d.id,
-        status: '取扱中',
-        stockStatus: '在庫要確認',
-        isPreparation: false,
-        verifiedForPublic: true,
-        priceHistory: [],
-      }));
-      setStoneRates(loaded);
-    }, (error) => {
-      console.warn('Public stone rates listener note:', error.message);
       setStoneRates([]);
-    });
+      setSettings({
+        lineUrl: OFFICIAL_LINE_URL,
+        shopNotice: '',
+        enableDirectLineCopy: false,
+        contactDeskHours: '公式LINEにてご案内',
+      });
+    };
 
-    const unsubSettings = onSnapshot(doc(db, 'publicSettings', 'general'), (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setSettings({
-          lineUrl: typeof data.lineUrl === 'string' ? data.lineUrl : OFFICIAL_LINE_URL,
-          shopNotice: typeof data.shopNotice === 'string' ? data.shopNotice : '',
-          enableDirectLineCopy: data.enableDirectLineCopy === true,
-          contactDeskHours: typeof data.contactDeskHours === 'string' ? data.contactDeskHours : '公式LINEにてご案内',
+    const unsubPointer = onSnapshot(doc(db, 'publicCatalogControl', 'active'), (pointerSnapshot) => {
+      const pointer = pointerSnapshot.exists() ? pointerSnapshot.data() : {};
+      const nextGenerationId = typeof pointer.generationId === 'string' ? pointer.generationId : null;
+      if (nextGenerationId === activeGenerationId) return;
+
+      clearGenerationListeners();
+      activeGenerationId = nextGenerationId;
+      resetPublicCatalog();
+      if (!nextGenerationId) return;
+
+      const generationCollection = (name: string) =>
+        collection(db, 'publicCatalogGenerations', nextGenerationId, name);
+
+      generationUnsubscribers.push(onSnapshot(generationCollection('games'), (snapshot) => {
+        const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
+          const data = d.data() as GameTitle;
+          const fallback = INITIAL_GAMES.find((g) => g.code.toUpperCase() === data.code?.toUpperCase());
+          return {
+            ...data,
+            id: d.id,
+            description: data.description || fallback?.description || '',
+            iconUrl: data.iconUrl || fallback?.iconUrl || '',
+            currencyIconUrl: data.currencyIconUrl || fallback?.currencyIconUrl || '',
+            isHandled: true,
+          };
         });
-      } else {
-        setSettings({
-          lineUrl: OFFICIAL_LINE_URL,
-          shopNotice: '',
-          enableDirectLineCopy: false,
-          contactDeskHours: '公式LINEにてご案内',
-        });
-      }
+        const loadedIds = new Set(loadedGames.map((game) => game.id));
+        const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].filter((game) => !loadedIds.has(game.id));
+        setAllGames([...loadedGames, ...missingInitialGames].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
+      }, (error) => {
+        console.warn('Public games listener note:', error.message);
+        setAllGames([...INITIAL_GAMES]);
+      }));
+
+      generationUnsubscribers.push(onSnapshot(generationCollection('products'), (snapshot) => {
+        const loaded: ProductItem[] = snapshot.docs.map((d) => ({
+          ...(d.data() as ProductItem),
+          id: d.id,
+          status: '掲載中',
+          verifiedForPublic: true,
+        }));
+        loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setProducts(loaded);
+      }, (error) => {
+        console.warn('Public products listener note:', error.message);
+        setProducts([]);
+      }));
+
+      generationUnsubscribers.push(onSnapshot(generationCollection('stoneRates'), (snapshot) => {
+        const loaded: StoneRatePlan[] = snapshot.docs.map((d) => ({
+          ...(d.data() as StoneRatePlan),
+          id: d.id,
+          status: '取扱中',
+          stockStatus: '在庫要確認',
+          isPreparation: false,
+          verifiedForPublic: true,
+          priceHistory: [],
+        }));
+        setStoneRates(loaded);
+      }, (error) => {
+        console.warn('Public stone rates listener note:', error.message);
+        setStoneRates([]);
+      }));
+
+      generationUnsubscribers.push(onSnapshot(
+        doc(db, 'publicCatalogGenerations', nextGenerationId, 'settings', 'general'),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setSettings({
+              lineUrl: typeof data.lineUrl === 'string' ? data.lineUrl : OFFICIAL_LINE_URL,
+              shopNotice: typeof data.shopNotice === 'string' ? data.shopNotice : '',
+              enableDirectLineCopy: data.enableDirectLineCopy === true,
+              contactDeskHours: typeof data.contactDeskHours === 'string' ? data.contactDeskHours : '公式LINEにてご案内',
+            });
+          }
+        },
+        (error) => console.warn('Public settings listener note:', error.message)
+      ));
     }, (error) => {
-      console.warn('Public settings listener note:', error.message);
-      setSettings({ ...INITIAL_SETTINGS, lineUrl: OFFICIAL_LINE_URL });
+      console.warn('Public catalog pointer listener note:', error.message);
+      clearGenerationListeners();
+      activeGenerationId = null;
+      resetPublicCatalog();
     });
 
     return () => {
-      unsubGames();
-      unsubProducts();
-      unsubRates();
-      unsubSettings();
+      unsubPointer();
+      clearGenerationListeners();
     };
   }, []);
 
