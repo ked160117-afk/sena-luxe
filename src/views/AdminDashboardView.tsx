@@ -316,6 +316,10 @@ export const AdminDashboardView: React.FC = () => {
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdTitle.trim() || !newProdGameId) return;
+    if (newProdVideoFile && newProdVideoFile.size > 15 * 1024 * 1024) {
+      window.alert('動画は15MB以下にしてください。');
+      return;
+    }
 
     const isVerifiedForPublic =
       (newProdCategory === 'ゲーム内通貨・石垢' || newProdCategory === '引退垢') &&
@@ -394,6 +398,10 @@ export const AdminDashboardView: React.FC = () => {
   const handleSaveEditedProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+    if (editProdVideoFile && editProdVideoFile.size > 15 * 1024 * 1024) {
+      window.alert('動画は15MB以下にしてください。');
+      return;
+    }
 
     const isVerifiedForPublic =
       (editProdCategory === 'ゲーム内通貨・石垢' || editProdCategory === '引退垢') &&
