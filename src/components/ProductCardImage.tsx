@@ -26,9 +26,9 @@ const getYouTubeVideoId = (value?: string): string | null => {
   if (!value) return null;
   try {
     const url = new URL(value);
-    const host = url.hostname.replace(/^www\\./, '').toLowerCase();
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
     if (host === 'youtu.be') return url.pathname.split('/').filter(Boolean)[0] || null;
-    if (host.endsWith('youtube.com') || host === 'youtube-nocookie.com') {
+    if (host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtube-nocookie.com') {
       if (url.pathname === '/watch') return url.searchParams.get('v');
       const parts = url.pathname.split('/').filter(Boolean);
       if (['embed', 'shorts', 'live'].includes(parts[0] || '')) return parts[1] || null;
