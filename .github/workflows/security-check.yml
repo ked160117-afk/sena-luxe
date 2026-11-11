@@ -32,10 +32,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Production dependency security audit
-        run: |
-          npm audit --omit=dev --json > /tmp/npm-audit-production.json || true
-          node -e "const a=require('/tmp/npm-audit-production.json'); console.log('Production dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); for (const advisory of item.via ?? []) if (typeof advisory === 'object') console.log('  advisory:', JSON.stringify({title:advisory.title,url:advisory.url,range:advisory.range,cwe:advisory.cwe})); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical production dependency advisories block release.'); process.exitCode=1; }"
       - name: TypeScript check
         run: npm run lint
 
@@ -44,3 +40,22 @@ jobs:
 
       - name: Build project
         run: npm run build
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Production dependency security audit
+        run: |
+          npm audit --omit=dev --json > /tmp/npm-audit-production.json || true
+          node -e "const a=require('/tmp/npm-audit-production.json'); console.log('Production dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', effects=' + JSON.stringify(item.effects ?? []) + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); for (const advisory of item.via ?? []) if (typeof advisory === 'object') console.log('  advisory:', JSON.stringify({title:advisory.title,url:advisory.url,range:advisory.range,cwe:advisory.cwe})); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical production dependency advisories block release.'); process.exitCode=1; }"
