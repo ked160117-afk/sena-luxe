@@ -482,7 +482,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     iconUrl: 'https://play-lh.googleusercontent.com/hXb0wwJYOJ7GwnzP29SbOIlDGSXWn7yOwgXnn4OBt1nfNgMpvcmSfwnNpeJ8B4n3AP73kyxeXnHTdhddfR6huw=w240-h480',
     isHandled: true,
     description: '背中で魅せるハイクオリティなグラフィックと重厚な世界観のガンガールRPG。',
-    order: 34,
+    order: 43,
   },
   {
     id: 'game-ko',
@@ -495,7 +495,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     iconUrl: 'https://play-lh.googleusercontent.com/67LMdiIq4uC-imFkkxmro_rzRlU5kbkxcq4wQHEcIy-TmvGlz2GGpa2WAuNSPvD0fsy7B5JaXkQM7VfqAo2yzbI=w240-h480',
     isHandled: true,
     description: '100人のプレイヤーが無人島に降り立ち最後の一人を目指すバトルロワイヤル。',
-    order: 35,
+    order: 41,
   },
   {
     id: 'game-kb',
@@ -508,9 +508,9 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     iconUrl: 'https://play-lh.googleusercontent.com/co478HyuivmHColPd8JER5MoRzEUqFJTCAHuQSeypNAxcRynPnhAIMpx-8S3udWte0hbZdXupMYoN9cvt06P=w240-h480',
     isHandled: true,
     description: 'アニメ『黒子のバスケ』の世界で熱いストリートバスケの真剣勝負を繰り広げる対戦ゲーム。',
-    order: 36,
+    order: 42,
   },
-  // 34-40. 引退垢カテゴリー用の追加ゲーム（石垢料金プランは作成しない）
+  // 37-43. 引退垢カテゴリー用の追加ゲーム（石垢料金プランは作成しない）
   {
     id: 'game-kitaou', code: 'KTO', name: 'キタキタ王様', shortName: 'キタキタ王様',
     category: '合成RPG', currencyName: '対象外', currencyUnit: '—',
