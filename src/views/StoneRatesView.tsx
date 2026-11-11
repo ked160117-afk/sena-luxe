@@ -149,7 +149,6 @@ export const StoneRatesView: React.FC = () => {
             </button>
             {games.map((g) => {
               const count = publishedPlans.filter((r) => r.gameId === g.id).length;
-              if (count === 0) return null;
               const isSelected = selectedGameId === g.id;
               return (
                 <button
@@ -161,7 +160,7 @@ export const StoneRatesView: React.FC = () => {
                       : 'bg-[#121316] text-stone-300 hover:text-white border border-stone-800'
                   }`}
                 >
-                  {g.shortName} ({count})
+                  <span className="inline-flex items-center gap-1.5"><img src={g.iconUrl} alt="" className="w-5 h-5 rounded object-cover" loading="lazy" />{g.shortName} ({count})</span>
                 </button>
               );
             })}
@@ -173,11 +172,17 @@ export const StoneRatesView: React.FC = () => {
       {filteredPlans.length === 0 ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-12 text-center text-stone-400">
           <p className="text-sm font-semibold text-stone-200">
-            {plansForSelectedGame.length === 0 ? '現在商品を準備中です' : '検索条件に一致する石垢プランが見つかりませんでした'}
+            {plansForSelectedGame.length === 0
+              ? selectedGameId
+                ? '現在石垢の取り扱いはしておりません。'
+                : '表示する石垢プランがありません。'
+              : '検索条件に一致する石垢プランが見つかりませんでした'}
           </p>
           <p className="mt-2 text-xs text-stone-400">
             {plansForSelectedGame.length === 0
-              ? '一覧にない商品や新しいゲームタイトルも公式LINEでご相談いただけます。'
+              ? selectedGameId
+                ? 'ご用意できましたら対応します。'
+                : '各ゲームタイトルを選択すると、石垢の取り扱い状況をご確認いただけます。'
               : '検索条件を変更するか、フィルターをリセットしてください。'}
           </p>
           <button
