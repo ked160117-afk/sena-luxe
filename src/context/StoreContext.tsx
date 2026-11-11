@@ -177,8 +177,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Master Data State
   const [allGames, setAllGames] = useState<GameTitle[]>(() => [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]);
-  const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
-  const [stoneRates, setStoneRates] = useState<StoneRatePlan[]>(INITIAL_STONE_RATES);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [stoneRates, setStoneRates] = useState<StoneRatePlan[]>([]);
   const [requests, setRequests] = useState<GameRequestItem[]>([]);
   const [sequences, setSequences] = useState<Record<string, SerialSequence>>(INITIAL_SEQUENCES);
   const [settings, setSettings] = useState<AdminSettings>(INITIAL_SETTINGS);
@@ -253,166 +253,82 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => unsubscribe();
   }, []);
 
-  // Firestore Realtime Listeners for Public Data
+  // Public realtime listeners read only sanitized mirror collections.
+  // Canonical collections are never subscribed to by an anonymous storefront session.
   useEffect(() => {
-    // 1. Games collection listener
-    const unsubGames = onSnapshot(
-      collection(db, 'games'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const allInitialMap = new Map<string, GameTitle>(
-            [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].map((g) => [g.code.toUpperCase(), g])
-          );
+    const unsubGames = onSnapshot(collection(db, 'publicGames'), (snapshot) => {
+      const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
+        const data = d.data() as GameTitle;
+        const fallback = INITIAL_GAMES.find((g) => g.code.toUpperCase() === data.code?.toUpperCase());
+        return {
+          ...data,
+          id: d.id,
+          description: data.description || fallback?.description || '',
+          iconUrl: data.iconUrl || fallback?.iconUrl || '',
+          currencyIconUrl: data.currencyIconUrl || fallback?.currencyIconUrl || '',
+          isHandled: true,
+        };
+      });
+      const loadedIds = new Set(loadedGames.map((game) => game.id));
+      const missingInitialGames = INITIAL_GAMES.filter((game) => !loadedIds.has(game.id));
+      const merged = [...loadedGames, ...missingInitialGames].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+      setAllGames(merged);
+    }, (error) => {
+      console.warn('Public games listener note:', error.message);
+      setAllGames([...INITIAL_GAMES]);
+    });
 
-          const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
-            const data = d.data() as GameTitle;
-            const fallback = allInitialMap.get(data.code?.toUpperCase() || '');
-            let description = data.description;
+    const unsubProducts = onSnapshot(collection(db, 'publicProducts'), (snapshot) => {
+      const loaded: ProductItem[] = snapshot.docs.map((d) => ({
+        ...(d.data() as ProductItem),
+        id: d.id,
+        status: '掲載中',
+        verifiedForPublic: true,
+      }));
+      loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setProducts(loaded);
+    }, (error) => {
+      console.warn('Public products listener note:', error.message);
+      setProducts([]);
+    });
 
-            // Ensure neutral description without fictional inventory claims
-            if (
-              !description ||
-              description.includes('取り扱い') ||
-              description.includes('所持データ') ||
-              description.includes('ストック') ||
-              description.includes('取扱候補') ||
-              description.includes('オーダー')
-            ) {
-              if (fallback) {
-                description = fallback.description;
-              }
-            }
+    const unsubRates = onSnapshot(collection(db, 'publicStoneRates'), (snapshot) => {
+      const loaded: StoneRatePlan[] = snapshot.docs.map((d) => ({
+        ...(d.data() as StoneRatePlan),
+        id: d.id,
+        status: '取扱中',
+        stockStatus: '在庫要確認',
+        isPreparation: false,
+        verifiedForPublic: true,
+        priceHistory: [],
+      }));
+      setStoneRates(loaded);
+    }, (error) => {
+      console.warn('Public stone rates listener note:', error.message);
+      setStoneRates([]);
+    });
 
-            let iconUrl = data.iconUrl || fallback?.iconUrl || '';
-            let currencyIconUrl = data.currencyIconUrl || fallback?.currencyIconUrl || '';
-            // Remove unverified stock images
-            if (iconUrl.includes('images.unsplash.com')) {
-              iconUrl = '';
-            }
-            if (currencyIconUrl.includes('images.unsplash.com')) {
-              currencyIconUrl = '';
-            }
-
-            return {
-              ...data,
-              description,
-              iconUrl,
-              currencyIconUrl,
-            };
-          });
-
-          // Keep the master catalog available even when public Firestore writes are restricted.
-          // Existing Firestore records always win, so administrator edits are preserved.
-          const loadedGameIds = new Set(loadedGames.map((game) => game.id));
-          const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]
-            .filter((game) => !loadedGameIds.has(game.id));
-          const mergedGames = [...loadedGames, ...missingInitialGames];
-          mergedGames.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-          setAllGames(mergedGames);
-        }
-      },
-      (error) => {
-        console.warn('Games onSnapshot note:', error.message);
+    const unsubSettings = onSnapshot(doc(db, 'publicSettings', 'general'), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setSettings({
+          lineUrl: typeof data.lineUrl === 'string' ? data.lineUrl : OFFICIAL_LINE_URL,
+          shopNotice: typeof data.shopNotice === 'string' ? data.shopNotice : '',
+          enableDirectLineCopy: data.enableDirectLineCopy === true,
+          contactDeskHours: typeof data.contactDeskHours === 'string' ? data.contactDeskHours : '公式LINEにてご案内',
+        });
+      } else {
+        setSettings({
+          lineUrl: OFFICIAL_LINE_URL,
+          shopNotice: '',
+          enableDirectLineCopy: false,
+          contactDeskHours: '公式LINEにてご案内',
+        });
       }
-    );
-
-    // 2. Products collection listener
-    const unsubProducts = onSnapshot(
-      collection(db, 'products'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedProducts: ProductItem[] = snapshot.docs.map((d) => {
-            const data = d.data() as ProductItem;
-            const verified =
-              data.verifiedForPublic === true &&
-              (data.category === 'ゲーム内通貨・石垢' || data.category === '引退垢') &&
-              typeof data.price === 'number' &&
-              data.price > 0 &&
-              Boolean(data.title?.trim()) &&
-              Boolean(data.summary?.trim());
-            return {
-              ...data,
-              verifiedForPublic: verified,
-              status: verified ? data.status : '掲載停止',
-            };
-          });
-          // sort by createdAt desc
-          loadedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setProducts(loadedProducts);
-        }
-      },
-      (error) => {
-        console.warn('Products onSnapshot note:', error.message);
-      }
-    );
-
-    // 3. Stone Rates collection listener
-    const unsubRates = onSnapshot(
-      collection(db, 'stoneRates'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedRates: StoneRatePlan[] = snapshot.docs.map((d) => {
-            const data = d.data() as StoneRatePlan;
-            const catalogFallback = INITIAL_STONE_RATES.find((plan) => plan.id === data.id);
-            // Older Firestore records had their public prices cleared during the
-            // temporary preparation state. Restore only the original catalog price
-            // for entries already marked 取扱中 in that source catalog.
-            const restoreCatalogPrice =
-              data.currentPrice == null &&
-              catalogFallback?.verifiedForPublic === true &&
-              typeof catalogFallback.currentPrice === 'number';
-            const merged: StoneRatePlan = restoreCatalogPrice && catalogFallback
-              ? {
-                  ...catalogFallback,
-                  ...data,
-                  currentPrice: catalogFallback.currentPrice,
-                  referencePrice: catalogFallback.referencePrice,
-                  confirmedDate: catalogFallback.confirmedDate,
-                  status: '取扱中',
-                  currencyAmount: data.currencyAmount?.trim() ? data.currencyAmount : catalogFallback.currencyAmount,
-                  planName: data.planName?.trim() ? data.planName : catalogFallback.planName,
-                  conditions: data.conditions?.trim() ? data.conditions : catalogFallback.conditions,
-                  isPreparation: false,
-                  verifiedForPublic: true,
-                }
-              : data;
-            const confirmedForDisplay =
-              merged.verifiedForPublic === true &&
-              merged.status === '取扱中' &&
-              merged.isPreparation === false &&
-              typeof merged.currentPrice === 'number' &&
-              merged.currentPrice > 0 &&
-              Boolean(merged.currencyAmount?.trim()) &&
-              Boolean(merged.planName?.trim()) &&
-              Boolean(merged.conditions?.trim());
-            return {
-              ...merged,
-              status: confirmedForDisplay ? '取扱中' : '価格確認中',
-              stockStatus: '在庫要確認',
-              isPreparation: !confirmedForDisplay,
-              verifiedForPublic: confirmedForDisplay,
-            };
-          });
-          setStoneRates(loadedRates);
-        }
-      },
-      (error) => {
-        console.warn('StoneRates onSnapshot note:', error.message);
-      }
-    );
-
-    // 4. Settings listener
-    const unsubSettings = onSnapshot(
-      doc(db, 'settings', 'general'),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setSettings(docSnap.data() as AdminSettings);
-        }
-      },
-      (error) => {
-        console.warn('Settings onSnapshot note:', error.message);
-      }
-    );
+    }, (error) => {
+      console.warn('Public settings listener note:', error.message);
+      setSettings({ ...INITIAL_SETTINGS, lineUrl: OFFICIAL_LINE_URL });
+    });
 
     return () => {
       unsubGames();
