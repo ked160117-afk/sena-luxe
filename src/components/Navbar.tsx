@@ -17,7 +17,7 @@ export const Navbar: React.FC = () => {
   };
 
   const navItems: { label: string; view: AppView }[] = [
-    { label: 'おすすめ‼️引退垢一覧‼️', view: 'retired_accounts' },
+    { label: 'おすすめ引退アカウント', view: 'retired_accounts' },
     { label: 'ゲーム一覧', view: 'games' },
     { label: '石垢料金表', view: 'stone_rates' },
     { label: '注意事項・FAQ', view: 'faq' },
