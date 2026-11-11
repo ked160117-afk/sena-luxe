@@ -278,8 +278,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
           });
 
-          loadedGames.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-          setAllGames(loadedGames);
+          // Keep the master catalog available even when public Firestore writes are restricted.
+          // Existing Firestore records always win, so administrator edits are preserved.
+          const loadedGameIds = new Set(loadedGames.map((game) => game.id));
+          const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]
+            .filter((game) => !loadedGameIds.has(game.id));
+          const mergedGames = [...loadedGames, ...missingInitialGames];
+          mergedGames.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+          setAllGames(mergedGames);
         }
       },
       (error) => {
