@@ -10,6 +10,7 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 - Public catalog listeners use dedicated mirror collections, not canonical product/game/rate/settings collections.
 - Admin dashboard listeners use separate canonical state and are attached only after the app's admin check.
 - Draft rules make canonical games, products, stone rates, settings, sequence ledgers, admin records, and product videos admin-only.
+- Draft admin-record rules no longer allow one admin to grant or edit another user's role: a legacy bootstrap admin may create only their own strictly shaped record; client updates/deletes and cross-user role creation are denied.
 - Public mirrors are written by an admin-only builder using explicit field allowlists.
 - Public request creation now has an exact field allowlist, required fields, bounded string lengths, a document-ID match, and a fixed initial status. Public reads/updates/deletes remain denied.
 - Public mirror eligibility now also excludes legacy service/boosting/paid-currency wording in product and stone-rate display fields, matching the site's stone-account-only policy.
@@ -35,6 +36,7 @@ The current admin check accepts a hard-coded email or UID in addition to an `adm
 
 - Do not remove either fallback blindly; that could lock the owner out.
 - Confirm the intended admin UID and verified email in Firebase Authentication.
+- Draft rules now prevent cross-user admin role creation and deny client-side admin-record updates/deletes. This has not been exercised in Rules emulator tests yet.
 - Ensure no ordinary account can create or modify an admin record.
 - Consider MFA for every administrator.
 - Keep public self-registration disabled.
