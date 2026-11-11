@@ -53,13 +53,13 @@ Required before enforcement:
 - Monitor metrics before enabling enforcement for the exact named Firestore database.
 - Never enable enforcement until the app has been verified to send valid App Check tokens.
 
-### High — security Rules tests are added but not yet verified
+### High — security Rules tests pass in isolated emulator; production named database remains unverified
 The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, and admin publication allowlists. The emulator suite uses an isolated demo project/default database; it does not validate the production named database. The publication revision fence has been implemented in draft code and rules. The revision is reserved before reading the canonical snapshot, and final activation is transactionally refused if a later revision is already active. Emulator and concurrent-run verification are still pending.
 
 Remaining:
-- Observe a successful CI emulator run and inspect its test output.
+- Continue expanding the passing CI suite to cover rollback, concurrent publication, and every private collection/list query.
 - Perform a separately controlled rules verification against the exact production named database before release; do not infer this from emulator success.
-- Expand coverage after validating the first run, including every collection/subcollection and failure/rollback scenarios.
+- Verify the exact named production database separately in a controlled process. The emulator suite currently runs against an isolated demo project's default database.
 
 ### High — public video playback is intentionally disabled by the privacy split
 Public product mirrors omit `videoUrl` and `videoStorageId`. Video metadata/chunks are admin-only. The client video helpers now reject non-admin access. This protects private videos but means the existing public product-card video path cannot be treated as supported until a separate safe public-video publishing design is implemented and tested.
@@ -72,8 +72,8 @@ The strict request schema blocks extra fields and oversized content but does not
 ### Medium — connection health check is not an authorization test
 `testFirestoreConnection()` reads `test/connection` and treats permission-denied as server reachability. This allows the app to avoid a false offline state when the collection is admin-only, but it does not verify public read/write permissions. Keep it separate from security tests.
 
-### Medium — security headers have not been audited
-Review Cloudflare-served response headers (CSP, frame restrictions, MIME sniffing, referrer policy, permissions policy, and cache behavior) after confirming the current app's inline scripts, Firebase Auth popup/redirect, image sources, and external links. Do not add a restrictive CSP blindly; it can break the site.
+### Medium — baseline security headers are drafted; response behavior remains unverified
+A conservative static `public/_headers` file has been added on the security branch for frame restrictions, MIME sniffing, referrer policy, and permissions policy. It has passed CI build but is not deployed or verified on Cloudflare. CSP and cache behavior remain unaudited; do not add a restrictive CSP blindly.
 
 ## Required verification matrix
 
@@ -87,14 +87,14 @@ Review Cloudflare-served response headers (CSP, frame restrictions, MIME sniffin
 | Admin records | No list/read of others; no write | Controlled admin access | Draft rules only |
 | Product videos/chunks | Denied | Read/write | Draft rules + client guard |
 | App Check | Enforced only after valid setup | Enforced only after valid setup | Not configured |
-| Security Rules emulator tests | Test cases authored; results pending | Test cases authored; results pending | Added to branch CI on isolated emulator default DB; named production DB still unverified |
-| Public mirror atomic switch | Read active generation only | Publish staged generation with monotonic revision fence | Implemented in draft code/rules; emulator and concurrent execution tests pending |
+| Security Rules emulator tests | Tested anonymous reads/lists and request rules | Tested admin allowlists and private access | CI passed 7 test cases on isolated emulator default DB; named production DB still unverified |
+| Public mirror atomic switch | Read active generation only | Publish staged generation with monotonic revision fence | Implemented in draft code/rules; rule allowlists pass, actual concurrent publisher test pending |
 
 ## Release gates
 
 1. Complete staged/versioned mirror publication and rollback.
 2. Audit all Firestore reads/writes across the repository and all external/public routes.
-3. Run and pass the new Rules emulator tests, then expand coverage for rollback and concurrent publishing.
+3. Keep Rules emulator tests passing and expand coverage for rollback and concurrent publishing.
 4. Verify admin identity, MFA, and recovery before changing legacy authorization fallbacks.
 5. Configure App Check and observe valid traffic before enforcement.
 6. Verify public product browsing and admin CRUD, video behavior, request intake, numbering, price history, logout/login, and error recovery.
@@ -105,3 +105,7 @@ Review Cloudflare-served response headers (CSP, frame restrictions, MIME sniffin
 ## Production safety
 
 No production Worker deployment, Firebase Console Rules publication, live mirror migration, Firebase Storage/R2 enablement, paid-plan change, or canonical product/price/history/sequence mutation was performed as part of this review.
+
+
+### High — production dependency advisories block release
+The CI production-only dependency audit reported 5 high-severity advisories (0 critical) in the current dependency tree: `firebase` (direct), `@firebase/firestore`, `@firebase/firestore-compat`, `@grpc/grpc-js`, and `zod`. The reported automated fix for Firebase requires a major-version change, so no dependency was upgraded blindly. The security workflow now fails when high/critical production advisories remain and prints advisory titles, affected ranges, and fix availability. Resolve and regression-test these advisories before release.
