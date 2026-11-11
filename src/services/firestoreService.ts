@@ -248,6 +248,7 @@ export async function createProductAtomic(data: {
   price: number | null;
   imageUrl?: string;
   videoUrl?: string;
+  videoStorageId?: string;
   deviceCompatibility?: ProductItem['deviceCompatibility'];
   currencyIconUrl?: string;
   keyHighlights: string[];
@@ -292,6 +293,7 @@ export async function createProductAtomic(data: {
         verifiedForPublic: data.verifiedForPublic === true,
         imageUrl: data.imageUrl,
         videoUrl: data.videoUrl,
+        videoStorageId: data.videoStorageId,
         deviceCompatibility: data.deviceCompatibility,
         currencyIconUrl: data.currencyIconUrl,
         keyHighlights: data.keyHighlights,
