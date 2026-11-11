@@ -150,19 +150,21 @@ export async function deleteProductVideoFromFirestore(videoId: string): Promise<
  * Product videos, private notes, price history, requests, settings, and sequence ledgers
  * are deliberately excluded.
  */
-export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number }> {
+export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number }> {
   const user = auth.currentUser;
   if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
     throw new Error('公開カタログの同期には管理者認証が必要です。');
   }
 
-  const [gamesSnap, productsSnap, ratesSnap, publicGamesSnap, publicProductsSnap, publicRatesSnap] = await Promise.all([
+  const [gamesSnap, productsSnap, ratesSnap, settingsSnap, publicGamesSnap, publicProductsSnap, publicRatesSnap, publicSettingsSnap] = await Promise.all([
     getDocs(collection(db, 'games')),
     getDocs(collection(db, 'products')),
     getDocs(collection(db, 'stoneRates')),
+    getDoc(doc(db, 'settings', 'general')),
     getDocs(collection(db, 'publicGames')),
     getDocs(collection(db, 'publicProducts')),
     getDocs(collection(db, 'publicStoneRates')),
+    getDoc(doc(db, 'publicSettings', 'general')),
   ]);
 
   const publicGames = gamesSnap.docs
@@ -243,6 +245,15 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       verifiedForPublic: true,
     }));
 
+  // Only fields intended for customer-facing display are copied. Internal settings stay private.
+  const sourceSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+  const publicSettings = {
+    lineUrl: typeof sourceSettings.lineUrl === 'string' ? sourceSettings.lineUrl : '',
+    shopNotice: typeof sourceSettings.shopNotice === 'string' ? sourceSettings.shopNotice : '',
+    enableDirectLineCopy: sourceSettings.enableDirectLineCopy === true,
+    contactDeskHours: typeof sourceSettings.contactDeskHours === 'string' ? sourceSettings.contactDeskHours : '公式LINEにてご案内',
+  };
+
   const desired = [
     { collectionName: 'publicGames', rows: publicGames, existing: publicGamesSnap.docs },
     { collectionName: 'publicProducts', rows: publicProducts, existing: publicProductsSnap.docs },
@@ -277,7 +288,10 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
   }
   if (operationCount > 0) await batch.commit();
 
-  return { games: publicGames.length, products: publicProducts.length, rates: publicRates.length };
+  // Settings are a single explicitly allowlisted public document.
+  await setDoc(doc(db, 'publicSettings', 'general'), publicSettings);
+
+  return { games: publicGames.length, products: publicProducts.length, rates: publicRates.length, settings: 1 };
 }
 
 const COLLECTIONS = {
