@@ -117,6 +117,7 @@ async function seedFixtures() {
     await setDoc(doc(db, 'productVideos/private-video'), { storageId: 'secret' });
     await setDoc(doc(db, 'productVideos/private-video/chunks/chunk-1'), { data: 'secret' });
     await setDoc(doc(db, 'test/connection'), { ok: true });
+    await setDoc(doc(db, 'publicCatalogControl/publishSequence'), { revision: 1, updatedAt: '2026-11-12T00:00:00.000Z' });
   });
 }
 
@@ -164,6 +165,7 @@ test('anonymous users cannot read canonical or administrative collections', asyn
     'productVideos/private-video',
     'productVideos/private-video/chunks/chunk-1',
     'test/connection',
+    'publicCatalogControl/publishSequence',
     'publicGames/legacy',
     'publicProducts/legacy',
     'publicStoneRates/legacy',
