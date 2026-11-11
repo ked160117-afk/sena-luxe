@@ -134,17 +134,26 @@ service cloud.firestore {
     }
 
     match /publicCatalogControl/{controlId} {
-      allow read: if controlId == 'active';
+      allow read: if controlId == 'active' || (controlId == 'publishSequence' && isAdmin());
       allow create, update: if isAdmin() &&
         controlId == 'active' &&
-        request.resource.data.keys().hasOnly(['generationId', 'publishedAt', 'games', 'products', 'rates']) &&
-        request.resource.data.keys().hasAll(['generationId', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.keys().hasOnly(['generationId', 'publishRevision', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.keys().hasAll(['generationId', 'publishRevision', 'publishedAt', 'games', 'products', 'rates']) &&
         request.resource.data.generationId is string &&
         request.resource.data.generationId.size() <= 120 &&
+        request.resource.data.publishRevision is int &&
+        request.resource.data.publishRevision > 0 &&
         request.resource.data.publishedAt is string &&
         request.resource.data.games is int &&
         request.resource.data.products is int &&
         request.resource.data.rates is int;
+      allow create, update: if isAdmin() &&
+        controlId == 'publishSequence' &&
+        request.resource.data.keys().hasOnly(['revision', 'updatedAt']) &&
+        request.resource.data.keys().hasAll(['revision', 'updatedAt']) &&
+        request.resource.data.revision is int &&
+        request.resource.data.revision > 0 &&
+        request.resource.data.updatedAt is string;
       allow delete: if false;
     }
 
