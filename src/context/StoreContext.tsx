@@ -110,6 +110,7 @@ interface StoreContextType {
     price: number | null;
     imageUrl?: string;
     videoUrl?: string;
+    videoStorageId?: string;
     deviceCompatibility?: ProductItem['deviceCompatibility'];
     keyHighlights: string[];
     status?: ProductStatus;
@@ -485,6 +486,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       price: data.price,
       imageUrl: data.imageUrl,
       videoUrl: data.videoUrl,
+      videoStorageId: data.videoStorageId,
       deviceCompatibility: data.deviceCompatibility,
       keyHighlights: data.keyHighlights,
       status: data.status,
