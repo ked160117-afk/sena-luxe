@@ -43,6 +43,16 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Product videos: visitors can play published videos; only admins can upload or modify.
+    match /productVideos/{videoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+      match /chunks/{chunkId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
     // Serial Sequence & Permanent Retired Number Registry: Admin only
     match /sequences/{gameCode} {
       allow read, write: if isAdmin();
