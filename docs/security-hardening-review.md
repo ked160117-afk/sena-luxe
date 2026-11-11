@@ -12,6 +12,7 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 - Draft rules make canonical games, products, stone rates, settings, sequence ledgers, admin records, and product videos admin-only.
 - Public mirrors are written by an admin-only builder using explicit field allowlists.
 - Public request creation now has an exact field allowlist, required fields, bounded string lengths, a document-ID match, and a fixed initial status. Public reads/updates/deletes remain denied.
+- Public mirror eligibility now also excludes legacy service/boosting/paid-currency wording in product and stone-rate display fields, matching the site's stone-account-only policy.
 - Request IDs now use UUIDs rather than timestamp-only identifiers.
 - Video upload/read/delete helpers now perform an admin check before attempting Firestore access. Firestore rules remain the enforcement boundary.
 - No product credentials, price history, private settings, requests, sequences, video metadata or video chunks are copied into public mirrors.
