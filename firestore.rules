@@ -42,6 +42,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /publicSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Games Catalog: Publicly readable, admin writable
     match /games/{gameId} {
       allow read: if true;
