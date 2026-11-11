@@ -44,7 +44,8 @@ export interface ProductItem {
   status: ProductStatus;
   verifiedForPublic?: boolean;
   imageUrl?: string;
-  videoUrl?: string; // External MP4/WebM URL; videos are not stored as Firestore base64 data
+  videoUrl?: string; // Legacy external MP4/WebM URL
+  videoStorageId?: string; // Video file stored in Firestore chunks under the free-tier quota
   deviceCompatibility?: 'iOSのみ' | 'Androidのみ' | 'iOS・Android両方可';
   currencyIconUrl?: string; // for stone accounts
   keyHighlights: string[]; // High-level highlights without revealing confidential account credentials
