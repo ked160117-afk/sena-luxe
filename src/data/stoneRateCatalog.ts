@@ -1,5 +1,5 @@
 /**
- * SENA LUXE - Complete Stone Rate Plans & Game Catalog (全33ゲーム・107料金プラン)
+ * SENA LUXE - Complete Stone Rate Plans & Game Catalog (全43ゲーム・107料金プラン)
  * All pricing, conditions, device requirements, and special notes faithfully preserved as instructed.
  */
 
