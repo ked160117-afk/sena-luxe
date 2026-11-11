@@ -507,7 +507,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     status?: ProductStatus;
     verifiedForPublic?: boolean;
   }): Promise<ProductItem> => {
-    const game = allGames.find((g) => g.id === data.gameId);
+    const game = adminAllGames.find((g) => g.id === data.gameId);
     const gameCode = game ? game.code.toUpperCase() : 'GEN';
     const gameName = game ? game.name : 'ゲームタイトル';
 
@@ -536,7 +536,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const deleteProduct = async (id: string, reason?: string) => {
-    const target = products.find((p) => p.id === id);
+    const target = adminProducts.find((p) => p.id === id);
     if (!target) return;
     await deleteProductDoc(target, reason);
   };
@@ -550,7 +550,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Stone Rate Actions
   const updateStoneRatePrice = async (id: string, newPrice: number | null, reason?: string) => {
-    const target = stoneRates.find((r) => r.id === id);
+    const target = adminStoneRates.find((r) => r.id === id);
     if (!target) return;
     await updateStoneRatePriceDoc(id, target, newPrice, reason || '管理者による価格改定');
   };
@@ -566,7 +566,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setAllStoneRatesPreparation = async () => {
     try {
       const batch = writeBatch(db);
-      for (const plan of stoneRates) {
+      for (const plan of adminStoneRates) {
         const ref = doc(db, 'stoneRates', plan.id);
         batch.set(
           ref,
@@ -583,7 +583,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (err) {
       console.warn('Batch preparation update notice:', err);
     }
-    setStoneRates((prev) =>
+    setAdminStoneRates((prev) =>
       prev.map((p) => ({
         ...p,
         status: '現在準備中',
@@ -609,7 +609,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const promoteCandidateToHandled = async (candidateId: string) => {
-    const candidate = allGames.find((c) => c.id === candidateId);
+    const candidate = adminAllGames.find((c) => c.id === candidateId);
     if (!candidate) return;
     await promoteCandidateDoc(candidate);
   };
