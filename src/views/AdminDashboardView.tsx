@@ -1600,7 +1600,7 @@ export const AdminDashboardView: React.FC = () => {
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-xs file:mr-3 file:rounded file:border-0 file:bg-[#d4af37] file:px-3 file:py-1 file:text-black"
                 />
                 {newProdVideoFile && <p className="text-xs text-stone-300">{newProdVideoFile.name}（{(newProdVideoFile.size / 1024 / 1024).toFixed(1)}MB）</p>}
-                <p className="text-[10px] text-stone-500 leading-relaxed">スマホ内の画面録画を直接選択できます。1本15MB以下。動画データは既存のFirestore無料枠に分割保存し、再生時のみ読み込みます。無料枠を超えると保存・再生が停止する方式で、課金プランへの自動変更は行いません。</p>
+                <p className="text-[10px] text-stone-500 leading-relaxed">スマホ内の画面録画を直接選択できます（1本15MB以下）。動画はFirestoreに分割保存し、再生時のみ読み込みます。課金を避けるにはFirebaseがSpark（無料）プランであることを事前に確認してください。Blaze（従量課金）プランでは無料枠超過分が課金される可能性があります。</p>
                 {newVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画を保存中：{newVideoUploadProgress}%</p>}
               </div>
 
@@ -1798,7 +1798,7 @@ export const AdminDashboardView: React.FC = () => {
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-xs file:mr-3 file:rounded file:border-0 file:bg-[#d4af37] file:px-3 file:py-1 file:text-black"
                 />
                 {editProdVideoFile && <p className="text-xs text-stone-300">{editProdVideoFile.name}（{(editProdVideoFile.size / 1024 / 1024).toFixed(1)}MB）</p>}
-                <p className="text-[10px] text-stone-500 leading-relaxed">新しい動画を選ぶと差し替えます。1本15MB以下。保存先は既存Firestoreの無料枠です。</p>
+                <p className="text-[10px] text-stone-500 leading-relaxed">新しい動画を選ぶと差し替えます（1本15MB以下）。Firestoreに保存します。課金を避けるにはFirebaseがSpark（無料）プランであることを事前に確認してください。Blaze（従量課金）プランでは無料枠超過分が課金される可能性があります。</p>
                 {editVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画を保存中：{editVideoUploadProgress}%</p>}
               </div>
 
