@@ -1,5 +1,4 @@
 import { after, before, test } from 'node:test';
-import assert from 'node:assert/strict';
 import {
   assertFails,
   assertSucceeds,
@@ -133,7 +132,7 @@ before(async () => {
   }).firestore();
   adminDb = testEnv.authenticatedContext(ADMIN_UID, {
     email: 'ked160117@gmail.com',
-  }).firestore(DATABASE_ID);
+  }).firestore();
   await seedFixtures();
 });
 
