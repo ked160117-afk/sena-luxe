@@ -25,8 +25,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Sanitized public mirrors. Only allowlisted display fields are written by the
-    // admin-only migration/service. Canonical collections remain separately governed.
+    // Sanitized public mirrors. Only allowlisted display fields are readable by visitors.
     match /publicGames/{gameId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -47,30 +46,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Games Catalog: Publicly readable, admin writable
+    // Canonical game catalog, including candidates and internal fields: admin only.
     match /games/{gameId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
-    // Products: Publicly readable for active collection, admin write
+    // Canonical products, including drafts and unpublished records: admin only.
     match /products/{productId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
     }
 
-    // Stone Rate Plans: Publicly readable, admin write
+    // Canonical stone rates, internal notes, and price history: admin only.
     match /stoneRates/{rateId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
     }
 
-    // Product videos: visitors can play published videos; only admins can upload or modify.
+    // Product videos and chunks remain private until a separately reviewed public-video design.
     match /productVideos/{videoId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
       match /chunks/{chunkId} {
-        allow read: if true;
+        allow read, create, update, delete: if isAdmin();
         allow create, update, delete: if isAdmin();
       }
     }
@@ -86,10 +81,9 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Admin Settings (LINE URL, announcement notice): Public read, admin write
+    // Canonical admin settings: public visitors use publicSettings instead.
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
     // Connection Health Check
