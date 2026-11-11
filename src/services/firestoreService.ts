@@ -166,7 +166,7 @@ export async function deleteProductVideoFromFirestore(videoId: string): Promise<
  * Product videos, private notes, price history, requests, settings, and sequence ledgers
  * are deliberately excluded.
  */
-export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number; generationId: string }> {
+export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number; generationId: string; activated: boolean }> {
   const user = auth.currentUser;
   if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
     throw new Error('公開カタログの同期には管理者認証が必要です。');
