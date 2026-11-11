@@ -482,7 +482,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     iconUrl: 'https://play-lh.googleusercontent.com/hXb0wwJYOJ7GwnzP29SbOIlDGSXWn7yOwgXnn4OBt1nfNgMpvcmSfwnNpeJ8B4n3AP73kyxeXnHTdhddfR6huw=w240-h480',
     isHandled: true,
     description: '背中で魅せるハイクオリティなグラフィックと重厚な世界観のガンガールRPG。',
-    order: 43,
+    order: 34,
   },
   {
     id: 'game-ko',
@@ -495,7 +495,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     iconUrl: 'https://play-lh.googleusercontent.com/67LMdiIq4uC-imFkkxmro_rzRlU5kbkxcq4wQHEcIy-TmvGlz2GGpa2WAuNSPvD0fsy7B5JaXkQM7VfqAo2yzbI=w240-h480',
     isHandled: true,
     description: '100人のプレイヤーが無人島に降り立ち最後の一人を目指すバトルロワイヤル。',
-    order: 41,
+    order: 35,
   },
   {
     id: 'game-kb',
@@ -508,50 +508,50 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     iconUrl: 'https://play-lh.googleusercontent.com/co478HyuivmHColPd8JER5MoRzEUqFJTCAHuQSeypNAxcRynPnhAIMpx-8S3udWte0hbZdXupMYoN9cvt06P=w240-h480',
     isHandled: true,
     description: 'アニメ『黒子のバスケ』の世界で熱いストリートバスケの真剣勝負を繰り広げる対戦ゲーム。',
-    order: 42,
+    order: 36,
   },
   // 37-43. 引退垢カテゴリー用の追加ゲーム（石垢料金プランは作成しない）
   {
     id: 'game-kitaou', code: 'KTO', name: 'キタキタ王様', shortName: 'キタキタ王様',
     category: '合成RPG', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://www.4gamer.net/games/044/G104419/screenshot_3.jpg',
-    isHandled: true, description: '運と戦略を組み合わせて戦う合成RPG。', order: 34,
+    isHandled: true, description: '運と戦略を組み合わせて戦う合成RPG。', order: 37,
   },
   {
     id: 'game-czn', code: 'CZN', name: 'カオスゼロナイトメア', shortName: 'カオゼロ',
     category: 'カオスループRPG', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/5d/cc/c5/5dccc5bb-2156-690e-f31b-e15b6de1179f/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg',
-    isHandled: true, description: '選択が物語を導くカオスループRPG。', order: 35,
+    isHandled: true, description: '選択が物語を導くカオスループRPG。', order: 38,
   },
   {
     id: 'game-baki-tsp', code: 'BAKI', name: '刃牙 THE STRONGEST PROOF', shortName: 'ストプル',
     category: '格闘・育成シミュレーション', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/fb/07/35/fb0735cf-575c-0685-6551-bed226c97bb0/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
-    isHandled: true, description: '刃牙の世界を舞台に最強を目指す育成ゲーム。', order: 36,
+    isHandled: true, description: '刃牙の世界を舞台に最強を目指す育成ゲーム。', order: 39,
   },
   {
     id: 'game-crows-unlimited', code: 'CRWU', name: 'クローズ×WORST UNLIMITED', shortName: 'クローズアンリミ',
     category: 'シネマティックバトル', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://unlimited.spgames.jp/common/images/appliicon.png',
-    isHandled: true, description: 'クローズ×WORSTのキャラクターが登場するシネマティックバトル。', order: 37,
+    isHandled: true, description: 'クローズ×WORSTのキャラクターが登場するシネマティックバトル。', order: 40,
   },
   {
     id: 'game-racing-master', code: 'RACE', name: 'レーシングマスター', shortName: 'レーシングマスター',
     category: 'リアルレーシング', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://play-lh.googleusercontent.com/GtROMzs4rL96ay2R3X7kueRZcC8qEUGpsk4GqHGGrpg4mEohu7F4DmPTwR2HKp5Hwqxk8JkMWObyhihg9u9bYg=w240-h480',
-    isHandled: true, description: '実在車種を収録した本格リアルレーシングゲーム。', order: 38,
+    isHandled: true, description: '実在車種を収録した本格リアルレーシングゲーム。', order: 41,
   },
   {
     id: 'game-twinklestar', code: 'TSKN', name: 'ティンクルスターナイツ', shortName: 'クルスタ',
     category: '変身ヒロイン×本格バトルRPG', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://play-lh.googleusercontent.com/thYXSAVvr5SYZ5Wsmh_607SuQb14muUa7XDquaIuoK9cFc7ju3qd-IbxdoLl0Ols-jxwfBC6ZmaX2tW-FIQtWOg=w240-h480',
-    isHandled: true, description: '星騎士たちを育成して戦う本格バトルRPG。', order: 39,
+    isHandled: true, description: '星騎士たちを育成して戦う本格バトルRPG。', order: 42,
   },
   {
     id: 'game-hxh-nen-survivor', code: 'HNXS', name: 'HUNTER×HUNTER NEN×SURVIVOR', shortName: 'ネンサバ',
     category: 'サバイバーアクション', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d8/2e/dd/d82edd00-efce-9113-e757-1fef4c03082d/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg',
-    isHandled: true, description: '念能力を駆使して戦うサバイバーアクション。', order: 40,
+    isHandled: true, description: '念能力を駆使して戦うサバイバーアクション。', order: 43,
   },
 ];
 
