@@ -59,18 +59,19 @@ export const RetiredAccountsView: React.FC = () => {
                   gameCode={item.gameCode}
                   imageUrl={item.imageUrl}
                   videoUrl={item.videoUrl}
+                  videoStorageId={item.videoStorageId}
                   title={item.title}
                   className="w-full h-48"
                 />
                 <div className="p-4 space-y-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {game?.iconUrl ? (
-                      <img src={game.iconUrl} alt="" loading="lazy" decoding="async" className="w-8 h-8 rounded-lg object-cover border border-stone-700 shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-lg bg-black border border-[#d4af37]/40 flex items-center justify-center text-[10px] text-[#d4af37] shrink-0">SL</div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-stone-400 truncate">{item.gameName}</p>
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-stone-400 truncate mb-1">{item.gameName}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {game?.iconUrl ? (
+                        <img src={game.iconUrl} alt={item.gameName} loading="lazy" decoding="async" className="w-8 h-8 rounded-lg object-cover border border-stone-700 shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-black border border-[#d4af37]/40 flex items-center justify-center text-[10px] text-[#d4af37] shrink-0">SL</div>
+                      )}
                       <h2 className="text-sm font-semibold text-white leading-snug break-words">{item.title}</h2>
                     </div>
                   </div>
