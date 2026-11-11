@@ -142,9 +142,15 @@ export const GameProductsView: React.FC = () => {
             <Clock className="w-6 h-6" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-base sm:text-lg font-semibold text-white">現在商品を準備中です</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white">
+              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0
+                ? '現在石垢の取り扱いはしておりません。'
+                : '現在商品を準備中です'}
+            </h3>
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-              {selectedGame ? `「${selectedGame.name}」の石垢アカウントは現在準備中です。` : '石垢アカウントは現在準備中です。'}
+              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0
+                ? 'ご用意できましたら対応します。'
+                : selectedGame ? `「${selectedGame.name}」の商品は現在準備中です。` : '商品は現在準備中です。'}
               <br className="hidden sm:inline" />
               掲載中の商品がない場合も、一覧にない商品や新しいゲームタイトルについて公式LINEからご相談いただけます。ご希望を伺い、取扱い・在庫を確認してご案内します。ゲームのプレイ代行・育成代行・通貨追加などの代行サービスは行っておりません。
             </p>
