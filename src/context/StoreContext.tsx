@@ -91,7 +91,7 @@ interface StoreContextType {
   navigateToGameProducts: (gameId: string, category?: ProductCategory | 'ALL') => void;
   navigateToStoneRates: (gameId?: string) => void;
 
-  // Master Data
+  // Master Data (public-facing state)
   games: GameTitle[];
   candidateGames: GameTitle[];
   products: ProductItem[];
@@ -99,6 +99,12 @@ interface StoreContextType {
   requests: GameRequestItem[];
   sequences: Record<string, SerialSequence>;
   settings: AdminSettings;
+  // Canonical data exposed only to the authenticated admin dashboard.
+  adminGames: GameTitle[];
+  adminCandidateGames: GameTitle[];
+  adminProducts: ProductItem[];
+  adminStoneRates: StoneRatePlan[];
+  adminSettings: AdminSettings;
   isFirestoreConnected: boolean;
 
   // Product Actions
@@ -176,6 +182,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [requests, setRequests] = useState<GameRequestItem[]>([]);
   const [sequences, setSequences] = useState<Record<string, SerialSequence>>(INITIAL_SEQUENCES);
   const [settings, setSettings] = useState<AdminSettings>(INITIAL_SETTINGS);
+  // Keep canonical admin data separate from the public catalog state. These
+  // values are populated only while an authorized administrator is signed in.
+  const [adminAllGames, setAdminAllGames] = useState<GameTitle[]>([]);
+  const [adminProducts, setAdminProducts] = useState<ProductItem[]>([]);
+  const [adminStoneRates, setAdminStoneRates] = useState<StoneRatePlan[]>([]);
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>(INITIAL_SETTINGS);
 
   // LINE Modal State
   const [lineModal, setLineModal] = useState<LineInquiryModalState>({
@@ -192,6 +204,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const handledCodes = new Set(games.map((g) => g.code?.trim().toUpperCase()).filter(Boolean));
   const candidateGames = allGames.filter(
     (g) => !g.isHandled && !handledCodes.has(g.code?.trim().toUpperCase())
+  );
+  const adminGames = adminAllGames.filter((g) => g.isHandled);
+  const adminHandledCodes = new Set(adminGames.map((g) => g.code?.trim().toUpperCase()).filter(Boolean));
+  const adminCandidateGames = adminAllGames.filter(
+    (g) => !g.isHandled && !adminHandledCodes.has(g.code?.trim().toUpperCase())
   );
 
   // Scroll to top on navigation change
@@ -223,6 +240,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       } else {
         setIsAdminLoggedIn(false);
+        setAdminAllGames([]);
+        setAdminProducts([]);
+        setAdminStoneRates([]);
+        setAdminSettings(INITIAL_SETTINGS);
+        setRequests([]);
+        setSequences(INITIAL_SEQUENCES);
       }
       setAuthLoading(false);
     });
@@ -399,45 +422,57 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-  // Firestore Listeners for Admin-Only Data (only attached if admin is authenticated)
+  // Canonical Firestore listeners for the admin dashboard only.
+  // Public-facing state above remains unchanged until the mirror readers are
+  // switched in a later, separately reviewed step.
   useEffect(() => {
     if (!isAdminLoggedIn) {
+      setAdminAllGames([]);
+      setAdminProducts([]);
+      setAdminStoneRates([]);
+      setAdminSettings(INITIAL_SETTINGS);
+      setRequests([]);
+      setSequences(INITIAL_SEQUENCES);
       return;
     }
 
-    // 1. Sequences listener
-    const unsubSeq = onSnapshot(
-      collection(db, 'sequences'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const seqMap: Record<string, SerialSequence> = {};
-          snapshot.docs.forEach((d) => {
-            seqMap[d.id] = d.data() as SerialSequence;
-          });
-          setSequences(seqMap);
-        }
-      },
-      (error) => {
-        console.warn('Sequences onSnapshot note:', error.message);
-      }
-    );
+    const unsubGames = onSnapshot(collection(db, 'games'), (snapshot) => {
+      const loaded = snapshot.docs.map((d) => ({ ...(d.data() as GameTitle), id: d.id }));
+      loaded.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+      setAdminAllGames(loaded);
+    }, (error) => console.warn('Admin games listener note:', error.message));
 
-    // 2. Requests listener
-    const unsubReq = onSnapshot(
-      collection(db, 'requests'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedReqs = snapshot.docs.map((d) => d.data() as GameRequestItem);
-          loadedReqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setRequests(loadedReqs);
-        }
-      },
-      (error) => {
-        console.warn('Requests onSnapshot note:', error.message);
-      }
-    );
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const loaded = snapshot.docs.map((d) => ({ ...(d.data() as ProductItem), id: d.id }));
+      loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setAdminProducts(loaded);
+    }, (error) => console.warn('Admin products listener note:', error.message));
+
+    const unsubRates = onSnapshot(collection(db, 'stoneRates'), (snapshot) => {
+      setAdminStoneRates(snapshot.docs.map((d) => ({ ...(d.data() as StoneRatePlan), id: d.id })));
+    }, (error) => console.warn('Admin stone rates listener note:', error.message));
+
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'general'), (snapshot) => {
+      if (snapshot.exists()) setAdminSettings(snapshot.data() as AdminSettings);
+    }, (error) => console.warn('Admin settings listener note:', error.message));
+
+    const unsubSeq = onSnapshot(collection(db, 'sequences'), (snapshot) => {
+      const seqMap: Record<string, SerialSequence> = {};
+      snapshot.docs.forEach((d) => { seqMap[d.id] = d.data() as SerialSequence; });
+      setSequences(seqMap);
+    }, (error) => console.warn('Sequences onSnapshot note:', error.message));
+
+    const unsubReq = onSnapshot(collection(db, 'requests'), (snapshot) => {
+      const loadedReqs = snapshot.docs.map((d) => d.data() as GameRequestItem);
+      loadedReqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRequests(loadedReqs);
+    }, (error) => console.warn('Requests onSnapshot note:', error.message));
 
     return () => {
+      unsubGames();
+      unsubProducts();
+      unsubRates();
+      unsubSettings();
       unsubSeq();
       unsubReq();
     };
@@ -708,6 +743,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         requests,
         sequences,
         settings,
+        adminGames,
+        adminCandidateGames,
+        adminProducts,
+        adminStoneRates,
+        adminSettings,
         isFirestoreConnected,
 
         addNewProduct,
