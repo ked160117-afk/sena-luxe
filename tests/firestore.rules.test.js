@@ -154,6 +154,26 @@ test('anonymous users can read only the active public catalog generation', async
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE_GENERATION}`)));
 });
 
+test('anonymous collection queries cannot enumerate canonical or private records', async () => {
+  const deniedCollections = [
+    'games',
+    'products',
+    'stoneRates',
+    'settings',
+    'sequences',
+    'admins',
+    'requests',
+    'productVideos',
+    'publicGames',
+    'publicProducts',
+    'publicStoneRates',
+    'publicSettings',
+  ];
+  for (const path of deniedCollections) {
+    await assertFails(getDocs(collection(publicDb, path)), `Anonymous list should fail: ${path}`);
+  }
+});
+
 test('anonymous users cannot read canonical or administrative collections', async () => {
   const deniedPaths = [
     'games/internal-game',
