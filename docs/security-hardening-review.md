@@ -25,8 +25,8 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 The builder now writes a new immutable generation under `publicCatalogGenerations/{generationId}`, writes its settings and count metadata, then switches the single `publicCatalogControl/active` document only after all batches commit. Public listeners follow that pointer; draft rules allow public reads only when the generation ID matches the active pointer. Older generations are retained for rollback and are not automatically deleted.
 
 Remaining checks before this can be considered production-ready:
-- Firestore Rules Emulator tests have now been added on this branch for the exact named database ID, including active/inactive generation reads, canonical/private collection denial, request schema validation, non-admin access denial, and admin publication allowlists. These tests are wired into CI but have not yet been observed passing.
-- Verify the emulator actually exercises the named database and that Firestore rules support the active-pointer `get()` for collection queries as expected.
+- Firestore Rules Emulator tests have now been added on this branch using an isolated `demo-` project and the emulator's default database. They cover active/inactive generation reads, canonical/private collection denial, request schema validation, non-admin access denial, and admin publication allowlists. These tests are wired into CI but have not yet been observed passing.
+- The emulator does not currently provide a reliable way to apply the configured rules to the production named database ID. Therefore these tests are a rules-logic check, not proof of the named production database's deployed rules. A separate controlled verification of the exact named database remains mandatory.
 - Test failure before pointer update: the previous active generation must remain visible.
 - Test pointer switch and rollback with concurrent admin publish attempts.
 - Verify generation document paths and public listener behavior in a real browser.
@@ -54,11 +54,11 @@ Required before enforcement:
 - Never enable enforcement until the app has been verified to send valid App Check tokens.
 
 ### High — security Rules tests are added but not yet verified
-The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, admin publication allowlists, and the configured named database ID.
+The branch now includes `firebase.json`, `@firebase/rules-unit-testing`, Firebase CLI, and `tests/firestore.rules.test.js`. CI runs the Firestore emulator suite between TypeScript checking and the production build. Test coverage includes active vs inactive public generations, canonical/private collection denial, request schema abuse, non-admin access, and admin publication allowlists. The emulator suite uses an isolated demo project/default database; it does not validate the production named database.
 
 Remaining:
 - Observe a successful CI emulator run and inspect its test output.
-- Confirm the emulator test context targets the named database ID rather than silently testing only `(default)`.
+- Perform a separately controlled rules verification against the exact production named database before release; do not infer this from emulator success.
 - Expand coverage after validating the first run, including every collection/subcollection and failure/rollback scenarios.
 
 ### High — public video playback is intentionally disabled by the privacy split
@@ -87,7 +87,7 @@ Review Cloudflare-served response headers (CSP, frame restrictions, MIME sniffin
 | Admin records | No list/read of others; no write | Controlled admin access | Draft rules only |
 | Product videos/chunks | Denied | Read/write | Draft rules + client guard |
 | App Check | Enforced only after valid setup | Enforced only after valid setup | Not configured |
-| Security Rules emulator tests | Test cases authored; results pending | Test cases authored; results pending | Added to branch CI; not yet observed passing |
+| Security Rules emulator tests | Test cases authored; results pending | Test cases authored; results pending | Added to branch CI on isolated emulator default DB; named production DB still unverified |
 | Public mirror atomic switch | Read active generation only | Publish staged generation | Not implemented |
 
 ## Release gates
