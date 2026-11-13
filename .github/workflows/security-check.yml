@@ -35,6 +35,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Upload resolved dependency lockfile for reproducibility review
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-package-lock-${{ github.run_id }}
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Verify Firestore rules target is the named production database only
         run: |
           node -e "const fs=require('node:fs'); const cfg=JSON.parse(fs.readFileSync('firebase.json','utf8')); const app=JSON.parse(fs.readFileSync('firebase-applet-config.json','utf8')); const entries=cfg.firestore; const id=app.firestoreDatabaseId; if (!Array.isArray(entries) || entries.length !== 1 || entries[0].database !== id || entries[0].rules !== 'firestore.rules') { console.error('Firestore rules target mismatch; refusing verification.'); process.exit(1); } console.log('Firestore rules target verified:', id);"
