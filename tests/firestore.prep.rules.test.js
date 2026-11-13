@@ -152,6 +152,8 @@ test('public stone-rate rules reject paid and unverified currency types', async 
     verifiedForPublic: true,
   };
   await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/free-rate`), baseRate));
+  await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/progressed-rate`), { ...baseRate, id: 'progressed-rate', accountType: '進行済み石垢' }));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/invalid-account-type`), { ...baseRate, id: 'invalid-account-type', accountType: '初期垢' }));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/paid-rate`), { ...baseRate, id: 'paid-rate', currencyType: '有償' }));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/unknown-rate`), { ...baseRate, id: 'unknown-rate', currencyType: '未確認' }));
   const missingTypeRate = { ...baseRate };
