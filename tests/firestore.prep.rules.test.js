@@ -121,6 +121,13 @@ test('public product rules reject image payloads above the bounded document limi
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/oversized-image`), oversizedProduct));
 });
 
+test('public game rules reject oversized app and currency icon payloads', async () => {
+  const oversizedAppIcon = { ...publicGame, id: 'oversized-app-icon', iconUrl: 'x'.repeat(100001) };
+  const oversizedCurrencyIcon = { ...publicGame, id: 'oversized-currency-icon', currencyIconUrl: 'x'.repeat(100001) };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/games/oversized-app-icon`), oversizedAppIcon));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/games/oversized-currency-icon`), oversizedCurrencyIcon));
+});
+
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const baseRate = {
     id: 'free-rate',
