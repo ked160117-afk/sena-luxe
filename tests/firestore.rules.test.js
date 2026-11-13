@@ -489,3 +489,23 @@ test('public catalog publisher rejects malformed input before any Firestore writ
     );
   }
 });
+
+test('public catalog publisher rejects unsafe generation paths and invalid setting values before writes', async () => {
+  const rows = [];
+  const counts = { games: 0, products: 0, rates: 0 };
+  const invalidCases = [
+    ['generation ID containing slash', 'unsafe/generation', publicSettings, '公開世代IDが不正です。'],
+    ['non-string LINE URL', 'preflight-setting-a', { ...publicSettings, lineUrl: 123 }, '公開設定の値が不正です。'],
+    ['oversized shop notice', 'preflight-setting-b', { ...publicSettings, shopNotice: 'x'.repeat(2001) }, '公開設定の値が不正です。'],
+    ['non-boolean direct LINE copy setting', 'preflight-setting-c', { ...publicSettings, enableDirectLineCopy: 'true' }, '公開設定の値が不正です。'],
+    ['oversized contact hours', 'preflight-setting-d', { ...publicSettings, contactDeskHours: 'x'.repeat(201) }, '公開設定の値が不正です。'],
+  ];
+
+  for (const [label, generationId, settings, message] of invalidCases) {
+    await assert.rejects(
+      stagePublicCatalogGeneration({}, generationId, rows, settings, counts),
+      (error) => error.message === message,
+      label,
+    );
+  }
+});
