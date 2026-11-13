@@ -1,15 +1,15 @@
 # Firestore privacy hardening migration plan
 
-Status: public/admin listener split and immutable generation publisher are implemented on a draft branch. The active-pointer design is not yet emulator-tested or production-ready. No production Firestore rules or data have been changed.
+Status (2026-11-13): public/admin listener split and immutable generation publisher are implemented on the draft security branch. TypeScript, all 7 Firestore Rules Emulator tests, and production build passed in CI. Production dependency audit still blocks release with 5 high findings. The emulator uses an isolated demo project's default database, not the production named database. No production Firestore rules, live data, or Worker deployment have been changed.
 
 ## Goal
 Prevent unauthenticated visitors from reading private product drafts, unlisted products, internal price history, inquiry records, sequence ledgers, admin settings, and admin records directly from Firestore. Publicly displayed catalog fields remain public by design.
 
 ## Confirmed current behavior
 - The app connects to the named database configured in `firebase-applet-config.json`: `ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699`.
-- On the draft branch, public listeners now subscribe to `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`; admin-only listeners subscribe to canonical collections after admin authorization.
+- On the draft branch, public listeners follow `publicCatalogControl/active` and subscribe only to `publicCatalogGenerations/{activeGeneration}/games`, `/products`, `/stoneRates`, and `/settings/general`; admin-only listeners subscribe to canonical collections after admin authorization.
 - Production rules have not been changed and still allow public reads of canonical `games`, `products`, `stoneRates`, `productVideos` and its chunks, `settings`, and `test`.
-- Draft rules restrict canonical catalog/settings/video reads to admins and expose only the public mirror collections, but these rules have not been published.
+- Draft rules restrict canonical catalog/settings/video reads to admins and expose only the currently active immutable generation. Legacy flat `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings` collections are admin-only in the draft rules. These rules have not been published.
 - `testFirestoreConnection()` performs a server read of `test/connection`; it returns true for permission-denied and other non-offline errors, so the draft admin-only `test` rule does not currently block general visitors. This check proves reachability only weakly and is not an authorization test.
 - `requests` permits public creates but restricts reads and management to admins. `sequences` is admin-only.
 - Admin recognition currently includes a hard-coded email and UID fallback as well as `admins/{uid}`; preserve account access during any change and review this bootstrap path separately.
@@ -17,13 +17,17 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 ## Target collection layout
 | Collection | Public access | Admin access | Purpose |
 |---|---|---|---|
-| `publicGames` | Read only | Read/write | Only handled catalog titles and safe display fields |
+| `publicCatalogGenerations/{active}/games` | Read only for active generation | Admin writes | Only handled catalog titles and safe display fields |
 | `games` | None | Read/write | Full game catalog including candidates and internal fields |
-| `publicProducts` | Read only | Read/write | Sanitized currently published products only |
+| `publicCatalogGenerations/{active}/products` | Read only for active generation | Admin writes | Sanitized currently published products only |
 | `products` | None | Read/write | Canonical product records, including drafts/unpublished data |
-| `publicStoneRates` | Read only | Read/write | Sanitized, explicitly verified current rates only |
+| `publicCatalogGenerations/{active}/stoneRates` | Read only for active generation | Admin writes | Sanitized, explicitly verified current rates only |
 | `stoneRates` | None | Read/write | Canonical plans, preparation flags, notes, and price history |
-| `publicSettings/general` | Read only | Read/write | Explicit allowlist of public settings only |
+| `publicCatalogGenerations/{active}/settings/general` | Read only for active generation | Admin writes | Explicit allowlist of public settings only |
+| `publicCatalogControl/active` | Read only | Admin pointer switch | Publishes the complete generation after staging succeeds |
+| `publicCatalogControl/publishSequence` | None | Admin only | Monotonic publication revision fence |
+| `publicCatalogGenerations/{generationId}` root metadata | None | Admin only | Generation metadata/counts; old generations retained for rollback |
+| Legacy flat public mirror collections | None | Admin only | No longer used by the storefront |
 | `settings/general` | None | Read/write | Full admin settings |
 | `productVideos` | None by default | Read/write | Private video metadata/chunks; public video publishing requires a separate reviewed mirror |
 | `requests` | Create only with strict validation | Read/write | Customer requests |
@@ -40,15 +44,20 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 - Video metadata and chunks remain private until an approved publishing design ties them to a currently public product. Do not make the existing entire video collection public.
 
 ## Migration sequence (do not skip)
-1. Implemented on the draft branch: an admin-only mirror builder writes allowlisted `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`; matching draft rules permit public reads and admin writes. This has not been deployed or executed against the live database.
-2. Completed on the draft branch: public website listeners now read only `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`.
-3. Completed on the draft branch: separate admin-only canonical listeners feed the admin dashboard after admin authorization; private state is cleared on logout/auth loss.
-4. Partially implemented only: mutation wrappers trigger a full mirror rebuild after canonical writes. This is non-atomic, may leave stale or partially refreshed mirrors if a later batch fails, and must be replaced or made safely recoverable before production.
-5. Pending: replace the in-place multi-batch rebuild with a staged/versioned generation and a single active-generation pointer (or another demonstrably safe atomic publication design). Do not run the current builder against production yet.
-6. Pending: execute a controlled migration only after the publication design and write paths are tested. The current builder does not modify canonical records, prices, price histories, product numbers, or sequence ledgers, but can rewrite public mirror collections.
-7. Pending: test anonymous reads and writes, admin reads/writes, CRUD/publish/unpublish, numbering, price history, logout/login, and the public site against the exact named database.
-8. Only after all tests pass, separately approve and publish restrictive rules to the exact named database. Never publish to `(default)` by mistake.
-9. Verify direct unauthenticated reads of canonical collections are denied, while only approved public mirrors remain readable and the site continues to work.
+
+1. Implemented on the draft branch: public/admin listeners are separated. Public listeners follow `publicCatalogControl/active`; admin listeners read canonical collections only after admin authorization.
+2. Implemented on the draft branch: an admin-only publisher reads canonical data, applies explicit public field allowlists and eligibility checks, stages a unique immutable generation under `publicCatalogGenerations/{generationId}`, writes public settings and metadata, and only then transactionally switches the active pointer.
+3. Implemented on the draft branch: a monotonic `publishSequence` is reserved before the canonical snapshot is read. The final pointer transaction refuses to activate an older/equal revision if a newer publish is already active. Older generations are retained; no cleanup is run.
+4. Implemented on the draft branch: public mirror reads reset to safe empty/static defaults when the pointer is missing or listeners fail. Admin canonical state is separate and cleared on logout/auth loss.
+5. Implemented on the draft branch: admin mutation wrappers request a full generation rebuild after canonical changes. If rebuilding fails, the last active generation remains intact; the admin operation reports the publish failure. The storefront may temporarily show the previous snapshot until an admin retries publication. Automated retry/reconciliation and mutation-specific failure recovery still need testing.
+6. CI verification: 7 Firestore Rules Emulator test cases pass, including active/inactive generation access, anonymous collection enumeration denial across canonical/private collections, request schema validation, non-admin access denial, and public field allowlists. TypeScript check and production build also pass. These tests run against an isolated demo project's default database only.
+7. Pending: test generation staging failure, active-pointer rollback, and concurrent publishers; verify all CRUD/publish/unpublish/price-verification paths and public/admin UI behavior in a real browser.
+8. Pending: resolve the production dependency audit gate (currently 5 high, 0 critical) without unsafe major downgrades or incompatible overrides.
+9. Pending: verify admin identity, recovery, and MFA strategy; preserve the current owner fallback until this is safely confirmed.
+10. Pending: configure Firebase App Check with a real provider/site key, observe valid traffic, and then decide whether to enforce it on the exact named database. App Check is not configured in source today.
+11. Pending: perform controlled verification against the exact named production database. Do not assume the emulator's default database represents it.
+12. Only after the preceding checks and separate approval: stage the public generation in production, publish restrictive rules to the exact named database (never `(default)` by mistake), deploy the Worker, and verify public browsing plus direct anonymous denial of every canonical/private collection.
+13. Confirm the public storefront remains functional and admin CRUD, request intake, numbering, price history, logout/login, error recovery, and rollback all work. Do not proceed to retired-account content work until this security task is genuinely complete.
 
 ## Required security-rule principles
 - Default deny for every collection.
@@ -101,4 +110,4 @@ No application listener or mutation behavior was changed by this audit note. Thi
 
 ## Public request write hardening (2026-11-12)
 
-The draft rules now validate public request creation against an exact field allowlist and bounded string lengths. Clients cannot submit extra fields such as `adminNotes` or choose a non-initial status; the document ID must match the `id` field. Reads, updates, and deletes remain admin-only. This reduces malformed/oversized writes but is not rate limiting or bot protection. Firebase App Check and abuse controls remain a separate release gate.
+The draft rules now validate public request creation against an exact field allowlist and bounded string lengths. Clients cannot submit extra fields such as `adminNotes` or choose a non-initial status; the document ID must match the `id` field. Reads, updates, and deletes remain admin-only. The latest 7-case emulator suite passes these request tests. This reduces malformed/oversized writes but is not rate limiting or bot protection. Firebase App Check and abuse controls remain a separate release gate.
