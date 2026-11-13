@@ -145,9 +145,13 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
-test('public product rules reject stone-account products; stone rates are the only public stone catalog', async () => {
-  const stoneAccountProduct = { ...publicProduct, category: 'ゲーム内通貨・石垢' };
-  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/stone-account-product`), stoneAccountProduct));
+test('public product rules accept only the four current account categories', async () => {
+  for (const category of ['引退垢', '初期垢', '石垢', '進行済み石垢']) {
+    const product = { ...publicProduct, id: `category-${category}`, category };
+    await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/${product.id}`), product));
+  }
+  const legacyCategory = { ...publicProduct, id: 'legacy-stone-category', category: 'ゲーム内通貨・石垢' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/${legacyCategory.id}`), legacyCategory));
 });
 
 test('public product rules reject records missing product or game identifiers', async () => {
