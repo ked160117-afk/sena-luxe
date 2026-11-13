@@ -141,6 +141,7 @@ test('public stone-rate rules reject paid and unverified currency types', async 
     planName: '無償石テスト',
     currencyName: '無償石',
     currencyType: '無償',
+    accountType: '石垢',
     currencyAmount: '1000個',
     conditions: 'テスト条件',
     currentPrice: 500,
