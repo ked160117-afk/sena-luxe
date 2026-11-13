@@ -55,7 +55,7 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 7. Pending: test generation staging failure, active-pointer rollback, and concurrent publishers; verify all CRUD/publish/unpublish/price-verification paths and public/admin UI behavior in a real browser.
 8. Pending: resolve the production dependency audit gate (currently 5 high, 0 critical) without unsafe major downgrades or incompatible overrides.
 9. Pending: verify admin identity, recovery, and MFA strategy; preserve the current owner fallback until this is safely confirmed.
-10. Pending: configure Firebase App Check with a real provider/site key, observe valid traffic, and then decide whether to enforce it on the exact named database. App Check is not configured in source today.
+10. Pending: configure Firebase App Check with a real provider/site key, observe valid traffic, and then decide whether to enforce it on the exact named database. A conditional reCAPTCHA v3 App Check initializer is in the draft source, but the configured site key is empty and enforcement remains off.
 11. Pending: perform controlled verification against the exact named production database. Do not assume the emulator's default database represents it.
 12. Only after the preceding checks and separate approval: stage the public generation in production, publish restrictive rules to the exact named database (never `(default)` by mistake), deploy the Worker, and verify public browsing plus direct anonymous denial of every canonical/private collection.
 13. Confirm the public storefront remains functional and admin CRUD, request intake, numbering, price history, logout/login, error recovery, and rollback all work. Do not proceed to retired-account content work until this security task is genuinely complete.
@@ -102,7 +102,7 @@ Important consequence: a successful canonical write followed by a failed generat
 2. Verify the public storefront and admin CRUD in a real browser, including product create/update/delete, publish/unpublish, rate verification/preparation, settings updates, numbering, price-history preservation, and logout/login.
 3. Resolve the production dependency audit findings without blind downgrades or unverified compatibility overrides.
 4. Confirm owner admin identity, recovery path, and MFA; do not remove the legacy owner fallback until verified.
-5. Configure App Check using the actual Firebase Console provider/site key, observe valid traffic, then evaluate enforcement. App Check is currently not configured.
+5. Register reCAPTCHA v3 for the web app/domain, set `recaptchaSiteKey`, verify valid tokens and traffic, then evaluate enforcement. The initializer is present but currently inactive because the key is empty.
 6. Verify the exact named production database and confirm anonymous users cannot read or enumerate canonical/private collections.
 7. Only with separate approval, run the staged generation migration, publish rules to the exact named database, deploy the Worker, and verify live headers and public/admin behavior.
 
