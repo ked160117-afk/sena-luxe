@@ -12,7 +12,7 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 - Production rules have not been changed and still allow public reads of canonical `games`, `products`, `stoneRates`, `productVideos` and its chunks, `settings`, and `test`.
 - Draft rules restrict canonical catalog/settings/video reads to admins and expose only the currently active immutable generation. Legacy flat `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings` collections are admin-only in the draft rules. These rules have not been published.
 - `testFirestoreConnection()` performs a server read of `test/connection`; it returns true for permission-denied and other non-offline errors, so the draft admin-only `test` rule does not currently block general visitors. This check proves reachability only weakly and is not an authorization test.
-- `requests` permits public creates but restricts reads and management to admins. `sequences` is admin-only.
+- Current production `requests/{requestId}` permits unrestricted public creates (`allow create: if true`) without a schema/size/status allowlist; reads and management are admin-only. The draft rules tighten create validation, but App Check/rate limiting remains separate. `sequences` is admin-only.
 - Admin recognition currently includes a hard-coded email and UID fallback as well as `admins/{uid}`; preserve account access during any change and review this bootstrap path separately.
 
 ## Target collection layout
