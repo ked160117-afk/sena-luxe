@@ -90,7 +90,9 @@ service cloud.firestore {
       request.resource.data.name is string &&
       request.resource.data.name.size() <= 120 &&
       request.resource.data.iconUrl is string &&
-      request.resource.data.iconUrl.size() <= 2048 &&
+      request.resource.data.iconUrl.size() <= 100000 &&
+      request.resource.data.currencyIconUrl is string &&
+      request.resource.data.currencyIconUrl.size() <= 100000 &&
       request.resource.data.description is string &&
       request.resource.data.description.size() <= 1000;
     }
