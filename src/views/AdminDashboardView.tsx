@@ -1434,13 +1434,13 @@ export const AdminDashboardView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-stone-400 font-medium">Firestore Database ID</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  ONLINE
+                  STATUS
                 </span>
               </div>
               <div className="font-mono text-xs font-bold text-stone-200 truncate" title="ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699">
                 ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699
               </div>
-              <div className="text-[10px] text-stone-500">Named Enterprise Firestore</div>
+              <div className="text-[10px] text-stone-500">Named Firestore（エディション・課金状態はConsoleで要確認）</div>
             </div>
           </div>
 
@@ -1460,7 +1460,7 @@ export const AdminDashboardView: React.FC = () => {
                 <div>
                   <div className="font-semibold text-white">一般ユーザー（閲覧専用・未認証保護）</div>
                   <div className="text-stone-400 text-[11px] mt-0.5">
-                    取扱ゲーム一覧・公開商品カタログ・石垢料金表の「読み取り（get / list）」のみ許可。内部情報や番号発番台帳へのアクセスは拒否。
+                    有効な公開世代のカタログのみ読み取り可能。正規商品・ゲーム・料金データ、履歴、管理情報、番号発番台帳は一般ユーザーから拒否。
                   </div>
                 </div>
               </div>
@@ -1478,9 +1478,9 @@ export const AdminDashboardView: React.FC = () => {
               <div className="p-3.5 rounded-lg bg-[#0a0b0d] border border-stone-800 flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-white">管理者権限のサーバー側検証（admins / verified email）</div>
+                  <div className="font-semibold text-white">管理者権限のサーバー側検証（admins / 所有者用メール・UID例外）</div>
                   <div className="text-stone-400 text-[11px] mt-0.5">
-                    商品の新規追加、編集、価格改定、非公開化、削除はFirebase Authenticationで認証された正規の管理者のみ書き込みが許可されます。
+                    管理者判定はadmins/{uid}と、移行前からの所有者用メール・UID例外で行います。所有者アカウントの確認が済むまで旧例外は維持します。
                   </div>
                 </div>
               </div>
@@ -1488,7 +1488,7 @@ export const AdminDashboardView: React.FC = () => {
 
             <div className="pt-3 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-[11px] text-stone-400">
-                マスターデータの初期同期状態：{isFirestoreConnected ? '同期稼働中' : '確認中'}
+                Firestoreサーバー応答：{isFirestoreConnected ? '応答あり（権限・同期状態は未検証）' : '応答を確認できず'}
               </div>
               <button
                 type="button"
