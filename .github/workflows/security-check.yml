@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - security/public-private-firestore-split
+      - integration/security-catalog-split
   pull_request:
     branches:
       - main
