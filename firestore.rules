@@ -95,12 +95,12 @@ service cloud.firestore {
 
     function validPublicStoneRate(rateId) {
       return request.resource.data.keys().hasOnly([
-        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType', 'accountType',
         'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
         'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
       ]) &&
       request.resource.data.keys().hasAll([
-        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType', 'accountType',
         'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
         'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
       ]) &&
@@ -112,6 +112,7 @@ service cloud.firestore {
       request.resource.data.currencyName is string &&
       request.resource.data.status == '取扱中' &&
       request.resource.data.currencyType == '無償' &&
+      request.resource.data.accountType in ['石垢', '進行済み石垢'] &&
       request.resource.data.stockStatus == '在庫要確認' &&
       request.resource.data.isPreparation == false &&
       request.resource.data.verifiedForPublic == true &&
