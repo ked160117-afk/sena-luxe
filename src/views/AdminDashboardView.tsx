@@ -1448,8 +1448,11 @@ export const AdminDashboardView: React.FC = () => {
           <div className="rounded-xl bg-[#111216] border border-stone-800 p-6 space-y-4 text-xs text-stone-300 leading-relaxed">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <span className="w-1.5 h-4 bg-[#d4af37] rounded-full inline-block" />
-              セキュリティルール（firestore.rules）適用概要
+              セキュリティルール設計概要（本番反映状況は別途確認）
             </h3>
+            <p className="text-[11px] text-amber-300/90">
+              ここに表示する内容はリポジトリ内のルール設計です。Firebase Consoleへの公開・適用済みかどうかを示すものではありません。本番反映は移行確認後に別途実施します。
+            </p>
 
             <div className="space-y-3">
               <div className="p-3.5 rounded-lg bg-[#0a0b0d] border border-stone-800 flex items-start gap-2.5">
