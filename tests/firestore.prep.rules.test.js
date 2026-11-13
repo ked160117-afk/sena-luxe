@@ -111,9 +111,13 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
-test('public product rules keep stone accounts out of the generic product catalog', async () => {
-  const stoneAccountProduct = { ...publicProduct, id: 'stone-account-product', category: 'ゲーム内通貨・石垢' };
-  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/stone-account-product`), stoneAccountProduct));
+test('public product rules accept the new stone-account categories and reject the legacy label', async () => {
+  for (const category of ['石垢', '進行済み石垢']) {
+    const product = { ...publicProduct, id: `stone-${category}`, category };
+    await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/${product.id}`), product));
+  }
+  const legacy = { ...publicProduct, id: 'legacy-stone-account', category: 'ゲーム内通貨・石垢' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/${legacy.id}`), legacy));
 });
 
 test('public product rules reject image payloads above the bounded document limit', async () => {
