@@ -80,13 +80,13 @@ Requests and sequences are separate private/admin workflows and must not be copi
 
 ## Follow-up source verification (2026-11-12)
 
-The earlier sections above record the original audit state. The following changes were subsequently implemented on this draft branch and supersede the earlier statements that the listener split is pending:
+The earlier sections above record the original audit state. The following changes were subsequently implemented on this draft branch and supersede the earlier statements that the listener split or staged-generation publisher is pending:
 
 - Public `StoreContext` listeners now read `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general` only.
 - Admin-authorized listeners separately read canonical `games`, `products`, `stoneRates`, `settings/general`, `sequences`, and `requests`; private context state is cleared when admin authorization is lost or the user logs out.
 - Admin dashboard consumers were switched to the separate canonical admin state.
 - Admin mutation wrappers now invoke a full public-mirror rebuild after canonical writes, including product, rate, game, and settings mutation paths.
-- The rebuild remains non-atomic: it writes mirror documents in multiple batches and may leave a partial or stale public mirror after failure. This is a production blocker, not a completed security solution.
+- A later implementation supersedes the earlier in-place mirror rebuild: the publisher stages a unique immutable generation in bounded batches, then switches one active pointer only after staging completes. The active pointer remains unchanged if staging fails; emulator tests cover partial staging failure and stale concurrent publishers. Production named-database and real-browser behavior remain unverified.
 - The draft Firestore rules restrict canonical catalog/settings/video reads to admins and allow public reads only from mirrors. The rules have not been published to Firebase Console.
 - The draft `test/{docId}` rule is admin-only. `testFirestoreConnection()` treats permission-denied and all other non-offline errors as successful reachability, so ordinary visitors do not currently fail the connection check solely because they cannot read `test/connection`. This behavior is not a robust health or authorization test and should be redesigned separately.
 
