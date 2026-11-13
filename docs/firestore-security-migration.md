@@ -1,3 +1,7 @@
+## Named database billing gate
+
+The configured database is a non-default named Firestore database. Google Cloud's current Firestore pricing documentation states that named databases require billing to be enabled and do not qualify for the free allocation. The actual project billing state must be checked in Firebase/Google Cloud Console. Do not run the live generation-preparation button or perform migration reads/writes until billing and possible charges are explicitly confirmed. No live data migration or billing change has been performed.
+
 # Firestore privacy hardening migration plan
 
 Status (2026-11-13): public/admin listener split and immutable generation publisher are implemented on the draft security branch. Latest CI on the PR branch passed TypeScript, all 9 Firestore Rules Emulator tests, production build, exact named-database target validation, browser bundle check, and dependency gates. A committed `package-lock.json` now pins the verified dependency tree, and CI uses `npm ci`. Production-only audit: 0 advisories. Full dependency tree: 13 moderate, 0 high, 0 critical (CI blocks high/critical). The emulator uses an isolated demo project's default database, not the production named database. Generation failure/rollback/concurrency, App Check, real-browser checks, and production deployment remain pending. No production Firestore rules, live data, or Worker deployment have been changed.
