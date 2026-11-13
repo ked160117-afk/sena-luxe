@@ -20,7 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { reservePublicCatalogRevision, activatePublicCatalogGeneration } from './publicCatalogPublisher';
+import { reservePublicCatalogRevision, stagePublicCatalogGeneration, activatePublicCatalogGeneration } from './publicCatalogPublisher';
 import {
   GameTitle,
   ProductItem,
@@ -274,30 +274,16 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
   // Build an immutable generation. The public pointer is switched only after
   // every collection and the settings document have been committed successfully.
   const generationId = `catalog-${Date.now()}-${crypto.randomUUID()}`;
-  const generationRef = (kind: string, id: string) =>
-    doc(db, 'publicCatalogGenerations', generationId, kind, id);
   const rows: Array<{ kind: string; id: string; data: Record<string, unknown> }> = [
     ...publicGames.map((row) => ({ kind: 'games', id: row.id, data: row as unknown as Record<string, unknown> })),
     ...publicProducts.map((row) => ({ kind: 'products', id: row.id, data: row as unknown as Record<string, unknown> })),
     ...publicRates.map((row) => ({ kind: 'stoneRates', id: row.id, data: row as unknown as Record<string, unknown> })),
   ];
 
-  for (let offset = 0; offset < rows.length; offset += 400) {
-    const batch = writeBatch(db);
-    rows.slice(offset, offset + 400).forEach((row) => {
-      batch.set(generationRef(row.kind, row.id), row.data);
-    });
-    await batch.commit();
-  }
-
-  await setDoc(doc(db, 'publicCatalogGenerations', generationId, 'settings', 'general'), publicSettings);
-  await setDoc(doc(db, 'publicCatalogGenerations', generationId), {
-    generationId,
+  await stagePublicCatalogGeneration(db, generationId, rows, publicSettings, {
     games: publicGames.length,
     products: publicProducts.length,
     rates: publicRates.length,
-    settings: 1,
-    createdAt: new Date().toISOString(),
   });
 
   const activated = await activatePublicCatalogGeneration(db, generationId, publishRevision, {
