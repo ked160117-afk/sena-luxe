@@ -32,7 +32,6 @@ import {
   saveSettingsDoc,
   checkIsUserAdmin,
   ensureAdminDocument,
-  seedInitialDataIfEmpty,
   rebuildPublicCatalogMirrors,
 } from '../services/firestoreService';
 import {
@@ -240,9 +239,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
             // Re-check after the asynchronous admin-document step before any canonical writes.
             if (auth.currentUser?.uid !== expectedUid) return;
-            // Only the same still-authenticated administrator may read or seed canonical collections.
-            await seedInitialDataIfEmpty();
-            if (auth.currentUser?.uid !== expectedUid) return;
+            // Do not seed or bulk-write catalog data automatically on login.
+            // Any catalog registration/synchronization must be explicitly initiated
+            // from the admin dashboard after production quota and source data are checked.
           } else {
             setAdminAllGames([]);
             setAdminProducts([]);
