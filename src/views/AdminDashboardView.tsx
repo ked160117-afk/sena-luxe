@@ -1446,7 +1446,7 @@ export const AdminDashboardView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-stone-400 font-medium">Firestore Database ID</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  応答あり
+                  {isFirestoreConnected ? '応答あり（権限未確認）' : '未確認'}
                 </span>
               </div>
               <div className="font-mono text-xs font-bold text-stone-200 truncate" title="ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699">
