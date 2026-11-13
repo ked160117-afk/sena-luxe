@@ -461,17 +461,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentView('stone_rates');
   };
 
-  // Rebuild allowlisted public mirrors after successful canonical admin writes.
-  // Canonical data remains authoritative; failures are surfaced instead of hidden.
-  const refreshPublicMirrors = async () => {
-    try {
-      await rebuildPublicCatalogMirrors();
-    } catch (error) {
-      console.error('Canonical data was saved, but public mirror refresh failed:', error);
-      throw new Error('正規データは保存されましたが、公開ページへの反映に失敗しました。管理画面から公開データを再同期してください。');
-    }
-  };
-
   // Safe Atomic Product Creation using Firestore Transaction
   const addNewProduct = async (data: {
     gameId: string;
@@ -508,20 +497,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       verifiedForPublic: data.verifiedForPublic,
     });
 
-    await refreshPublicMirrors();
     return newProd;
   };
 
   const updateProduct = async (id: string, updates: Partial<ProductItem>) => {
     await updateProductDoc(id, updates);
-    await refreshPublicMirrors();
   };
 
   const deleteProduct = async (id: string, reason?: string) => {
     const target = adminProducts.find((p) => p.id === id);
     if (!target) return;
     await deleteProductDoc(target, reason);
-    await refreshPublicMirrors();
   };
 
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
@@ -529,7 +515,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!target) return;
     if (status === '掲載中' && (!target.verifiedForPublic || target.category !== '引退垢' || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
     await updateProductDoc(id, { status });
-    await refreshPublicMirrors();
   };
 
   // Stone Rate Actions
@@ -537,17 +522,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const target = adminStoneRates.find((r) => r.id === id);
     if (!target) return;
     await updateStoneRatePriceDoc(id, target, newPrice, reason || '管理者による価格改定');
-    await refreshPublicMirrors();
   };
 
   const updateStoneRatePlan = async (id: string, updates: Partial<StoneRatePlan>) => {
     await updateStoneRateDoc(id, updates);
-    await refreshPublicMirrors();
   };
 
   const addNewStoneRatePlan = async (plan: Omit<StoneRatePlan, 'id' | 'priceHistory'>) => {
     await addStoneRatePlanDoc(plan);
-    await refreshPublicMirrors();
   };
 
   const setAllStoneRatesPreparation = async () => {
@@ -567,8 +549,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         );
       }
       await batch.commit();
-      await refreshPublicMirrors();
-    } catch (err) {
+      } catch (err) {
       console.warn('Batch preparation update notice:', err);
       throw err;
     }
@@ -586,7 +567,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Game & Candidate Actions
   const updateGameDetails = async (id: string, updates: Partial<GameTitle>) => {
     await updateGameDoc(id, updates);
-    await refreshPublicMirrors();
   };
 
   const addNewGameTitle = async (gameData: Omit<GameTitle, 'id'>) => {
@@ -596,14 +576,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: newId,
     };
     await addGameDoc(newGame);
-    await refreshPublicMirrors();
   };
 
   const promoteCandidateToHandled = async (candidateId: string) => {
     const candidate = adminAllGames.find((c) => c.id === candidateId);
     if (!candidate) return;
     await promoteCandidateDoc(candidate);
-    await refreshPublicMirrors();
   };
 
   const addNewCandidateGame = async (candidate: Omit<GameTitle, 'id' | 'isHandled'>) => {
@@ -614,7 +592,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isHandled: false,
     };
     await updateGameDoc(newId, fullCandidate);
-    await refreshPublicMirrors();
   };
 
   // Request Submission directly to Firestore
@@ -631,7 +608,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Settings
   const updateSettings = async (updates: Partial<AdminSettings>) => {
     await saveSettingsDoc(updates);
-    await refreshPublicMirrors();
   };
 
   // Firebase Authentication: Email & Password
