@@ -105,7 +105,7 @@ export const LineInquiryModal: React.FC = () => {
             className="w-full py-3.5 px-4 rounded-lg font-semibold text-black bg-[#06C755] hover:bg-[#05b34c] transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(6,199,85,0.3)] hover:shadow-[0_6px_20px_rgba(6,199,85,0.4)]"
           >
             <MessageCircle className="w-5 h-5 fill-black stroke-none" />
-            <span>LINEを開いて問い合わせる</span>
+            <span>LINEで問い合わせ</span>
             <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
           </button>
 
