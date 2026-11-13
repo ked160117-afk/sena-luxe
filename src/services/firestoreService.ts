@@ -34,7 +34,6 @@ import {
 import {
   INITIAL_GAMES,
   INITIAL_CANDIDATE_GAMES,
-  INITIAL_PRODUCTS,
   INITIAL_STONE_RATES,
   INITIAL_SEQUENCES,
   INITIAL_SETTINGS,
@@ -414,15 +413,8 @@ export async function seedInitialDataIfEmpty(): Promise<void> {
       console.log('Syncing / Seeding SENA LUXE catalog into Firestore...');
       await syncAllStoneRatesAndGamesToFirestore();
 
-      // Seed Products if none exist (do not overwrite existing products)
-      const prodsSnap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
-      if (prodsSnap.empty) {
-        const prodBatch = writeBatch(db);
-        for (const product of INITIAL_PRODUCTS) {
-          prodBatch.set(doc(db, COLLECTIONS.PRODUCTS, product.id), product);
-        }
-        await prodBatch.commit();
-      }
+      // Never auto-create placeholder/sample products. Products are registered
+      // manually only after their real account details and price are verified.
 
       // Seed Settings if not exists
       const settingsSnap = await getDoc(doc(db, COLLECTIONS.SETTINGS, 'general'));
