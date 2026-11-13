@@ -72,6 +72,7 @@ const publicRate = {
   gameName: 'テストゲーム',
   planName: '無償石テスト',
   currencyName: '無償石',
+  currencyType: '無償',
   currencyAmount: '1000個',
   conditions: 'テスト条件',
   currentPrice: 500,
@@ -142,6 +143,13 @@ before(async () => {
 
 after(async () => {
   await testEnv?.cleanup();
+});
+
+test('public stone-rate rules reject paid and unverified currency types', async () => {
+  const paidRate = { ...publicRate, currencyType: '有償' };
+  const unknownRate = { ...publicRate, currencyType: '未確認' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/paid-rate`), paidRate));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/unknown-rate`), unknownRate));
 });
 
 test('anonymous users can read only the active public catalog generation', async () => {
