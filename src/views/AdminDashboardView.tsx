@@ -105,7 +105,7 @@ export const AdminDashboardView: React.FC = () => {
       Boolean(rate.conditions?.trim())
     ).length;
     const confirmMessage = [
-      '公開専用データを事前作成します。現在のホームページ表示・商品データ・価格履歴には変更を加えません。',
+      '公開専用データを手動で作成・切替します。実行するとFirestoreの全カタログ読み取りと公開世代への書き込みが発生します。無料枠・使用量を確認できるまで実行しないでください。',
       '',
       '公開対象の目安（禁止語句などは実際の処理でさらに除外されます）:',
       `ゲームタイトル: ${estimatedGames}件`,
