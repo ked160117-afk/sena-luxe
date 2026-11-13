@@ -81,7 +81,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     gameId: 'game-fp',
     gameCode: 'FP',
     gameName: '呪術廻戦 ファントムパレード',
-    category: 'ゲーム内通貨・石垢',
+    category: '石垢',
     title: 'ファンパレ 廻珠ストックアカウント（準備中）',
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
@@ -482,7 +482,7 @@ export const INITIAL_SEQUENCES: Record<string, SerialSequence> = {
 
 export const INITIAL_SETTINGS: AdminSettings = {
   lineUrl: 'https://lin.ee/6uy8hu9',
-  shopNotice: '石垢アカウントの掲載内容・価格・在庫は、購入前に公式LINEでご確認ください。掲載外商品の個別手配・取り寄せ・予約は承っておりません。',
+  shopNotice: '石垢商品の掲載内容・価格・在庫は、購入前に公式LINEでご確認ください。掲載外商品の個別手配・取り寄せ・予約は承っておりません。',
   enableDirectLineCopy: false,
   contactDeskHours: '公式LINEにてご案内',
 };
