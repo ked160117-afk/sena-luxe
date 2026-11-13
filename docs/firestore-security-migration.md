@@ -1,6 +1,6 @@
 ## Named database billing gate
 
-The configured database is a non-default named Firestore database and the prior Console context identified it as Enterprise edition. Google Cloud's Standard-edition pricing says named databases require billing and have no free allocation; Enterprise pricing says only one database per project receives the free allocation. The repository cannot tell which database currently receives that allocation or confirm the billing plan. Verify the named database's free-tier assignment, billing plan, and usage in Console before running the live generation-preparation button or any migration reads/writes. No live data migration or billing change has been performed.
+The configured database is a non-default named Firestore database; prior Console context identified it as Enterprise edition, while a separate `(default)` Standard database also exists. Official Firestore documentation says exactly one database per project receives the free quota: the first database created, regardless of ID. The repository cannot establish which database was created first or currently receives the free quota. Verify the named database's free-tier assignment, billing plan, and usage in Console before running the live generation-preparation button or any migration reads/writes. Do not enable Blaze or change billing without explicit approval. No live data migration or billing change has been performed.
 
 # Firestore privacy hardening migration plan
 
