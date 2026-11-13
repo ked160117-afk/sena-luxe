@@ -136,6 +136,7 @@ export const AdminDashboardView: React.FC = () => {
   const [editRatePlanName, setEditRatePlanName] = useState('');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
+  const [editRateCurrencyType, setEditRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
   const [editRateCurrPrice, setEditRateCurrPrice] = useState('');
   const [editRateNotes, setEditRateNotes] = useState('');
@@ -146,6 +147,7 @@ export const AdminDashboardView: React.FC = () => {
   const [newRatePlanName, setNewRatePlanName] = useState('');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
+  const [newRateCurrencyType, setNewRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
   const [newRateCurrPrice, setNewRateCurrPrice] = useState('');
 
@@ -179,6 +181,7 @@ export const AdminDashboardView: React.FC = () => {
       Boolean(product.summary?.trim())
     ).length;
     const estimatedRates = stoneRates.filter((rate) =>
+      rate.currencyType === '無償' &&
       rate.verifiedForPublic === true &&
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
@@ -522,6 +525,7 @@ export const AdminDashboardView: React.FC = () => {
     setEditRatePlanName(isVerified ? plan.planName : '');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
+    setEditRateCurrencyType(plan.currencyType === '無償' || plan.currencyType === '有償' ? plan.currencyType : '未確認');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
     setEditRateCurrPrice(isVerified && plan.currentPrice !== null ? String(plan.currentPrice) : '');
     setEditRateNotes(isVerified ? plan.notes || '' : '');
@@ -537,8 +541,9 @@ export const AdminDashboardView: React.FC = () => {
       window.alert('プラン名・通貨数量・確認済みの条件を入力してください。');
       return;
     }
-    const isVerifiedForPublic = currPriceVal !== null && currPriceVal > 0;
+    const isVerifiedForPublic = editRateCurrencyType === '無償' && currPriceVal !== null && currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
+      currencyType: editRateCurrencyType,
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
@@ -562,6 +567,7 @@ export const AdminDashboardView: React.FC = () => {
 
     const currPriceVal = newRateIsPriceConfirmed && newRateCurrPrice ? Number(newRateCurrPrice) : null;
     const isVerifiedForPublic =
+      newRateCurrencyType === '無償' &&
       Boolean(newRatePlanName.trim()) &&
       Boolean(newRateAmount.trim()) &&
       Boolean(newRateConditions.trim()) &&
@@ -574,6 +580,7 @@ export const AdminDashboardView: React.FC = () => {
       gameName: game.name,
       planName: newRatePlanName.trim(),
       currencyName: game.currencyName,
+      currencyType: newRateCurrencyType,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim(),
       referencePrice: 0,
@@ -588,6 +595,7 @@ export const AdminDashboardView: React.FC = () => {
     setNewRatePlanName('');
     setNewRateAmount('');
     setNewRateConditions('');
+    setNewRateCurrencyType('未確認');
     setNewRateCurrPrice('');
     setNewRateIsPriceConfirmed(false);
   };
@@ -1967,6 +1975,16 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               <div>
+                <label className="text-stone-300 block mb-1 font-semibold">通貨区分（必須）</label>
+                <select value={newRateCurrencyType} onChange={(e) => setNewRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="未確認">未確認（公開不可）</option>
+                  <option value="無償">無償（確認済み）</option>
+                  <option value="有償">有償（公開不可）</option>
+                </select>
+                <p className="text-[11px] text-amber-400 mt-1">無償であることを確認できた料金のみ公開対象になります。</p>
+              </div>
+
+              <div>
                 <label className="text-stone-300 block mb-1 font-semibold">通貨数量表記 *</label>
                 <input
                   type="text"
@@ -2074,6 +2092,16 @@ export const AdminDashboardView: React.FC = () => {
                   onChange={(e) => setEditRatePlanName(e.target.value)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                 />
+              </div>
+
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">通貨区分（必須）</label>
+                <select value={editRateCurrencyType} onChange={(e) => setEditRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="未確認">未確認（公開不可）</option>
+                  <option value="無償">無償（確認済み）</option>
+                  <option value="有償">有償（公開不可）</option>
+                </select>
+                <p className="text-[11px] text-amber-400 mt-1">無償であることを確認できた料金のみ公開対象になります。</p>
               </div>
 
               <div>
