@@ -118,7 +118,7 @@ test('public product rules keep stone accounts out of the generic product catalo
 
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const baseRate = {
-    id: 'rate-test',
+    id: 'free-rate',
     gameId: 'game-a',
     gameCode: 'GAMEA',
     gameName: 'テストゲーム',
