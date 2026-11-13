@@ -509,3 +509,21 @@ test('public catalog publisher rejects unsafe generation paths and invalid setti
     );
   }
 });
+
+test('publisher activation rejects unsafe pointers and invalid revisions or counts before Firestore access', async () => {
+  const invalidCases = [
+    ['slash in generation ID', 'unsafe/generation', 1, { games: 0, products: 0, rates: 0 }, '公開世代IDが不正です。'],
+    ['non-positive revision', 'safe-generation', 0, { games: 0, products: 0, rates: 0 }, '公開リビジョンが不正です。'],
+    ['fractional revision', 'safe-generation', 1.5, { games: 0, products: 0, rates: 0 }, '公開リビジョンが不正です。'],
+    ['negative count', 'safe-generation', 1, { games: -1, products: 0, rates: 0 }, '公開データの件数が不正です。'],
+    ['missing count', 'safe-generation', 1, { games: 0, products: 0 }, '公開データの件数が不正です。'],
+  ];
+
+  for (const [label, generationId, revision, counts, message] of invalidCases) {
+    await assert.rejects(
+      activatePublicCatalogGeneration({}, generationId, revision, counts),
+      (error) => error.message === message,
+      label,
+    );
+  }
+});
