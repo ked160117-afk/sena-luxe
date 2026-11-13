@@ -15,7 +15,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { readFile } from 'node:fs/promises';
-import { reservePublicCatalogRevision, activatePublicCatalogGeneration } from '../src/services/publicCatalogPublisher.js';
+import { reservePublicCatalogRevision, stagePublicCatalogGeneration, activatePublicCatalogGeneration } from '../src/services/publicCatalogPublisher.js';
 
 // The Firestore Emulator currently cannot reliably bind rules to the production named database.
 // These automated tests validate the rules against an isolated demo project's default database.
@@ -377,4 +377,38 @@ test('publisher revision fence preserves the active generation on failed staging
   assert.equal(activePointer.data().publishRevision, rollbackRevision);
   await assertSucceeds(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE_GENERATION}/products/product-a`)));
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/staging-secret`)));
+});
+
+test('partial generation staging failure leaves old pointer active and staged documents private', async () => {
+  const pointerRef = doc(adminDb, 'publicCatalogControl/active');
+  const before = await getDoc(pointerRef);
+  const generationId = 'catalog-test-failed-staging';
+
+  // The first 400 valid docs commit; the second batch contains a forbidden
+  // private field and must fail. The publisher must never switch the pointer.
+  const rows = Array.from({ length: 400 }, (_, index) => ({
+    kind: 'games',
+    id: `staged-game-${index}`,
+    data: { ...publicGame, id: `staged-game-${index}` },
+  }));
+  rows.push({
+    kind: 'games',
+    id: 'staged-game-private-field',
+    data: { ...publicGame, id: 'staged-game-private-field', privateNote: 'must be rejected' },
+  });
+
+  await assert.rejects(
+    stagePublicCatalogGeneration(adminDb, generationId, rows, publicSettings, {
+      games: rows.length,
+      products: 0,
+      rates: 0,
+    }),
+  );
+
+  const after = await getDoc(pointerRef);
+  assert.equal(after.data().generationId, before.data().generationId);
+  assert.equal(after.data().publishRevision, before.data().publishRevision);
+
+  await assertSucceeds(getDoc(doc(adminDb, `publicCatalogGenerations/${generationId}/games/staged-game-0`)));
+  await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${generationId}/games/staged-game-0`)));
 });
