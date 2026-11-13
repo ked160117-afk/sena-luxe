@@ -205,7 +205,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     .filter((product) =>
       product.verifiedForPublic === true &&
       product.status === '掲載中' &&
-      product.category === '引退垢' &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(product.category) &&
       typeof product.price === 'number' &&
       Number.isFinite(product.price) &&
       product.price > 0 &&
