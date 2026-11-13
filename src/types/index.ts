@@ -22,11 +22,14 @@ export interface GameTitle {
 }
 
 export type ProductCategory =
-  | 'ゲームアカウント'
-  | 'ゲーム内通貨・石垢'
+  | 'ゲームアカウント' // legacy category retained for existing records
   | '引退垢'
+  | '初期垢'
+  | '石垢'
+  | '進行済み石垢'
   | '育成済みデータ'
-  | '限定キャラクター・アイテム';
+  | '限定キャラクター・アイテム'
+  | 'ゲーム内通貨・石垢'; // legacy value; no longer offered in the admin UI
 
 export type ProductStatus = '掲載中' | '商談中' | '売り切れ' | '掲載停止';
 
