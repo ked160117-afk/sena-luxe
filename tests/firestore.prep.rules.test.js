@@ -116,6 +116,11 @@ test('public product rules keep stone accounts out of the generic product catalo
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/stone-account-product`), stoneAccountProduct));
 });
 
+test('public product rules reject image payloads above the bounded document limit', async () => {
+  const oversizedProduct = { ...publicProduct, id: 'oversized-image', imageUrl: 'x'.repeat(250001) };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/oversized-image`), oversizedProduct));
+});
+
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const baseRate = {
     id: 'free-rate',
