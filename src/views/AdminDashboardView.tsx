@@ -1480,7 +1480,7 @@ export const AdminDashboardView: React.FC = () => {
                 <div>
                   <div className="font-semibold text-white">管理者権限のサーバー側検証（admins / 所有者用メール・UID例外）</div>
                   <div className="text-stone-400 text-[11px] mt-0.5">
-                    管理者判定はadmins/{uid}と、移行前からの所有者用メール・UID例外で行います。所有者アカウントの確認が済むまで旧例外は維持します。
+                    管理者判定はadmins/{管理者UID}と、移行前からの所有者用メール・UID例外で行います。所有者アカウントの確認が済むまで旧例外は維持します。
                   </div>
                 </div>
               </div>
