@@ -2030,14 +2030,6 @@ export const AdminDashboardView: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="text-stone-300 block mb-1 font-semibold">通貨の種類（必須確認）</label>
-                <select value={newRateCurrencyType} onChange={(e) => setNewRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
-                  <option value="未確認">未確認（公開対象外）</option>
-                  <option value="無償">無償石</option>
-                  <option value="有償">有償石（公開対象外）</option>
-                </select>
-              </div>
-              <div>
                 <label className="text-stone-300 block mb-1 font-semibold">プラン名 *</label>
                 <input
                   type="text"
@@ -2153,14 +2145,6 @@ export const AdminDashboardView: React.FC = () => {
                 <select value={editRateAccountType} onChange={(e) => setEditRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
                   <option value="石垢">石垢</option>
                   <option value="進行済み石垢">進行済み石垢</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-stone-300 block mb-1 font-semibold">通貨の種類（必須確認）</label>
-                <select value={editRateCurrencyType} onChange={(e) => setEditRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
-                  <option value="未確認">未確認（公開対象外）</option>
-                  <option value="無償">無償石</option>
-                  <option value="有償">有償石（公開対象外）</option>
                 </select>
               </div>
               <div>
