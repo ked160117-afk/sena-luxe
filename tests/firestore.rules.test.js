@@ -150,6 +150,22 @@ test('public product rules reject stone-account products; stone rates are the on
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/stone-account-product`), stoneAccountProduct));
 });
 
+test('public product rules reject records missing product or game identifiers', async () => {
+  const missingProductNumber = { ...publicProduct, id: 'missing-product-number', productNumber: '' };
+  const missingGameId = { ...publicProduct, id: 'missing-game-id', gameId: '' };
+  const missingGameName = { ...publicProduct, id: 'missing-game-name', gameName: '' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/missing-product-number`), missingProductNumber));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/missing-game-id`), missingGameId));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/missing-game-name`), missingGameName));
+});
+
+test('public stone-rate rules reject records missing game identifiers', async () => {
+  const missingGameId = { ...publicRate, id: 'missing-rate-game-id', gameId: '' };
+  const missingGameName = { ...publicRate, id: 'missing-rate-game-name', gameName: '' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/missing-rate-game-id`), missingGameId));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/missing-rate-game-name`), missingGameName));
+});
+
 test('public product rules reject image payloads above the bounded document limit', async () => {
   const oversizedProduct = { ...publicProduct, id: 'oversized-image', imageUrl: 'x'.repeat(250001) };
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/oversized-image`), oversizedProduct));
