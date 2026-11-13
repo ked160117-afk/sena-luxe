@@ -554,7 +554,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerified = plan.verifiedForPublic === true;
     setEditRatePlanName(isVerified ? plan.planName : '');
     setEditRateAccountType(typeof plan.accountType === 'string' && /進行済み|進行中|進行/.test(plan.accountType) ? '進行済み石垢' : '石垢');
-    setEditRateCurrencyType(plan.currencyType === '有償' ? '有償' : '無償');
+    setEditRateCurrencyType('無償');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
