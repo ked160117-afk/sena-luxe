@@ -190,7 +190,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     .filter((product) =>
       product.verifiedForPublic === true &&
       product.status === '掲載中' &&
-      (product.category === 'ゲーム内通貨・石垢' || product.category === '引退垢') &&
+      product.category === '引退垢' &&
       typeof product.price === 'number' &&
       product.price > 0 &&
       Boolean(product.title?.trim()) &&
@@ -220,6 +220,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
   const publicRates = ratesSnap.docs
     .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as StoneRatePlan))
     .filter((rate) =>
+      rate.currencyType === '無償' &&
       rate.verifiedForPublic === true &&
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
@@ -237,6 +238,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       gameName: rate.gameName,
       planName: rate.planName,
       currencyName: rate.currencyName,
+      currencyType: '無償' as const,
       currencyAmount: rate.currencyAmount,
       conditions: rate.conditions,
       currentPrice: rate.currentPrice,
