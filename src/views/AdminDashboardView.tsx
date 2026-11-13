@@ -349,7 +349,7 @@ export const AdminDashboardView: React.FC = () => {
       if (typeof event.target?.result !== 'string') return;
       const img = new Image();
       img.onload = () => {
-        const maxDim = 1280;
+        const maxDim = 720;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(img.width * scale));
@@ -360,7 +360,7 @@ export const AdminDashboardView: React.FC = () => {
           return;
         }
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        onComplete(canvas.toDataURL('image/webp', 0.76));
+        onComplete(canvas.toDataURL('image/webp', 0.72));
       };
       img.onerror = () => onComplete(event.target!.result as string);
       img.src = event.target.result;
