@@ -1730,7 +1730,7 @@ export const AdminDashboardView: React.FC = () => {
 
               {/* Summary Description */}
               <div>
-                <label className="text-stone-300 block mb-1 font-semibold">概要説明 (商品説明)</label>
+                <label className="text-stone-300 block mb-1 font-semibold">概要説明（商品説明・引退垢に有償石が含まれる場合は必ず明記）</label>
                 <textarea
                   rows={2}
                   placeholder="商品の概要・特徴（詳細な秘密情報は記載しないでください）"
@@ -1929,7 +1929,7 @@ export const AdminDashboardView: React.FC = () => {
 
               {/* Summary Description */}
               <div>
-                <label className="text-stone-300 block mb-1 font-semibold">概要説明 (商品説明)</label>
+                <label className="text-stone-300 block mb-1 font-semibold">概要説明（商品説明・引退垢に有償石が含まれる場合は必ず明記）</label>
                 <textarea
                   rows={3}
                   value={editProdSummary}
