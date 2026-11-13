@@ -460,3 +460,32 @@ test('partial generation staging failure leaves old pointer active and staged do
   assert.equal(stagedAdminSnapshot.exists(), true);
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${generationId}/games/staged-game-0`)));
 });
+
+test('public catalog publisher rejects malformed input before any Firestore writes', async () => {
+  const validRows = [{
+    kind: 'games',
+    id: 'game-preflight',
+    data: { id: 'game-preflight', name: '検証用ゲーム' },
+  }];
+  const validCounts = { games: 1, products: 0, rates: 0 };
+
+  const invalidCases = [
+    ['empty generation ID', '', validRows, publicSettings, validCounts, '公開世代IDが不正です。'],
+    ['unknown collection kind', 'preflight-a', [{ ...validRows[0], kind: 'admins' }], publicSettings, validCounts, '公開データに不正なレコードが含まれています。'],
+    ['document ID containing slash', 'preflight-b', [{ ...validRows[0], id: 'bad/id' }], publicSettings, validCounts, '公開データに不正なレコードが含まれています。'],
+    ['mismatched document and payload IDs', 'preflight-c', [{ ...validRows[0], data: { id: 'different-id' } }], publicSettings, validCounts, '公開データのIDが一致しません。'],
+    ['duplicate document IDs', 'preflight-d', [...validRows, ...validRows], publicSettings, { games: 2, products: 0, rates: 0 }, '公開データに重複したIDがあります。'],
+    ['incorrect record counts', 'preflight-e', validRows, publicSettings, { games: 0, products: 0, rates: 0 }, '公開データの件数が一致しません。'],
+    ['non-integer record counts', 'preflight-f', validRows, publicSettings, { games: 1.5, products: 0, rates: 0 }, '公開データの件数が一致しません。'],
+    ['missing public setting', 'preflight-g', validRows, { ...publicSettings, lineUrl: undefined }, validCounts, '公開設定に許可されていない項目、または不足項目があります。'],
+    ['private extra public setting', 'preflight-h', validRows, { ...publicSettings, adminNote: 'secret' }, validCounts, '公開設定に許可されていない項目、または不足項目があります。'],
+  ];
+
+  for (const [label, generationId, rows, settings, counts, message] of invalidCases) {
+    await assert.rejects(
+      stagePublicCatalogGeneration({}, generationId, rows, settings, counts),
+      (error) => error.message === message,
+      label,
+    );
+  }
+});
