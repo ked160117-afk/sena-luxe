@@ -26,6 +26,18 @@ export async function reservePublicCatalogRevision(database) {
  * The caller must finish writing the generation before calling this function.
  */
 export async function activatePublicCatalogGeneration(database, generationId, publishRevision, counts) {
+  if (typeof generationId !== 'string' || !generationId.trim() || generationId.length > 120 || generationId.includes('/')) {
+    throw new Error('公開世代IDが不正です。');
+  }
+  if (!Number.isInteger(publishRevision) || publishRevision <= 0) {
+    throw new Error('公開リビジョンが不正です。');
+  }
+  if (!counts || typeof counts !== 'object' ||
+      !Number.isInteger(counts.games) || counts.games < 0 ||
+      !Number.isInteger(counts.products) || counts.products < 0 ||
+      !Number.isInteger(counts.rates) || counts.rates < 0) {
+    throw new Error('公開データの件数が不正です。');
+  }
   const activePointerRef = doc(database, 'publicCatalogControl', 'active');
   return runTransaction(database, async (transaction) => {
     const activeSnapshot = await transaction.get(activePointerRef);
