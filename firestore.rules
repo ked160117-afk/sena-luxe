@@ -80,7 +80,7 @@ service cloud.firestore {
       request.resource.data.summary is string &&
       request.resource.data.summary.size() <= 2000 &&
       request.resource.data.imageUrl is string &&
-      request.resource.data.imageUrl.size() <= 2048 &&
+      request.resource.data.imageUrl.size() <= 250000 &&
       request.resource.data.keyHighlights is list &&
       request.resource.data.keyHighlights.size() <= 5;
     }
