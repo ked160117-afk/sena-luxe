@@ -78,7 +78,7 @@ jobs:
       - name: Report full dependency audit, including development tools
         run: |
           npm audit --json > /tmp/npm-audit-all.json || true
-          node -e "const a=require('/tmp/npm-audit-all.json'); console.log('Full dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); for (const [name,item] of Object.entries(a.vulnerabilities ?? {})) console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', via=' + JSON.stringify((item.via ?? []).map(v => typeof v === 'string' ? v : {title:v.title,url:v.url,range:v.range,severity:v.severity}), null, 2) + ', fixAvailable=' + JSON.stringify(item.fixAvailable));"
+          node -e "const a=require('/tmp/npm-audit-all.json'); console.log('Full dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name,item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', via=' + JSON.stringify((item.via ?? []).map(v => typeof v === 'string' ? v : {title:v.title,url:v.url,range:v.range,severity:v.severity}), null, 2) + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical advisories in the full dependency tree block release.'); process.exitCode=1; }"
 
       - name: Production dependency security audit
         run: |
