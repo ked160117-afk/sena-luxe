@@ -55,7 +55,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Explain flagged production dependency paths
+        run: |
+          npm ls zod @grpc/grpc-js @firebase/firestore @firebase/firestore-compat firebase --all || true
+          npm explain zod || true
+          npm explain @grpc/grpc-js || true
+          npm explain @firebase/firestore || true
+
       - name: Production dependency security audit
         run: |
           npm audit --omit=dev --json > /tmp/npm-audit-production.json || true
-          node -e "const a=require('/tmp/npm-audit-production.json'); console.log('Production dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', effects=' + JSON.stringify(item.effects ?? []) + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); for (const advisory of item.via ?? []) if (typeof advisory === 'object') console.log('  advisory:', JSON.stringify({title:advisory.title,url:advisory.url,range:advisory.range,cwe:advisory.cwe})); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical production dependency advisories block release.'); process.exitCode=1; }"
+          node -e "const a=require('/tmp/npm-audit-production.json'); console.log('Production dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', effects=' + JSON.stringify(item.effects ?? []) + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', via=' + JSON.stringify(item.via ?? [] , null, 2) + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical production dependency advisories block release.'); process.exitCode=1; }"
