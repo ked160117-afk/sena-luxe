@@ -201,6 +201,7 @@ export const AdminDashboardView: React.FC = () => {
   const [editingRatePlan, setEditingRatePlan] = useState<StoneRatePlan | null>(null);
   const [editRatePlanName, setEditRatePlanName] = useState('');
   const [editRateAccountType, setEditRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
+  const [editRateCurrencyType, setEditRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
@@ -212,6 +213,7 @@ export const AdminDashboardView: React.FC = () => {
   const [newRateGameId, setNewRateGameId] = useState(games[0]?.id || '');
   const [newRatePlanName, setNewRatePlanName] = useState('');
   const [newRateAccountType, setNewRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
+  const [newRateCurrencyType, setNewRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
@@ -553,6 +555,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerified = plan.verifiedForPublic === true;
     setEditRatePlanName(isVerified ? plan.planName : '');
     setEditRateAccountType(typeof plan.accountType === 'string' && /進行済み|進行中|進行/.test(plan.accountType) ? '進行済み石垢' : '石垢');
+    setEditRateCurrencyType(plan.currencyType === '無償' || plan.currencyType === '有償' ? plan.currencyType : '未確認');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
@@ -574,6 +577,7 @@ export const AdminDashboardView: React.FC = () => {
     await updateStoneRatePlan(editingRatePlan.id, {
       planName: editRatePlanName.trim(),
       accountType: editRateAccountType,
+      currencyType: editRateCurrencyType,
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
       referencePrice: 0,
@@ -608,6 +612,7 @@ export const AdminDashboardView: React.FC = () => {
       gameName: game.name,
       planName: newRatePlanName.trim(),
       accountType: newRateAccountType,
+      currencyType: newRateCurrencyType,
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim(),
@@ -622,6 +627,7 @@ export const AdminDashboardView: React.FC = () => {
     setIsAddRateModalOpen(false);
     setNewRatePlanName('');
     setNewRateAccountType('石垢');
+    setNewRateCurrencyType('未確認');
     setNewRateAmount('');
     setNewRateConditions('');
     setNewRateCurrPrice('');
@@ -2025,6 +2031,14 @@ export const AdminDashboardView: React.FC = () => {
                 </select>
               </div>
               <div>
+                <label className="text-stone-300 block mb-1 font-semibold">通貨の種類（必須確認）</label>
+                <select value={newRateCurrencyType} onChange={(e) => setNewRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="未確認">未確認（公開対象外）</option>
+                  <option value="無償">無償石</option>
+                  <option value="有償">有償石（公開対象外）</option>
+                </select>
+              </div>
+              <div>
                 <label className="text-stone-300 block mb-1 font-semibold">プラン名 *</label>
                 <input
                   type="text"
@@ -2140,6 +2154,14 @@ export const AdminDashboardView: React.FC = () => {
                 <select value={editRateAccountType} onChange={(e) => setEditRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
                   <option value="石垢">石垢</option>
                   <option value="進行済み石垢">進行済み石垢</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">通貨の種類（必須確認）</label>
+                <select value={editRateCurrencyType} onChange={(e) => setEditRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="未確認">未確認（公開対象外）</option>
+                  <option value="無償">無償石</option>
+                  <option value="有償">有償石（公開対象外）</option>
                 </select>
               </div>
               <div>
