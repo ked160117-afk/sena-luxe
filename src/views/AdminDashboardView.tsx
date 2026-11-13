@@ -1461,7 +1461,7 @@ export const AdminDashboardView: React.FC = () => {
             <div>
               <h3 className="text-sm font-semibold text-white">公開専用データの事前準備</h3>
               <p className="text-[11px] text-stone-400 mt-1 leading-relaxed">
-                無料枠・DB仕様の確認が完了するまで一括作成は停止中です。元の商品・価格・価格履歴・商品番号台帳は変更しません。
+                無料枠・DB仕様の確認が完了するまで公開用データの一括作成は停止中です。商品登録・編集は管理画面に保存されますが、ホームページへの公開反映は再開まで行われません。元の商品・価格・価格履歴・商品番号台帳は変更しません。
               </p>
             </div>
             <button
