@@ -31,7 +31,6 @@ import {
   updateRequestStatusDoc,
   saveSettingsDoc,
   checkIsUserAdmin,
-  ensureAdminDocument,
   rebuildPublicCatalogMirrors,
 } from '../services/firestoreService';
 import {
@@ -236,9 +235,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (auth.currentUser?.uid !== expectedUid) return;
           setIsAdminLoggedIn(isAdmin);
           if (isAdmin) {
-            await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
-            // Re-check after the asynchronous admin-document step before any canonical writes.
-            if (auth.currentUser?.uid !== expectedUid) return;
+            // Do not auto-create admin records during login; authorization remains
+            // governed by the existing verified role check and Firestore Rules.
             // Do not seed or bulk-write catalog data automatically on login.
             // Any catalog registration/synchronization must be explicitly initiated
             // from the admin dashboard after production quota and source data are checked.
