@@ -20,6 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { reservePublicCatalogRevision, activatePublicCatalogGeneration } from './publicCatalogPublisher';
 import {
   GameTitle,
   ProductItem,
@@ -172,18 +173,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     throw new Error('公開カタログの同期には管理者認証が必要です。');
   }
 
-  // Reserve a monotonically increasing publication revision before staging.
-  // If two admins publish concurrently, the older reservation can never replace
-  // a newer generation that has already become active.
-  const publishSequenceRef = doc(db, 'publicCatalogControl', 'publishSequence');
-  const publishRevision = await runTransaction(db, async (transaction) => {
-    const sequenceSnapshot = await transaction.get(publishSequenceRef);
-    const nextRevision = (sequenceSnapshot.exists() && typeof sequenceSnapshot.data().revision === 'number'
-      ? sequenceSnapshot.data().revision
-      : 0) + 1;
-    transaction.set(publishSequenceRef, { revision: nextRevision, updatedAt: new Date().toISOString() });
-    return nextRevision;
-  });
+  const publishRevision = await reservePublicCatalogRevision(db);
 
   // Read canonical data first. No canonical record is changed by this publisher.
   const [gamesSnap, productsSnap, ratesSnap, settingsSnap] = await Promise.all([
@@ -310,24 +300,10 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     createdAt: new Date().toISOString(),
   });
 
-  // Atomic publication fence: a slower, older publisher cannot overwrite a
-  // generation reserved by a later concurrent publish.
-  const activePointerRef = doc(db, 'publicCatalogControl', 'active');
-  const activated = await runTransaction(db, async (transaction) => {
-    const activeSnapshot = await transaction.get(activePointerRef);
-    const activeRevision = activeSnapshot.exists() && typeof activeSnapshot.data().publishRevision === 'number'
-      ? activeSnapshot.data().publishRevision
-      : 0;
-    if (activeRevision >= publishRevision) return false;
-    transaction.set(activePointerRef, {
-      generationId,
-      publishRevision,
-      publishedAt: new Date().toISOString(),
-      games: publicGames.length,
-      products: publicProducts.length,
-      rates: publicRates.length,
-    });
-    return true;
+  const activated = await activatePublicCatalogGeneration(db, generationId, publishRevision, {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
   });
 
   // Previous generations are intentionally retained for rollback. No cleanup is
