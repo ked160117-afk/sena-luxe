@@ -21,6 +21,10 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 
 ## Confirmed risks and release blockers
 
+### Cloudflare response headers — build verified, production unverified
+
+The security branch includes a `public/_headers` asset with clickjacking, MIME-sniffing, referrer, and browser-permission headers. CI now checks that Vite copies this file into `dist/_headers`. The production Worker currently has not been deployed from this branch, and the live response headers could not be verified from the public endpoint. Treat these headers as pending until after a separately approved deployment and a direct `curl -I`/browser network-response check. No Content-Security-Policy is added yet because Firebase Auth, remote game images, and other existing external resources need a compatibility inventory first.
+
 ### Critical — named Firestore database billing must be confirmed before migration
 
 The app is configured for the non-default database `ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699`, and prior Console context identified it as Enterprise edition. Google Cloud's Standard-edition pricing page says named databases require billing and have no free allocation; the Enterprise-edition pricing page instead says only one database per project receives the free allocation. The repository cannot establish which database currently receives that allocation or the project's billing state. The generation-preparation action reads canonical collections and writes a new generation, so it can incur billable operations if this named database is outside the free allocation or exceeds quotas. Do not run the live preparation button, enable Blaze, or change billing until the owner verifies the named database's quota assignment, current billing plan, and usage in Console. No live database reads/writes or billing changes were performed by this work.
