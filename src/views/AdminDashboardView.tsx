@@ -42,6 +42,10 @@ import {
 
 type AdminTab = 'products' | 'rates' | 'games' | 'sequences' | 'requests' | 'settings' | 'firebase';
 
+// Keep high-volume Firestore operations disabled until the named database's
+// free-tier assignment, edition, and remaining quota are verified in Console.
+const BULK_FIRESTORE_OPERATIONS_ENABLED = false;
+
 export const AdminDashboardView: React.FC = () => {
   const {
     adminProducts: products,
@@ -83,6 +87,10 @@ export const AdminDashboardView: React.FC = () => {
   const [publicCatalogError, setPublicCatalogError] = useState<string | null>(null);
 
   const handleBuildPublicCatalog = async () => {
+    if (!BULK_FIRESTORE_OPERATIONS_ENABLED) {
+      setPublicCatalogError('無料枠・データベース仕様の確認が完了するまで、一括公開処理を停止しています。');
+      return;
+    }
     const estimatedGames = games.filter((game) => game.isHandled === true).length;
     const estimatedProducts = products.filter((product) =>
       product.verifiedForPublic === true &&
@@ -212,6 +220,10 @@ export const AdminDashboardView: React.FC = () => {
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleBulkSyncRates = async () => {
+    if (!BULK_FIRESTORE_OPERATIONS_ENABLED) {
+      setSyncFeedback('無料枠・データベース仕様の確認が完了するまで、一括同期を停止しています。');
+      return;
+    }
     if (!window.confirm('不足しているゲーム・石垢プランをFirestoreへ追加します。データベースの無料枠と使用量を確認済みの場合のみ実行してください。既存データは上書きしません。続行しますか？')) {
       return;
     }
@@ -229,6 +241,10 @@ export const AdminDashboardView: React.FC = () => {
 
   // Bulk set all stone rates to preparation status
   const handleBulkSetPreparation = async () => {
+    if (!BULK_FIRESTORE_OPERATIONS_ENABLED) {
+      setSyncFeedback('無料枠・データベース仕様の確認が完了するまで、一括変更を停止しています。');
+      return;
+    }
     if (!window.confirm('全43タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更しますか？\n（価格や商品データは維持されます）')) {
       return;
     }
@@ -856,21 +872,21 @@ export const AdminDashboardView: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleBulkSetPreparation}
-                disabled={isBulkSettingPrep}
+                disabled={isBulkSettingPrep || !BULK_FIRESTORE_OPERATIONS_ENABLED}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-600/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 title="登録済みの石垢プランを一括で準備中に変更"
               >
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>{isBulkSettingPrep ? '一括変更中...' : '全石垢プランを準備中に一括変更'}</span>
+                <span>{isBulkSettingPrep ? '一括変更中...' : BULK_FIRESTORE_OPERATIONS_ENABLED ? '全石垢プランを準備中に一括変更' : '無料枠確認待ち（停止中）'}</span>
               </button>
               <button
                 onClick={handleBulkSyncRates}
-                disabled={isSyncingRates}
+                disabled={isSyncingRates || !BULK_FIRESTORE_OPERATIONS_ENABLED}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 border border-[#d4af37]/40 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 title="登録済みの石垢プランをFirestoreへ同期"
               >
                 <Database className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>{isSyncingRates ? 'Firestore同期中...' : '石垢プランをFirestoreへ同期'}</span>
+                <span>{isSyncingRates ? 'Firestore同期中...' : BULK_FIRESTORE_OPERATIONS_ENABLED ? '石垢プランをFirestoreへ同期' : '無料枠確認待ち（停止中）'}</span>
               </button>
               <button
                 onClick={() => setIsAddRateModalOpen(true)}
@@ -1445,16 +1461,16 @@ export const AdminDashboardView: React.FC = () => {
             <div>
               <h3 className="text-sm font-semibold text-white">公開専用データの事前準備</h3>
               <p className="text-[11px] text-stone-400 mt-1 leading-relaxed">
-                現在のホームページ表示は変更せず、将来のセキュリティ切替に使う公開専用データだけを作成します。元の商品・価格・価格履歴・商品番号台帳は変更しません。
+                無料枠・DB仕様の確認が完了するまで一括作成は停止中です。元の商品・価格・価格履歴・商品番号台帳は変更しません。
               </p>
             </div>
             <button
               type="button"
               onClick={handleBuildPublicCatalog}
-              disabled={isBuildingPublicCatalog || !isFirestoreConnected}
+              disabled={isBuildingPublicCatalog || !isFirestoreConnected || !BULK_FIRESTORE_OPERATIONS_ENABLED}
               className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isBuildingPublicCatalog ? '公開専用データを作成中...' : '公開専用データを事前作成'}
+              {isBuildingPublicCatalog ? '公開専用データを作成中...' : BULK_FIRESTORE_OPERATIONS_ENABLED ? '公開専用データを事前作成' : '無料枠確認待ち（停止中）'}
             </button>
             {publicCatalogStatus && (
               <div className="text-[11px] text-emerald-300 space-y-1">
@@ -1511,7 +1527,9 @@ export const AdminDashboardView: React.FC = () => {
               </div>
               <button
                 type="button"
+                disabled={!BULK_FIRESTORE_OPERATIONS_ENABLED}
                 onClick={async () => {
+                  if (!BULK_FIRESTORE_OPERATIONS_ENABLED) return;
                   if (!window.confirm('Firestoreのゲーム・石垢プラン・設定を確認し、不足分を追加する場合があります。読み取り・書き込みが発生します。データベースの無料枠と使用量を確認済みの場合のみ実行してください。続行しますか？')) {
                     return;
                   }
@@ -1524,7 +1542,7 @@ export const AdminDashboardView: React.FC = () => {
                 }}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 border border-stone-700 transition-colors"
               >
-                マスターデータ再確認・初期同期
+                {BULK_FIRESTORE_OPERATIONS_ENABLED ? 'マスターデータ再確認・初期同期' : '無料枠確認待ち（停止中）'}
               </button>
             </div>
           </div>
