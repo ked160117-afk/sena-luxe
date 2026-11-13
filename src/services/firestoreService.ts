@@ -244,7 +244,6 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
   const publicRates = ratesSnap.docs
     .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as StoneRatePlan))
     .filter((rate) =>
-      rate.currencyType === '無償' &&
       rate.verifiedForPublic === true &&
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
