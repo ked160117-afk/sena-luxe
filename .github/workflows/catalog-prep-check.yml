@@ -1,0 +1,49 @@
+name: Catalog Generation Preparation Check
+
+on:
+  push:
+    branches:
+      - security/catalog-generation-prep
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Set up Java for Firestore Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify named database rules target
+        run: |
+          node -e "const fs=require('node:fs'); const cfg=JSON.parse(fs.readFileSync('firebase.json','utf8')); const app=JSON.parse(fs.readFileSync('firebase-applet-config.json','utf8')); if (!Array.isArray(cfg.firestore) || cfg.firestore.length !== 1 || cfg.firestore[0].database !== app.firestoreDatabaseId) throw new Error('Firestore rules target mismatch'); console.log('Named database target verified:', app.firestoreDatabaseId);"
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Preparation Firestore Rules tests
+        run: npm run test:rules:prep
+
+      - name: Build project
+        run: npm run build
