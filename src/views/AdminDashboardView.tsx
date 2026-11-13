@@ -42,26 +42,30 @@ import {
 
 type AdminTab = 'products' | 'rates' | 'games' | 'sequences' | 'requests' | 'settings' | 'firebase';
 
+// Keep high-volume Firestore operations disabled until the named database's
+// free-tier assignment, edition, and remaining quota are verified in Console.
+const BULK_FIRESTORE_OPERATIONS_ENABLED = false;
+
 export const AdminDashboardView: React.FC = () => {
   const {
-    products,
+    adminProducts: products,
     addNewProduct,
     updateProduct,
     deleteProduct,
     toggleProductStatus,
-    stoneRates,
+    adminStoneRates: stoneRates,
     updateStoneRatePrice,
     updateStoneRatePlan,
     addNewStoneRatePlan,
-    games,
-    candidateGames,
+    adminGames: games,
+    adminCandidateGames: candidateGames,
     promoteCandidateToHandled,
     updateGameDetails,
     addNewGameTitle,
     sequences,
     requests,
     updateRequestStatus,
-    settings,
+    adminSettings: settings,
     updateSettings,
     logoutAdmin,
     setCurrentView,
@@ -83,19 +87,21 @@ export const AdminDashboardView: React.FC = () => {
   const [publicCatalogError, setPublicCatalogError] = useState<string | null>(null);
 
   const handleBuildPublicCatalog = async () => {
+    if (!BULK_FIRESTORE_OPERATIONS_ENABLED) {
+      setPublicCatalogError('無料枠・データベース仕様の確認が完了するまで、一括公開処理を停止しています。');
+      return;
+    }
     const estimatedGames = games.filter((game) => game.isHandled === true).length;
     const estimatedProducts = products.filter((product) =>
       product.verifiedForPublic === true &&
       product.status === '掲載中' &&
-      product.category === '引退垢' &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(product.category) &&
       typeof product.price === 'number' &&
       product.price > 0 &&
       Boolean(product.title?.trim()) &&
       Boolean(product.summary?.trim())
     ).length;
     const estimatedRates = stoneRates.filter((rate) =>
-      rate.currencyType === '無償' &&
-      rate.verifiedForPublic === true &&
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
       typeof rate.currentPrice === 'number' &&
@@ -105,14 +111,14 @@ export const AdminDashboardView: React.FC = () => {
       Boolean(rate.conditions?.trim())
     ).length;
     const confirmMessage = [
-      '公開専用データを事前作成します。現在のホームページ表示・商品データ・価格履歴には変更を加えません。',
+      '公開専用データを手動で作成・切替します。実行するとFirestoreの全カタログ読み取りと公開世代への書き込みが発生します。無料枠・使用量を確認できるまで実行しないでください。',
       '',
       '公開対象の目安（禁止語句などは実際の処理でさらに除外されます）:',
       `ゲームタイトル: ${estimatedGames}件`,
       `商品: ${estimatedProducts}件`,
-      `石垢料金（無償確認済みのみ）: ${estimatedRates}件`,
+      `石垢料金（FAQ方針により無償石として統一）: ${estimatedRates}件`,
       '',
-      '石垢料金は「無償」と明示確認されたものだけを公開します。有償・未確認のデータは公開対象外です。',
+      '石垢・進行済み石垢はFAQの方針により、すべて無償石として公開します。既存の販売価格は変更しません。引退垢に有償石が含まれる場合は商品説明に明記してください。',
       '0件の項目がある場合は、管理画面の確認状態を見直してから実行してください。',
       '続行しますか？',
     ].join('\\n');
@@ -153,7 +159,7 @@ export const AdminDashboardView: React.FC = () => {
   // ==========================================
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
-  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲーム内通貨・石垢');
+  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('引退垢');
   const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
   const [newProdVideoFile, setNewProdVideoFile] = useState<File | null>(null);
   const [newVideoUploadProgress, setNewVideoUploadProgress] = useState<number | null>(null);
@@ -192,6 +198,8 @@ export const AdminDashboardView: React.FC = () => {
   // Stone Rate Full Edit Modal State
   const [editingRatePlan, setEditingRatePlan] = useState<StoneRatePlan | null>(null);
   const [editRatePlanName, setEditRatePlanName] = useState('');
+  const [editRateAccountType, setEditRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
+  const [editRateCurrencyType, setEditRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('無償');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
@@ -202,6 +210,8 @@ export const AdminDashboardView: React.FC = () => {
   const [isAddRateModalOpen, setIsAddRateModalOpen] = useState(false);
   const [newRateGameId, setNewRateGameId] = useState(games[0]?.id || '');
   const [newRatePlanName, setNewRatePlanName] = useState('');
+  const [newRateAccountType, setNewRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
+  const [newRateCurrencyType, setNewRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('無償');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
@@ -212,6 +222,13 @@ export const AdminDashboardView: React.FC = () => {
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleBulkSyncRates = async () => {
+    if (!BULK_FIRESTORE_OPERATIONS_ENABLED) {
+      setSyncFeedback('無料枠・データベース仕様の確認が完了するまで、一括同期を停止しています。');
+      return;
+    }
+    if (!window.confirm('不足しているゲーム・石垢プランをFirestoreへ追加します。データベースの無料枠と使用量を確認済みの場合のみ実行してください。既存データは上書きしません。続行しますか？')) {
+      return;
+    }
     setIsSyncingRates(true);
     setSyncFeedback(null);
     try {
@@ -226,6 +243,10 @@ export const AdminDashboardView: React.FC = () => {
 
   // Bulk set all stone rates to preparation status
   const handleBulkSetPreparation = async () => {
+    if (!BULK_FIRESTORE_OPERATIONS_ENABLED) {
+      setSyncFeedback('無料枠・データベース仕様の確認が完了するまで、一括変更を停止しています。');
+      return;
+    }
     if (!window.confirm('全43タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更しますか？\n（価格や商品データは維持されます）')) {
       return;
     }
@@ -380,7 +401,7 @@ export const AdminDashboardView: React.FC = () => {
     }
 
     const isVerifiedForPublic =
-      (newProdCategory === 'ゲーム内通貨・石垢' || newProdCategory === '引退垢') &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(newProdCategory) &&
       newProdIsPriceConfirmed &&
       Boolean(newProdPrice.trim()) &&
       Number(newProdPrice) > 0 &&
@@ -432,6 +453,7 @@ export const AdminDashboardView: React.FC = () => {
     setNewProdPrice('');
     setNewProdIsPriceConfirmed(false);
     setNewProdStatus('掲載停止');
+    setNewProdCategory('引退垢');
   };
 
   // Open Product Edit Modal
@@ -439,7 +461,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerified = product.verifiedForPublic === true;
     setEditingProduct(product);
     setEditProdTitle(product.title);
-    setEditProdCategory(product.category);
+    setEditProdCategory(product.category === 'ゲーム内通貨・石垢' ? '石垢' : product.category);
     setEditProdIsPriceConfirmed(isVerified && product.price !== null);
     setEditProdPrice(isVerified && product.price !== null ? String(product.price) : '');
     setEditProdSummary(isVerified ? product.summary || '' : '');
@@ -462,7 +484,7 @@ export const AdminDashboardView: React.FC = () => {
     }
 
     const isVerifiedForPublic =
-      (editProdCategory === 'ゲーム内通貨・石垢' || editProdCategory === '引退垢') &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(editProdCategory) &&
       editProdIsPriceConfirmed &&
       Boolean(editProdPrice.trim()) &&
       Number(editProdPrice) > 0 &&
@@ -530,6 +552,8 @@ export const AdminDashboardView: React.FC = () => {
     setEditingRatePlan(plan);
     const isVerified = plan.verifiedForPublic === true;
     setEditRatePlanName(isVerified ? plan.planName : '');
+    setEditRateAccountType(typeof plan.accountType === 'string' && /進行済み|進行中|進行/.test(plan.accountType) ? '進行済み石垢' : '石垢');
+    setEditRateCurrencyType('無償');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
@@ -550,6 +574,8 @@ export const AdminDashboardView: React.FC = () => {
     const isVerifiedForPublic = currPriceVal !== null && currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
       planName: editRatePlanName.trim(),
+      accountType: editRateAccountType,
+      currencyType: editRateCurrencyType,
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
       referencePrice: 0,
@@ -583,6 +609,8 @@ export const AdminDashboardView: React.FC = () => {
       gameCode: game.code,
       gameName: game.name,
       planName: newRatePlanName.trim(),
+      accountType: newRateAccountType,
+      currencyType: newRateCurrencyType,
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim(),
@@ -596,6 +624,8 @@ export const AdminDashboardView: React.FC = () => {
 
     setIsAddRateModalOpen(false);
     setNewRatePlanName('');
+    setNewRateAccountType('石垢');
+    setNewRateCurrencyType('無償');
     setNewRateAmount('');
     setNewRateConditions('');
     setNewRateCurrPrice('');
@@ -853,21 +883,21 @@ export const AdminDashboardView: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleBulkSetPreparation}
-                disabled={isBulkSettingPrep}
+                disabled={isBulkSettingPrep || !BULK_FIRESTORE_OPERATIONS_ENABLED}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-600/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 title="登録済みの石垢プランを一括で準備中に変更"
               >
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>{isBulkSettingPrep ? '一括変更中...' : '全石垢プランを準備中に一括変更'}</span>
+                <span>{isBulkSettingPrep ? '一括変更中...' : BULK_FIRESTORE_OPERATIONS_ENABLED ? '全石垢プランを準備中に一括変更' : '無料枠確認待ち（停止中）'}</span>
               </button>
               <button
                 onClick={handleBulkSyncRates}
-                disabled={isSyncingRates}
+                disabled={isSyncingRates || !BULK_FIRESTORE_OPERATIONS_ENABLED}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 border border-[#d4af37]/40 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 title="登録済みの石垢プランをFirestoreへ同期"
               >
                 <Database className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>{isSyncingRates ? 'Firestore同期中...' : '石垢プランをFirestoreへ同期'}</span>
+                <span>{isSyncingRates ? 'Firestore同期中...' : BULK_FIRESTORE_OPERATIONS_ENABLED ? '石垢プランをFirestoreへ同期' : '無料枠確認待ち（停止中）'}</span>
               </button>
               <button
                 onClick={() => setIsAddRateModalOpen(true)}
@@ -911,6 +941,7 @@ export const AdminDashboardView: React.FC = () => {
                   <tr key={plan.id} className="hover:bg-stone-900/40 transition-colors">
                     <td className="py-3 px-3 sm:px-4">
                       <div className="text-[11px] text-[#d4af37] font-medium">{plan.gameName}</div>
+                      <span className="inline-flex mt-1 text-[9px] px-1.5 py-0.5 rounded border border-[#d4af37]/30 text-[#e6c875]">{plan.accountType === '進行済み' || plan.accountType === '進行済み石垢' ? '進行済み石垢' : '石垢'}</span>
                       <div className="font-semibold text-white">{plan.verifiedForPublic ? plan.planName : '未確認プラン（非公開）'}</div>
                     </td>
                     <td className="py-3 px-3 sm:px-4">
@@ -1427,13 +1458,13 @@ export const AdminDashboardView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-stone-400 font-medium">Firestore Database ID</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  ONLINE
+                  {isFirestoreConnected ? '応答あり（権限未確認）' : '未確認'}
                 </span>
               </div>
               <div className="font-mono text-xs font-bold text-stone-200 truncate" title="ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699">
                 ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699
               </div>
-              <div className="text-[10px] text-stone-500">Named Enterprise Firestore</div>
+              <div className="text-[10px] text-stone-500">名前付きFirestore（エディション未確認）</div>
             </div>
           </div>
 
@@ -1442,16 +1473,16 @@ export const AdminDashboardView: React.FC = () => {
             <div>
               <h3 className="text-sm font-semibold text-white">公開専用データの事前準備</h3>
               <p className="text-[11px] text-stone-400 mt-1 leading-relaxed">
-                現在のホームページ表示は変更せず、将来のセキュリティ切替に使う公開専用データだけを作成します。元の商品・価格・価格履歴・商品番号台帳は変更しません。
+                無料枠・DB仕様の確認が完了するまで公開用データの一括作成は停止中です。商品登録・編集は管理画面に保存されますが、ホームページへの公開反映は再開まで行われません。元の商品・価格・価格履歴・商品番号台帳は変更しません。
               </p>
             </div>
             <button
               type="button"
               onClick={handleBuildPublicCatalog}
-              disabled={isBuildingPublicCatalog || !isFirestoreConnected}
+              disabled={isBuildingPublicCatalog || !isFirestoreConnected || !BULK_FIRESTORE_OPERATIONS_ENABLED}
               className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isBuildingPublicCatalog ? '公開専用データを作成中...' : '公開専用データを事前作成'}
+              {isBuildingPublicCatalog ? '公開専用データを作成中...' : BULK_FIRESTORE_OPERATIONS_ENABLED ? '公開専用データを事前作成' : '無料枠確認待ち（停止中）'}
             </button>
             {publicCatalogStatus && (
               <div className="text-[11px] text-emerald-300 space-y-1">
@@ -1504,11 +1535,16 @@ export const AdminDashboardView: React.FC = () => {
 
             <div className="pt-3 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-[11px] text-stone-400">
-                マスターデータの初期同期状態：{isFirestoreConnected ? '同期稼働中' : '確認中'}
+                Firestoreサーバー応答：{isFirestoreConnected ? '応答あり（権限・同期状態は未確認）' : '未確認'}
               </div>
               <button
                 type="button"
+                disabled={!BULK_FIRESTORE_OPERATIONS_ENABLED}
                 onClick={async () => {
+                  if (!BULK_FIRESTORE_OPERATIONS_ENABLED) return;
+                  if (!window.confirm('Firestoreのゲーム・石垢プラン・設定を確認し、不足分を追加する場合があります。読み取り・書き込みが発生します。データベースの無料枠と使用量を確認済みの場合のみ実行してください。続行しますか？')) {
+                    return;
+                  }
                   try {
                     await seedInitialDataIfEmpty();
                     alert('Firestoreコレクションの初期データ確認および同期を実行いたしました。');
@@ -1518,7 +1554,7 @@ export const AdminDashboardView: React.FC = () => {
                 }}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 border border-stone-700 transition-colors"
               >
-                マスターデータ再確認・初期同期
+                {BULK_FIRESTORE_OPERATIONS_ENABLED ? 'マスターデータ再確認・初期同期' : '無料枠確認待ち（停止中）'}
               </button>
             </div>
           </div>
@@ -1570,8 +1606,10 @@ export const AdminDashboardView: React.FC = () => {
                     onChange={(e) => setNewProdCategory(e.target.value as ProductCategory)}
                     className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                   >
-                    <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
                     <option value="引退垢">引退垢</option>
+                    <option value="初期垢">初期垢</option>
+                    <option value="石垢">石垢</option>
+                    <option value="進行済み石垢">進行済み石垢</option>
                   </select>
                 </div>
                 <div>
@@ -1691,7 +1729,7 @@ export const AdminDashboardView: React.FC = () => {
 
               {/* Summary Description */}
               <div>
-                <label className="text-stone-300 block mb-1 font-semibold">概要説明 (商品説明)</label>
+                <label className="text-stone-300 block mb-1 font-semibold">概要説明（商品説明・引退垢に有償石が含まれる場合は必ず明記）</label>
                 <textarea
                   rows={2}
                   placeholder="商品の概要・特徴（詳細な秘密情報は記載しないでください）"
@@ -1789,8 +1827,10 @@ export const AdminDashboardView: React.FC = () => {
                   onChange={(e) => setEditProdCategory(e.target.value as ProductCategory)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                 >
-                  <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
                   <option value="引退垢">引退垢</option>
+                  <option value="初期垢">初期垢</option>
+                  <option value="石垢">石垢</option>
+                  <option value="進行済み石垢">進行済み石垢</option>
                 </select>
               </div>
 
@@ -1888,7 +1928,7 @@ export const AdminDashboardView: React.FC = () => {
 
               {/* Summary Description */}
               <div>
-                <label className="text-stone-300 block mb-1 font-semibold">概要説明 (商品説明)</label>
+                <label className="text-stone-300 block mb-1 font-semibold">概要説明（商品説明・引退垢に有償石が含まれる場合は必ず明記）</label>
                 <textarea
                   rows={3}
                   value={editProdSummary}
@@ -1981,6 +2021,13 @@ export const AdminDashboardView: React.FC = () => {
                 </select>
               </div>
 
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">石垢の種類</label>
+                <select value={newRateAccountType} onChange={(e) => setNewRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="石垢">石垢</option>
+                  <option value="進行済み石垢">進行済み石垢</option>
+                </select>
+              </div>
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">プラン名 *</label>
                 <input
@@ -2092,6 +2139,13 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveEditedRatePlan} className="space-y-4 text-xs">
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">石垢の種類</label>
+                <select value={editRateAccountType} onChange={(e) => setEditRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="石垢">石垢</option>
+                  <option value="進行済み石垢">進行済み石垢</option>
+                </select>
+              </div>
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">プラン名 *</label>
                 <input

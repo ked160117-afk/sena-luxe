@@ -1,0 +1,100 @@
+name: SENA LUXE security branch checks
+
+on:
+  push:
+    branches:
+      - security/public-private-firestore-split
+      - integration/security-catalog-split
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Set up Java for Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Firestore rules target is the named production database only
+        run: |
+          node -e "const fs=require('node:fs'); const cfg=JSON.parse(fs.readFileSync('firebase.json','utf8')); const app=JSON.parse(fs.readFileSync('firebase-applet-config.json','utf8')); const entries=cfg.firestore; const id=app.firestoreDatabaseId; if (!Array.isArray(entries) || entries.length !== 1 || entries[0].database !== id || entries[0].rules !== 'firestore.rules') { console.error('Firestore rules target mismatch; refusing verification.'); process.exit(1); } console.log('Firestore rules target verified:', id);"
+
+      - name: TypeScript check
+        run: npm run lint
+
+      - name: Firestore Rules tests
+        run: npm run test:rules
+
+      - name: Firestore preparation compatibility tests
+        run: npm run test:rules:prep
+
+      - name: Build project
+        run: npm run build
+
+      - name: Verify Cloudflare security headers are included in build assets
+        run: |
+          node -e "const fs=require('node:fs'); const p='dist/_headers'; if(!fs.existsSync(p)) throw new Error('Cloudflare _headers file missing from dist'); const h=fs.readFileSync(p,'utf8'); for(const v of ['X-Frame-Options: DENY','X-Content-Type-Options: nosniff','Referrer-Policy: strict-origin-when-cross-origin','Permissions-Policy: camera=(), microphone=(), geolocation=()']) if(!h.includes(v)) throw new Error('Missing header: '+v); console.log('Cloudflare security header asset verified');"
+
+      - name: Check browser bundle excludes Node gRPC transport
+        run: |
+          if grep -R -E '@grpc/grpc-js|GrpcConnection|grpc_connection' dist/assets; then
+            echo 'Node gRPC transport markers found in browser assets; review before release.'
+            exit 1
+          else
+            echo 'No Node gRPC transport markers found in browser assets.'
+          fi
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Explain flagged production dependency paths
+        run: |
+          npm ls zod @grpc/grpc-js @firebase/firestore @firebase/firestore-compat firebase --all || true
+          npm explain zod || true
+          npm explain @grpc/grpc-js || true
+          npm explain @firebase/firestore || true
+
+      - name: Report full dependency audit, including development tools
+        run: |
+          npm audit --json > /tmp/npm-audit-all.json || true
+          node -e "const a=require('/tmp/npm-audit-all.json'); console.log('Full dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name,item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', via=' + JSON.stringify((item.via ?? []).map(v => typeof v === 'string' ? v : {title:v.title,url:v.url,range:v.range,severity:v.severity}), null, 2) + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical advisories in the full dependency tree block release.'); process.exitCode=1; }"
+
+      - name: Production dependency security audit
+        run: |
+          npm audit --omit=dev --json > /tmp/npm-audit-production.json || true
+          node -e "const a=require('/tmp/npm-audit-production.json'); console.log('Production dependency audit:', JSON.stringify(a.metadata?.vulnerabilities ?? a.error ?? {}, null, 2)); let blocked=false; for (const [name, item] of Object.entries(a.vulnerabilities ?? {})) { console.log(name + ': ' + item.severity + ', direct=' + item.isDirect + ', range=' + item.range + ', effects=' + JSON.stringify(item.effects ?? []) + ', nodes=' + JSON.stringify(item.nodes ?? []) + ', via=' + JSON.stringify(item.via ?? [] , null, 2) + ', fixAvailable=' + JSON.stringify(item.fixAvailable)); if (['high','critical'].includes(item.severity)) blocked=true; } if (blocked) { console.error('High/critical production dependency advisories block release.'); process.exitCode=1; }"

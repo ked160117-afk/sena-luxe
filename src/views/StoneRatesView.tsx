@@ -14,6 +14,7 @@ export const StoneRatesView: React.FC = () => {
   const { stoneRates, games, selectedGameId, setSelectedGameId, setCurrentView, copyToClipboardAndOpenModal } = useStore();
   const [activeHistoryPlan, setActiveHistoryPlan] = useState<StoneRatePlan | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeAccountType, setActiveAccountType] = useState<'ALL' | '石垢' | '進行済み石垢'>('ALL');
 
   // Public pages are strictly for stone-account sales. Hide legacy delegation,
   // work-service, and add-on records even if they remain in Firestore.
@@ -35,7 +36,10 @@ export const StoneRatesView: React.FC = () => {
   const plansForSelectedGame = publishedPlans.filter((plan) =>
     selectedGameId ? plan.gameId === selectedGameId : true
   );
+  const getAccountTypeLabel = (accountType?: string): '石垢' | '進行済み石垢' =>
+    typeof accountType === 'string' && /進行済み|進行中|進行/.test(accountType) ? '進行済み石垢' : '石垢';
   const filteredPlans = plansForSelectedGame.filter((p) => {
+    if (activeAccountType !== 'ALL' && getAccountTypeLabel(p.accountType) !== activeAccountType) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -106,11 +110,34 @@ export const StoneRatesView: React.FC = () => {
             <span>お取引注意事項・FAQを確認</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
+          <button
+            type="button"
+            onClick={() => copyToClipboardAndOpenModal(
+              '【SENA LUXE 石垢在庫問い合わせ】\\nゲームタイトル：\\n希望プラン：\\n在庫状況を教えてください。',
+              '石垢',
+              '在庫問い合わせ',
+              '石垢の在庫確認'
+            )}
+            className="self-start sm:self-center shrink-0 px-4 py-2.5 rounded-lg bg-[#06C755] hover:bg-[#05b34c] text-black text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>LINEで問い合わせ</span>
+          </button>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
       <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs text-stone-400 font-medium">石垢の種類：</label>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {(['ALL', '石垢', '進行済み石垢'] as const).map((type) => (
+              <button key={type} onClick={() => setActiveAccountType(type)} className={`px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${activeAccountType === type ? 'bg-[#d4af37] text-black font-semibold' : 'bg-[#121316] text-stone-300 hover:text-white border border-stone-800'}`}>
+                {type === 'ALL' ? 'すべて' : type}
+              </button>
+            ))}
+          </div>
+        </div>
         {/* Search input */}
         <div className="relative max-w-md">
           <input
@@ -227,7 +254,7 @@ export const StoneRatesView: React.FC = () => {
                       <div key={plan.id} className="px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-3 sm:gap-5 sm:items-center">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-white">{plan.currencyAmount?.trim() || '石の数を確認中'}</div>
-                          <div className="text-xs text-stone-400 mt-1">{plan.planName}</div>
+                          <div className="flex items-center gap-2 flex-wrap mt-1"><span className="text-xs text-stone-400">{plan.planName}</span><span className="text-[10px] px-1.5 py-0.5 rounded border border-[#d4af37]/30 text-[#e6c875]">{getAccountTypeLabel(plan.accountType)}</span></div>
                           {plan.conditions && confirmed && <div className="text-[11px] text-stone-500 mt-1">{plan.conditions}</div>}
                         </div>
                         <div className="sm:text-right">

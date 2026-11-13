@@ -111,9 +111,13 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
-test('public product rules keep stone accounts out of the generic product catalog', async () => {
-  const stoneAccountProduct = { ...publicProduct, id: 'stone-account-product', category: 'ゲーム内通貨・石垢' };
-  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/stone-account-product`), stoneAccountProduct));
+test('public product rules accept the new stone-account categories and reject the legacy label', async () => {
+  for (const category of ['石垢', '進行済み石垢']) {
+    const product = { ...publicProduct, id: `stone-${category}`, category };
+    await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/${product.id}`), product));
+  }
+  const legacy = { ...publicProduct, id: 'legacy-stone-account', category: 'ゲーム内通貨・石垢' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/${legacy.id}`), legacy));
 });
 
 test('public product rules reject image payloads above the bounded document limit', async () => {
@@ -137,6 +141,7 @@ test('public stone-rate rules reject paid and unverified currency types', async 
     planName: '無償石テスト',
     currencyName: '無償石',
     currencyType: '無償',
+    accountType: '石垢',
     currencyAmount: '1000個',
     conditions: 'テスト条件',
     currentPrice: 500,
@@ -147,6 +152,8 @@ test('public stone-rate rules reject paid and unverified currency types', async 
     verifiedForPublic: true,
   };
   await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/free-rate`), baseRate));
+  await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/progressed-rate`), { ...baseRate, id: 'progressed-rate', accountType: '進行済み石垢' }));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/invalid-account-type`), { ...baseRate, id: 'invalid-account-type', accountType: '初期垢' }));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/paid-rate`), { ...baseRate, id: 'paid-rate', currencyType: '有償' }));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/unknown-rate`), { ...baseRate, id: 'unknown-rate', currencyType: '未確認' }));
   const missingTypeRate = { ...baseRate };
@@ -154,13 +161,13 @@ test('public stone-rate rules reject paid and unverified currency types', async 
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/missing-type-rate`), { ...missingTypeRate, id: 'missing-type-rate' }));
 });
 
-test('preparation release keeps current storefront reads and exposes only the active staged generation', async () => {
-  await assertSucceeds(getDoc(doc(publicDb, 'games/canonical-game')));
-  await assertSucceeds(getDoc(doc(publicDb, 'products/canonical-product')));
-  await assertSucceeds(getDoc(doc(publicDb, 'stoneRates/canonical-rate')));
-  await assertSucceeds(getDoc(doc(publicDb, 'settings/general')));
-  await assertSucceeds(getDoc(doc(publicDb, 'productVideos/video-a')));
-  await assertSucceeds(getDoc(doc(publicDb, 'productVideos/video-a/chunks/chunk-1')));
+test('public users can read only the active staged generation, never canonical or private collections', async () => {
+  await assertFails(getDoc(doc(publicDb, 'games/canonical-game')));
+  await assertFails(getDoc(doc(publicDb, 'products/canonical-product')));
+  await assertFails(getDoc(doc(publicDb, 'stoneRates/canonical-rate')));
+  await assertFails(getDoc(doc(publicDb, 'settings/general')));
+  await assertFails(getDoc(doc(publicDb, 'productVideos/video-a')));
+  await assertFails(getDoc(doc(publicDb, 'productVideos/video-a/chunks/chunk-1')));
 
   await assertSucceeds(getDoc(doc(publicDb, 'publicCatalogControl/active')));
   await assertSucceeds(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE}/products/product-a`)));
@@ -169,6 +176,7 @@ test('preparation release keeps current storefront reads and exposes only the ac
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${INACTIVE}/products/staging-secret`)));
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE}`)));
   await assertFails(getDoc(doc(publicDb, 'publicCatalogControl/publishSequence')));
+  await assertSucceeds(getDoc(doc(adminDb, 'products/canonical-product')));
 });
 
 test('admin can stage allowlisted generation documents and activate the pointer without changing canonical records', async () => {

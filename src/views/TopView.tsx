@@ -15,7 +15,7 @@ export const TopView: React.FC = () => {
   // Public-facing product surfaces must never show legacy delegation/work-service records.
   const publicStoneAccountProducts = products.filter((p) => {
     const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
-    return p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢' && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+    return p.status === '掲載中' && p.verifiedForPublic === true && (p.category === '石垢' || p.category === '進行済み石垢') && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
   });
 
   return (
@@ -248,7 +248,7 @@ export const TopView: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products
-              .filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢')
+              .filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && (p.category === '石垢' || p.category === '進行済み石垢'))
               .slice(0, 3)
               .map((item) => {
                 const game = games.find((g) => g.id === item.gameId);

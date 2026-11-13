@@ -15,9 +15,19 @@ import { ProductCardImage } from '../components/ProductCardImage';
 
 const CATEGORIES: (ProductCategory | 'ALL')[] = [
   'ALL',
-  'ゲーム内通貨・石垢',
   '引退垢',
+  '初期垢',
+  '石垢',
+  '進行済み石垢',
 ];
+
+const isStoneCategory = (category: ProductCategory | 'ALL') =>
+  category === '石垢' || category === '進行済み石垢';
+
+const getStoneRateCategory = (accountType?: string): '石垢' | '進行済み石垢' =>
+  typeof accountType === 'string' && /進行済み|進行中|進行/.test(accountType)
+    ? '進行済み石垢'
+    : '石垢';
 
 export const GameProductsView: React.FC = () => {
   const {
@@ -38,14 +48,15 @@ export const GameProductsView: React.FC = () => {
   // including records that may still exist in Firestore for historical/admin purposes.
   const isStoneAccountSale = (p: (typeof products)[number]) => {
     const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
-    return (p.category === 'ゲーム内通貨・石垢' || p.category === '引退垢') && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+    return ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(p.category) && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
   };
 
-  // Stone-rate plans shown directly inside the game's 「ゲーム内通貨・石垢」 category.
+  // Legacy accountType values are normalized for display; missing/initial values default to 石垢.
   const visibleStoneRates = stoneRates.filter((plan) => {
     const publicText = [plan.id, plan.gameName, plan.planName, plan.currencyName, plan.currencyAmount, plan.conditions, plan.deviceRequirement, plan.accountType, plan.notes].filter(Boolean).join(' ');
     const isStoneOnly = !/(代行|作業|追加オプション|追加料金|追加費用|プレイ代行|育成代行|ガチャ代行|通貨追加)/i.test(publicText);
-    return isStoneOnly && (selectedGameId ? plan.gameId === selectedGameId : true);
+    const matchesStoneCategory = !isStoneCategory(selectedCategory) || getStoneRateCategory(plan.accountType) === selectedCategory;
+    return isStoneOnly && matchesStoneCategory && (selectedGameId ? plan.gameId === selectedGameId : true);
   });
 
   // Filter only active, publicly published stone-account products (excluding legacy services and 掲載停止)
@@ -136,19 +147,19 @@ export const GameProductsView: React.FC = () => {
       </div>
 
       {/* Product Grid or Preparation State */}
-      {filteredProducts.length === 0 && !(selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0) ? (
+      {filteredProducts.length === 0 && !(isStoneCategory(selectedCategory) && visibleStoneRates.length > 0) ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
             <Clock className="w-6 h-6" />
           </div>
           <div className="space-y-1.5">
             <h3 className="text-base sm:text-lg font-semibold text-white">
-              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
+              {isStoneCategory(selectedCategory) && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
                 ? '現在石垢の取り扱いはしておりません。'
                 : '現在商品を準備中です'}
             </h3>
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
+              {isStoneCategory(selectedCategory) && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
                 ? 'ご用意できましたら対応します。'
                 : selectedGame ? `「${selectedGame.name}」の商品は現在準備中です。` : '商品は現在準備中です。'}
               <br className="hidden sm:inline" />
@@ -180,7 +191,7 @@ export const GameProductsView: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-8">
-          {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0 && (
+          {isStoneCategory(selectedCategory) && visibleStoneRates.length > 0 && (
             <section className="rounded-xl bg-[#111216] border border-[#d4af37]/30 overflow-hidden">
               <div className="px-4 sm:px-5 py-4 bg-gradient-to-r from-[#201a0d] to-[#111216] border-b border-[#d4af37]/25 flex items-center gap-3">
                 {selectedGame?.currencyIconUrl || selectedGame?.iconUrl ? (
@@ -194,7 +205,7 @@ export const GameProductsView: React.FC = () => {
                     }}
                   />
                 ) : <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><span className="text-[#d4af37]">◆</span></div>}
-                <div><h2 className="text-base font-bold text-[#f7e7ce]">ゲーム内通貨・石垢 料金表</h2><p className="text-[11px] text-stone-400">掲載プラン・価格・お問い合わせ</p></div>
+                <div><h2 className="text-base font-bold text-[#f7e7ce]">{selectedCategory} 料金表</h2><p className="text-[11px] text-stone-400">掲載プラン・価格・お問い合わせ</p></div>
               </div>
               <div className="divide-y divide-stone-800">
                 {visibleStoneRates.map((plan) => {
