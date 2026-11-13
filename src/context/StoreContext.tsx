@@ -33,6 +33,7 @@ import {
   checkIsUserAdmin,
   ensureAdminDocument,
   seedInitialDataIfEmpty,
+  rebuildPublicCatalogMirrors,
 } from '../services/firestoreService';
 import {
   GameTitle,
@@ -47,8 +48,6 @@ import {
 import {
   INITIAL_GAMES,
   INITIAL_CANDIDATE_GAMES,
-  INITIAL_PRODUCTS,
-  INITIAL_STONE_RATES,
   INITIAL_SEQUENCES,
   INITIAL_SETTINGS,
 } from '../data/initialData';
@@ -91,7 +90,7 @@ interface StoreContextType {
   navigateToGameProducts: (gameId: string, category?: ProductCategory | 'ALL') => void;
   navigateToStoneRates: (gameId?: string) => void;
 
-  // Master Data
+  // Master Data (public-facing state)
   games: GameTitle[];
   candidateGames: GameTitle[];
   products: ProductItem[];
@@ -99,6 +98,12 @@ interface StoreContextType {
   requests: GameRequestItem[];
   sequences: Record<string, SerialSequence>;
   settings: AdminSettings;
+  // Canonical data exposed only to the authenticated admin dashboard.
+  adminGames: GameTitle[];
+  adminCandidateGames: GameTitle[];
+  adminProducts: ProductItem[];
+  adminStoneRates: StoneRatePlan[];
+  adminSettings: AdminSettings;
   isFirestoreConnected: boolean;
 
   // Product Actions
@@ -171,11 +176,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Master Data State
   const [allGames, setAllGames] = useState<GameTitle[]>(() => [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]);
-  const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
-  const [stoneRates, setStoneRates] = useState<StoneRatePlan[]>(INITIAL_STONE_RATES);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [stoneRates, setStoneRates] = useState<StoneRatePlan[]>([]);
   const [requests, setRequests] = useState<GameRequestItem[]>([]);
   const [sequences, setSequences] = useState<Record<string, SerialSequence>>(INITIAL_SEQUENCES);
   const [settings, setSettings] = useState<AdminSettings>(INITIAL_SETTINGS);
+  // Keep canonical admin data separate from the public catalog state. These
+  // values are populated only while an authorized administrator is signed in.
+  const [adminAllGames, setAdminAllGames] = useState<GameTitle[]>([]);
+  const [adminProducts, setAdminProducts] = useState<ProductItem[]>([]);
+  const [adminStoneRates, setAdminStoneRates] = useState<StoneRatePlan[]>([]);
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>(INITIAL_SETTINGS);
 
   // LINE Modal State
   const [lineModal, setLineModal] = useState<LineInquiryModalState>({
@@ -193,21 +204,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const candidateGames = allGames.filter(
     (g) => !g.isHandled && !handledCodes.has(g.code?.trim().toUpperCase())
   );
+  const adminGames = adminAllGames.filter((g) => g.isHandled);
+  const adminHandledCodes = new Set(adminGames.map((g) => g.code?.trim().toUpperCase()).filter(Boolean));
+  const adminCandidateGames = adminAllGames.filter(
+    (g) => !g.isHandled && !adminHandledCodes.has(g.code?.trim().toUpperCase())
+  );
 
   // Scroll to top on navigation change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView, selectedGameId]);
 
-  // Initialize and test connection
+  // Initialize and test connection only. Canonical catalog seeding is deferred
+  // until the authenticated user has passed the admin check below.
   useEffect(() => {
     async function initConnection() {
       const ok = await testFirestoreConnection();
       setIsFirestoreConnected(ok);
-      if (ok) {
-        // Attempt initial seed if empty
-        await seedInitialDataIfEmpty();
-      }
     }
     initConnection();
   }, []);
@@ -216,229 +229,222 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) {
-        const isAdmin = await checkIsUserAdmin(user.uid, user.email);
-        setIsAdminLoggedIn(isAdmin);
-        if (isAdmin) {
-          await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
+      const expectedUid = user?.uid ?? null;
+      try {
+        if (user) {
+          const isAdmin = await checkIsUserAdmin(user.uid, user.email);
+          // Ignore stale async role checks if the account changed or signed out.
+          if (auth.currentUser?.uid !== expectedUid) return;
+          setIsAdminLoggedIn(isAdmin);
+          if (isAdmin) {
+            await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
+            // Re-check after the asynchronous admin-document step before any canonical writes.
+            if (auth.currentUser?.uid !== expectedUid) return;
+            // Only the same still-authenticated administrator may read or seed canonical collections.
+            await seedInitialDataIfEmpty();
+            if (auth.currentUser?.uid !== expectedUid) return;
+          } else {
+            setAdminAllGames([]);
+            setAdminProducts([]);
+            setAdminStoneRates([]);
+            setAdminSettings(INITIAL_SETTINGS);
+            setRequests([]);
+            setSequences(INITIAL_SEQUENCES);
+          }
+        } else {
+          setIsAdminLoggedIn(false);
+          setAdminAllGames([]);
+          setAdminProducts([]);
+          setAdminStoneRates([]);
+          setAdminSettings(INITIAL_SETTINGS);
+          setRequests([]);
+          setSequences(INITIAL_SEQUENCES);
         }
-      } else {
+      } catch (error) {
+        // Fail closed if role lookup or admin initialization fails.
+        if (auth.currentUser?.uid !== expectedUid) return;
+        console.error('Firebase admin initialization failed:', error);
         setIsAdminLoggedIn(false);
+        setAdminAllGames([]);
+        setAdminProducts([]);
+        setAdminStoneRates([]);
+        setAdminSettings(INITIAL_SETTINGS);
+        setRequests([]);
+        setSequences(INITIAL_SEQUENCES);
+      } finally {
+        // A stale callback must not finish the loading state for a newer account.
+        if (auth.currentUser?.uid === expectedUid) setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Firestore Realtime Listeners for Public Data
+  // Public listeners follow one active immutable catalog generation.
+  // The generation pointer changes only after the full snapshot is written.
   useEffect(() => {
-    // 1. Games collection listener
-    const unsubGames = onSnapshot(
-      collection(db, 'games'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const allInitialMap = new Map<string, GameTitle>(
-            [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].map((g) => [g.code.toUpperCase(), g])
-          );
+    let generationUnsubscribers: Array<() => void> = [];
+    let activeGenerationId: string | null = null;
 
-          const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
-            const data = d.data() as GameTitle;
-            const fallback = allInitialMap.get(data.code?.toUpperCase() || '');
-            let description = data.description;
+    const clearGenerationListeners = () => {
+      generationUnsubscribers.forEach((unsubscribe) => unsubscribe());
+      generationUnsubscribers = [];
+    };
+    const resetPublicCatalog = () => {
+      setAllGames([...INITIAL_GAMES].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
+      setProducts([]);
+      setStoneRates([]);
+      setSettings({
+        lineUrl: OFFICIAL_LINE_URL,
+        shopNotice: '',
+        enableDirectLineCopy: false,
+        contactDeskHours: '公式LINEにてご案内',
+      });
+    };
 
-            // Ensure neutral description without fictional inventory claims
-            if (
-              !description ||
-              description.includes('取り扱い') ||
-              description.includes('所持データ') ||
-              description.includes('ストック') ||
-              description.includes('取扱候補') ||
-              description.includes('オーダー')
-            ) {
-              if (fallback) {
-                description = fallback.description;
-              }
-            }
+    const unsubPointer = onSnapshot(doc(db, 'publicCatalogControl', 'active'), (pointerSnapshot) => {
+      const pointer = pointerSnapshot.exists() ? pointerSnapshot.data() : {};
+      const nextGenerationId = typeof pointer.generationId === 'string' ? pointer.generationId : null;
+      if (nextGenerationId === activeGenerationId) return;
 
-            let iconUrl = data.iconUrl || fallback?.iconUrl || '';
-            let currencyIconUrl = data.currencyIconUrl || fallback?.currencyIconUrl || '';
-            // Remove unverified stock images
-            if (iconUrl.includes('images.unsplash.com')) {
-              iconUrl = '';
-            }
-            if (currencyIconUrl.includes('images.unsplash.com')) {
-              currencyIconUrl = '';
-            }
+      clearGenerationListeners();
+      activeGenerationId = nextGenerationId;
+      resetPublicCatalog();
+      if (!nextGenerationId) return;
 
-            return {
-              ...data,
-              description,
-              iconUrl,
-              currencyIconUrl,
-            };
-          });
+      const generationCollection = (name: string) =>
+        collection(db, 'publicCatalogGenerations', nextGenerationId, name);
 
-          // Keep the master catalog available even when public Firestore writes are restricted.
-          // Existing Firestore records always win, so administrator edits are preserved.
-          const loadedGameIds = new Set(loadedGames.map((game) => game.id));
-          const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]
-            .filter((game) => !loadedGameIds.has(game.id));
-          const mergedGames = [...loadedGames, ...missingInitialGames];
-          mergedGames.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-          setAllGames(mergedGames);
-        }
-      },
-      (error) => {
-        console.warn('Games onSnapshot note:', error.message);
-      }
-    );
+      generationUnsubscribers.push(onSnapshot(generationCollection('games'), (snapshot) => {
+        const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
+          const data = d.data() as GameTitle;
+          const fallback = INITIAL_GAMES.find((g) => g.code.toUpperCase() === data.code?.toUpperCase());
+          return {
+            ...data,
+            id: d.id,
+            description: data.description || fallback?.description || '',
+            iconUrl: data.iconUrl || fallback?.iconUrl || '',
+            currencyIconUrl: data.currencyIconUrl || fallback?.currencyIconUrl || '',
+            isHandled: true,
+          };
+        });
+        const loadedIds = new Set(loadedGames.map((game) => game.id));
+        const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].filter((game) => !loadedIds.has(game.id));
+        setAllGames([...loadedGames, ...missingInitialGames].sort((a, b) => (a.order ?? 999) - (b.order ?? 999)));
+      }, (error) => {
+        console.warn('Public games listener note:', error.message);
+        setAllGames([...INITIAL_GAMES]);
+      }));
 
-    // 2. Products collection listener
-    const unsubProducts = onSnapshot(
-      collection(db, 'products'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedProducts: ProductItem[] = snapshot.docs.map((d) => {
-            const data = d.data() as ProductItem;
-            const verified =
-              data.verifiedForPublic === true &&
-              (data.category === 'ゲーム内通貨・石垢' || data.category === '引退垢') &&
-              typeof data.price === 'number' &&
-              data.price > 0 &&
-              Boolean(data.title?.trim()) &&
-              Boolean(data.summary?.trim());
-            return {
-              ...data,
-              verifiedForPublic: verified,
-              status: verified ? data.status : '掲載停止',
-            };
-          });
-          // sort by createdAt desc
-          loadedProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setProducts(loadedProducts);
-        }
-      },
-      (error) => {
-        console.warn('Products onSnapshot note:', error.message);
-      }
-    );
+      generationUnsubscribers.push(onSnapshot(generationCollection('products'), (snapshot) => {
+        const loaded: ProductItem[] = snapshot.docs.map((d) => ({
+          ...(d.data() as ProductItem),
+          id: d.id,
+          status: '掲載中',
+          verifiedForPublic: true,
+        }));
+        loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setProducts(loaded);
+      }, (error) => {
+        console.warn('Public products listener note:', error.message);
+        setProducts([]);
+      }));
 
-    // 3. Stone Rates collection listener
-    const unsubRates = onSnapshot(
-      collection(db, 'stoneRates'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedRates: StoneRatePlan[] = snapshot.docs.map((d) => {
-            const data = d.data() as StoneRatePlan;
-            const catalogFallback = INITIAL_STONE_RATES.find((plan) => plan.id === data.id);
-            // Older Firestore records had their public prices cleared during the
-            // temporary preparation state. Restore only the original catalog price
-            // for entries already marked 取扱中 in that source catalog.
-            const restoreCatalogPrice =
-              data.currentPrice == null &&
-              catalogFallback?.verifiedForPublic === true &&
-              typeof catalogFallback.currentPrice === 'number';
-            const merged: StoneRatePlan = restoreCatalogPrice && catalogFallback
-              ? {
-                  ...catalogFallback,
-                  ...data,
-                  currentPrice: catalogFallback.currentPrice,
-                  referencePrice: catalogFallback.referencePrice,
-                  confirmedDate: catalogFallback.confirmedDate,
-                  status: '取扱中',
-                  currencyAmount: data.currencyAmount?.trim() ? data.currencyAmount : catalogFallback.currencyAmount,
-                  planName: data.planName?.trim() ? data.planName : catalogFallback.planName,
-                  conditions: data.conditions?.trim() ? data.conditions : catalogFallback.conditions,
-                  isPreparation: false,
-                  verifiedForPublic: true,
-                }
-              : data;
-            const confirmedForDisplay =
-              merged.verifiedForPublic === true &&
-              merged.status === '取扱中' &&
-              merged.isPreparation === false &&
-              typeof merged.currentPrice === 'number' &&
-              merged.currentPrice > 0 &&
-              Boolean(merged.currencyAmount?.trim()) &&
-              Boolean(merged.planName?.trim()) &&
-              Boolean(merged.conditions?.trim());
-            return {
-              ...merged,
-              status: confirmedForDisplay ? '取扱中' : '価格確認中',
-              stockStatus: '在庫要確認',
-              isPreparation: !confirmedForDisplay,
-              verifiedForPublic: confirmedForDisplay,
-            };
-          });
-          setStoneRates(loadedRates);
-        }
-      },
-      (error) => {
-        console.warn('StoneRates onSnapshot note:', error.message);
-      }
-    );
+      generationUnsubscribers.push(onSnapshot(generationCollection('stoneRates'), (snapshot) => {
+        const loaded: StoneRatePlan[] = snapshot.docs.map((d) => ({
+          ...(d.data() as StoneRatePlan),
+          id: d.id,
+          status: '取扱中',
+          stockStatus: '在庫要確認',
+          isPreparation: false,
+          verifiedForPublic: true,
+          priceHistory: [],
+        }));
+        setStoneRates(loaded);
+      }, (error) => {
+        console.warn('Public stone rates listener note:', error.message);
+        setStoneRates([]);
+      }));
 
-    // 4. Settings listener
-    const unsubSettings = onSnapshot(
-      doc(db, 'settings', 'general'),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setSettings(docSnap.data() as AdminSettings);
-        }
-      },
-      (error) => {
-        console.warn('Settings onSnapshot note:', error.message);
-      }
-    );
+      generationUnsubscribers.push(onSnapshot(
+        doc(db, 'publicCatalogGenerations', nextGenerationId, 'settings', 'general'),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setSettings({
+              lineUrl: typeof data.lineUrl === 'string' ? data.lineUrl : OFFICIAL_LINE_URL,
+              shopNotice: typeof data.shopNotice === 'string' ? data.shopNotice : '',
+              enableDirectLineCopy: data.enableDirectLineCopy === true,
+              contactDeskHours: typeof data.contactDeskHours === 'string' ? data.contactDeskHours : '公式LINEにてご案内',
+            });
+          }
+        },
+        (error) => console.warn('Public settings listener note:', error.message)
+      ));
+    }, (error) => {
+      console.warn('Public catalog pointer listener note:', error.message);
+      clearGenerationListeners();
+      activeGenerationId = null;
+      resetPublicCatalog();
+    });
+
+    return () => {
+      unsubPointer();
+      clearGenerationListeners();
+    };
+  }, []);
+
+  // Canonical Firestore listeners for the admin dashboard only.
+  // Public-facing state is populated exclusively from the active allowlisted
+  // public catalog generation above; never fall back to canonical collections.
+  useEffect(() => {
+    if (!isAdminLoggedIn) {
+      setAdminAllGames([]);
+      setAdminProducts([]);
+      setAdminStoneRates([]);
+      setAdminSettings(INITIAL_SETTINGS);
+      setRequests([]);
+      setSequences(INITIAL_SEQUENCES);
+      return;
+    }
+
+    const unsubGames = onSnapshot(collection(db, 'games'), (snapshot) => {
+      const loaded = snapshot.docs.map((d) => ({ ...(d.data() as GameTitle), id: d.id }));
+      loaded.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+      setAdminAllGames(loaded);
+    }, (error) => console.warn('Admin games listener note:', error.message));
+
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const loaded = snapshot.docs.map((d) => ({ ...(d.data() as ProductItem), id: d.id }));
+      loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setAdminProducts(loaded);
+    }, (error) => console.warn('Admin products listener note:', error.message));
+
+    const unsubRates = onSnapshot(collection(db, 'stoneRates'), (snapshot) => {
+      setAdminStoneRates(snapshot.docs.map((d) => ({ ...(d.data() as StoneRatePlan), id: d.id })));
+    }, (error) => console.warn('Admin stone rates listener note:', error.message));
+
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'general'), (snapshot) => {
+      if (snapshot.exists()) setAdminSettings(snapshot.data() as AdminSettings);
+    }, (error) => console.warn('Admin settings listener note:', error.message));
+
+    const unsubSeq = onSnapshot(collection(db, 'sequences'), (snapshot) => {
+      const seqMap: Record<string, SerialSequence> = {};
+      snapshot.docs.forEach((d) => { seqMap[d.id] = d.data() as SerialSequence; });
+      setSequences(seqMap);
+    }, (error) => console.warn('Sequences onSnapshot note:', error.message));
+
+    const unsubReq = onSnapshot(collection(db, 'requests'), (snapshot) => {
+      const loadedReqs = snapshot.docs.map((d) => d.data() as GameRequestItem);
+      loadedReqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRequests(loadedReqs);
+    }, (error) => console.warn('Requests onSnapshot note:', error.message));
 
     return () => {
       unsubGames();
       unsubProducts();
       unsubRates();
       unsubSettings();
-    };
-  }, []);
-
-  // Firestore Listeners for Admin-Only Data (only attached if admin is authenticated)
-  useEffect(() => {
-    if (!isAdminLoggedIn) {
-      return;
-    }
-
-    // 1. Sequences listener
-    const unsubSeq = onSnapshot(
-      collection(db, 'sequences'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const seqMap: Record<string, SerialSequence> = {};
-          snapshot.docs.forEach((d) => {
-            seqMap[d.id] = d.data() as SerialSequence;
-          });
-          setSequences(seqMap);
-        }
-      },
-      (error) => {
-        console.warn('Sequences onSnapshot note:', error.message);
-      }
-    );
-
-    // 2. Requests listener
-    const unsubReq = onSnapshot(
-      collection(db, 'requests'),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedReqs = snapshot.docs.map((d) => d.data() as GameRequestItem);
-          loadedReqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setRequests(loadedReqs);
-        }
-      },
-      (error) => {
-        console.warn('Requests onSnapshot note:', error.message);
-      }
-    );
-
-    return () => {
       unsubSeq();
       unsubReq();
     };
@@ -458,6 +464,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentView('stone_rates');
   };
 
+  // Rebuild allowlisted public mirrors after successful canonical admin writes.
+  // Canonical data remains authoritative; failures are surfaced instead of hidden.
+  const refreshPublicMirrors = async () => {
+    try {
+      await rebuildPublicCatalogMirrors();
+    } catch (error) {
+      console.error('Canonical data was saved, but public mirror refresh failed:', error);
+      throw new Error('正規データは保存されましたが、公開ページへの反映に失敗しました。管理画面から公開データを再同期してください。');
+    }
+  };
+
   // Safe Atomic Product Creation using Firestore Transaction
   const addNewProduct = async (data: {
     gameId: string;
@@ -473,7 +490,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     status?: ProductStatus;
     verifiedForPublic?: boolean;
   }): Promise<ProductItem> => {
-    const game = allGames.find((g) => g.id === data.gameId);
+    const game = adminAllGames.find((g) => g.id === data.gameId);
     const gameCode = game ? game.code.toUpperCase() : 'GEN';
     const gameName = game ? game.name : 'ゲームタイトル';
 
@@ -494,45 +511,52 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       verifiedForPublic: data.verifiedForPublic,
     });
 
+    await refreshPublicMirrors();
     return newProd;
   };
 
   const updateProduct = async (id: string, updates: Partial<ProductItem>) => {
     await updateProductDoc(id, updates);
+    await refreshPublicMirrors();
   };
 
   const deleteProduct = async (id: string, reason?: string) => {
-    const target = products.find((p) => p.id === id);
+    const target = adminProducts.find((p) => p.id === id);
     if (!target) return;
     await deleteProductDoc(target, reason);
+    await refreshPublicMirrors();
   };
 
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
-    const target = products.find((p) => p.id === id);
+    const target = adminProducts.find((p) => p.id === id);
     if (!target) return;
-    if (status === '掲載中' && (!target.verifiedForPublic || (target.category !== 'ゲーム内通貨・石垢' && target.category !== '引退垢') || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
+    if (status === '掲載中' && (!target.verifiedForPublic || target.category !== '引退垢' || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
     await updateProductDoc(id, { status });
+    await refreshPublicMirrors();
   };
 
   // Stone Rate Actions
   const updateStoneRatePrice = async (id: string, newPrice: number | null, reason?: string) => {
-    const target = stoneRates.find((r) => r.id === id);
+    const target = adminStoneRates.find((r) => r.id === id);
     if (!target) return;
     await updateStoneRatePriceDoc(id, target, newPrice, reason || '管理者による価格改定');
+    await refreshPublicMirrors();
   };
 
   const updateStoneRatePlan = async (id: string, updates: Partial<StoneRatePlan>) => {
     await updateStoneRateDoc(id, updates);
+    await refreshPublicMirrors();
   };
 
   const addNewStoneRatePlan = async (plan: Omit<StoneRatePlan, 'id' | 'priceHistory'>) => {
     await addStoneRatePlanDoc(plan);
+    await refreshPublicMirrors();
   };
 
   const setAllStoneRatesPreparation = async () => {
     try {
       const batch = writeBatch(db);
-      for (const plan of stoneRates) {
+      for (const plan of adminStoneRates) {
         const ref = doc(db, 'stoneRates', plan.id);
         batch.set(
           ref,
@@ -546,10 +570,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         );
       }
       await batch.commit();
+      await refreshPublicMirrors();
     } catch (err) {
       console.warn('Batch preparation update notice:', err);
+      throw err;
     }
-    setStoneRates((prev) =>
+    setAdminStoneRates((prev) =>
       prev.map((p) => ({
         ...p,
         status: '現在準備中',
@@ -563,6 +589,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Game & Candidate Actions
   const updateGameDetails = async (id: string, updates: Partial<GameTitle>) => {
     await updateGameDoc(id, updates);
+    await refreshPublicMirrors();
   };
 
   const addNewGameTitle = async (gameData: Omit<GameTitle, 'id'>) => {
@@ -572,12 +599,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: newId,
     };
     await addGameDoc(newGame);
+    await refreshPublicMirrors();
   };
 
   const promoteCandidateToHandled = async (candidateId: string) => {
-    const candidate = allGames.find((c) => c.id === candidateId);
+    const candidate = adminAllGames.find((c) => c.id === candidateId);
     if (!candidate) return;
     await promoteCandidateDoc(candidate);
+    await refreshPublicMirrors();
   };
 
   const addNewCandidateGame = async (candidate: Omit<GameTitle, 'id' | 'isHandled'>) => {
@@ -588,6 +617,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isHandled: false,
     };
     await updateGameDoc(newId, fullCandidate);
+    await refreshPublicMirrors();
   };
 
   // Request Submission directly to Firestore
@@ -604,6 +634,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Settings
   const updateSettings = async (updates: Partial<AdminSettings>) => {
     await saveSettingsDoc(updates);
+    await refreshPublicMirrors();
   };
 
   // Firebase Authentication: Email & Password
@@ -614,6 +645,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.trim(), pass);
       const isAdmin = await checkIsUserAdmin(userCredential.user.uid, userCredential.user.email);
+      // Do not apply a role result to a different account after an auth-state change.
+      if (auth.currentUser?.uid !== userCredential.user.uid) {
+        return { success: false, error: '認証状態が変更されました。もう一度ログインしてください。' };
+      }
       if (!isAdmin) {
         await signOut(auth);
         return {
@@ -622,6 +657,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       }
       await ensureAdminDocument(userCredential.user.uid, userCredential.user.email || email.trim());
+      if (auth.currentUser?.uid !== userCredential.user.uid) {
+        return { success: false, error: '認証状態が変更されました。もう一度ログインしてください。' };
+      }
       setIsAdminLoggedIn(true);
       return { success: true };
     } catch (err: any) {
@@ -709,6 +747,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         requests,
         sequences,
         settings,
+        adminGames,
+        adminCandidateGames,
+        adminProducts,
+        adminStoneRates,
+        adminSettings,
         isFirestoreConnected,
 
         addNewProduct,

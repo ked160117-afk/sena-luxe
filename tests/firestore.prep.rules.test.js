@@ -154,13 +154,13 @@ test('public stone-rate rules reject paid and unverified currency types', async 
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/missing-type-rate`), { ...missingTypeRate, id: 'missing-type-rate' }));
 });
 
-test('preparation release keeps current storefront reads and exposes only the active staged generation', async () => {
-  await assertSucceeds(getDoc(doc(publicDb, 'games/canonical-game')));
-  await assertSucceeds(getDoc(doc(publicDb, 'products/canonical-product')));
-  await assertSucceeds(getDoc(doc(publicDb, 'stoneRates/canonical-rate')));
-  await assertSucceeds(getDoc(doc(publicDb, 'settings/general')));
-  await assertSucceeds(getDoc(doc(publicDb, 'productVideos/video-a')));
-  await assertSucceeds(getDoc(doc(publicDb, 'productVideos/video-a/chunks/chunk-1')));
+test('public users can read only the active staged generation, never canonical or private collections', async () => {
+  await assertFails(getDoc(doc(publicDb, 'games/canonical-game')));
+  await assertFails(getDoc(doc(publicDb, 'products/canonical-product')));
+  await assertFails(getDoc(doc(publicDb, 'stoneRates/canonical-rate')));
+  await assertFails(getDoc(doc(publicDb, 'settings/general')));
+  await assertFails(getDoc(doc(publicDb, 'productVideos/video-a')));
+  await assertFails(getDoc(doc(publicDb, 'productVideos/video-a/chunks/chunk-1')));
 
   await assertSucceeds(getDoc(doc(publicDb, 'publicCatalogControl/active')));
   await assertSucceeds(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE}/products/product-a`)));
@@ -169,6 +169,7 @@ test('preparation release keeps current storefront reads and exposes only the ac
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${INACTIVE}/products/staging-secret`)));
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE}`)));
   await assertFails(getDoc(doc(publicDb, 'publicCatalogControl/publishSequence')));
+  await assertSucceeds(getDoc(doc(adminDb, 'products/canonical-product')));
 });
 
 test('admin can stage allowlisted generation documents and activate the pointer without changing canonical records', async () => {
