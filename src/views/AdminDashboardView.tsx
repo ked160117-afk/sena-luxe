@@ -102,7 +102,6 @@ export const AdminDashboardView: React.FC = () => {
       Boolean(product.summary?.trim())
     ).length;
     const estimatedRates = stoneRates.filter((rate) =>
-      rate.verifiedForPublic === true &&
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
       typeof rate.currentPrice === 'number' &&
