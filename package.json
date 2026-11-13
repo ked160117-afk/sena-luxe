@@ -41,6 +41,9 @@
   "overrides": {
     "@modelcontextprotocol/sdk": {
       "zod": "^4.6.6"
+    },
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "^1.14.7"
     }
   }
 }
