@@ -200,6 +200,7 @@ export const AdminDashboardView: React.FC = () => {
   // Stone Rate Full Edit Modal State
   const [editingRatePlan, setEditingRatePlan] = useState<StoneRatePlan | null>(null);
   const [editRatePlanName, setEditRatePlanName] = useState('');
+  const [editRateAccountType, setEditRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
@@ -210,6 +211,7 @@ export const AdminDashboardView: React.FC = () => {
   const [isAddRateModalOpen, setIsAddRateModalOpen] = useState(false);
   const [newRateGameId, setNewRateGameId] = useState(games[0]?.id || '');
   const [newRatePlanName, setNewRatePlanName] = useState('');
+  const [newRateAccountType, setNewRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
@@ -550,6 +552,7 @@ export const AdminDashboardView: React.FC = () => {
     setEditingRatePlan(plan);
     const isVerified = plan.verifiedForPublic === true;
     setEditRatePlanName(isVerified ? plan.planName : '');
+    setEditRateAccountType(typeof plan.accountType === 'string' && /進行済み|進行中|進行/.test(plan.accountType) ? '進行済み石垢' : '石垢');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
@@ -570,6 +573,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerifiedForPublic = currPriceVal !== null && currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
       planName: editRatePlanName.trim(),
+      accountType: editRateAccountType,
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
       referencePrice: 0,
@@ -603,6 +607,7 @@ export const AdminDashboardView: React.FC = () => {
       gameCode: game.code,
       gameName: game.name,
       planName: newRatePlanName.trim(),
+      accountType: newRateAccountType,
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim(),
@@ -616,6 +621,7 @@ export const AdminDashboardView: React.FC = () => {
 
     setIsAddRateModalOpen(false);
     setNewRatePlanName('');
+    setNewRateAccountType('石垢');
     setNewRateAmount('');
     setNewRateConditions('');
     setNewRateCurrPrice('');
@@ -2011,6 +2017,13 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               <div>
+                <label className="text-stone-300 block mb-1 font-semibold">石垢の種類</label>
+                <select value={newRateAccountType} onChange={(e) => setNewRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="石垢">石垢</option>
+                  <option value="進行済み石垢">進行済み石垢</option>
+                </select>
+              </div>
+              <div>
                 <label className="text-stone-300 block mb-1 font-semibold">プラン名 *</label>
                 <input
                   type="text"
@@ -2121,6 +2134,13 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveEditedRatePlan} className="space-y-4 text-xs">
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">石垢の種類</label>
+                <select value={newRateAccountType} onChange={(e) => setNewRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="石垢">石垢</option>
+                  <option value="進行済み石垢">進行済み石垢</option>
+                </select>
+              </div>
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">プラン名 *</label>
                 <input
