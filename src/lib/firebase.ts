@@ -27,16 +27,25 @@ export const appCheck = recaptchaSiteKey
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
-// Connection verification health check.
-// Return true only after a server read succeeds. Permission errors, authentication
-// errors, and network failures must never be reported as a healthy connection.
+// Connection reachability check, not an authorization check.
+// A permission-denied response proves the server was reached, but does not prove
+// that this user can read or write protected data. Network/other failures are false.
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
+    const errorCode =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : '';
+
+    if (errorCode === 'permission-denied') {
+      return true;
+    }
+
     console.warn(
-      'Firestore connection check did not complete successfully:',
+      'Firestore connection check could not reach the server:',
       error instanceof Error ? error.message : String(error),
     );
     return false;
