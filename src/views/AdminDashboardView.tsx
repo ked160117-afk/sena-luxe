@@ -201,7 +201,7 @@ export const AdminDashboardView: React.FC = () => {
   const [editingRatePlan, setEditingRatePlan] = useState<StoneRatePlan | null>(null);
   const [editRatePlanName, setEditRatePlanName] = useState('');
   const [editRateAccountType, setEditRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
-  const [editRateCurrencyType, setEditRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
+  const [editRateCurrencyType, setEditRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('無償');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
@@ -213,7 +213,7 @@ export const AdminDashboardView: React.FC = () => {
   const [newRateGameId, setNewRateGameId] = useState(games[0]?.id || '');
   const [newRatePlanName, setNewRatePlanName] = useState('');
   const [newRateAccountType, setNewRateAccountType] = useState<'石垢' | '進行済み石垢'>('石垢');
-  const [newRateCurrencyType, setNewRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
+  const [newRateCurrencyType, setNewRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('無償');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
@@ -555,7 +555,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerified = plan.verifiedForPublic === true;
     setEditRatePlanName(isVerified ? plan.planName : '');
     setEditRateAccountType(typeof plan.accountType === 'string' && /進行済み|進行中|進行/.test(plan.accountType) ? '進行済み石垢' : '石垢');
-    setEditRateCurrencyType(plan.currencyType === '無償' || plan.currencyType === '有償' ? plan.currencyType : '未確認');
+    setEditRateCurrencyType(plan.currencyType === '有償' ? '有償' : '無償');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
@@ -627,7 +627,7 @@ export const AdminDashboardView: React.FC = () => {
     setIsAddRateModalOpen(false);
     setNewRatePlanName('');
     setNewRateAccountType('石垢');
-    setNewRateCurrencyType('未確認');
+    setNewRateCurrencyType('無償');
     setNewRateAmount('');
     setNewRateConditions('');
     setNewRateCurrPrice('');
