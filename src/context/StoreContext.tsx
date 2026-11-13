@@ -653,10 +653,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           error: 'このアカウントには管理者権限が付与されていません。',
         };
       }
-      await ensureAdminDocument(userCredential.user.uid, userCredential.user.email || email.trim());
-      if (auth.currentUser?.uid !== userCredential.user.uid) {
-        return { success: false, error: '認証状態が変更されました。もう一度ログインしてください。' };
-      }
+      // Do not write an admin registry document as a side effect of login.
+      // The verified role check above is authoritative for this session.
       setIsAdminLoggedIn(true);
       return { success: true };
     } catch (err: any) {
