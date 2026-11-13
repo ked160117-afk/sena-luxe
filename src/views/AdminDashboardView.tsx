@@ -12,7 +12,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
-import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore } from '../services/firestoreService';
+import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, rebuildPublicCatalogMirrors, uploadProductVideoToFirestore, deleteProductVideoFromFirestore } from '../services/firestoreService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
@@ -44,24 +44,24 @@ type AdminTab = 'products' | 'rates' | 'games' | 'sequences' | 'requests' | 'set
 
 export const AdminDashboardView: React.FC = () => {
   const {
-    products,
+    adminProducts: products,
     addNewProduct,
     updateProduct,
     deleteProduct,
     toggleProductStatus,
-    stoneRates,
+    adminStoneRates: stoneRates,
     updateStoneRatePrice,
     updateStoneRatePlan,
     addNewStoneRatePlan,
-    games,
-    candidateGames,
+    adminGames: games,
+    adminCandidateGames: candidateGames,
     promoteCandidateToHandled,
     updateGameDetails,
     addNewGameTitle,
     sequences,
     requests,
     updateRequestStatus,
-    settings,
+    adminSettings: settings,
     updateSettings,
     logoutAdmin,
     setCurrentView,
@@ -136,6 +136,7 @@ export const AdminDashboardView: React.FC = () => {
   const [editRatePlanName, setEditRatePlanName] = useState('');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
+  const [editRateCurrencyType, setEditRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
   const [editRateCurrPrice, setEditRateCurrPrice] = useState('');
   const [editRateNotes, setEditRateNotes] = useState('');
@@ -146,11 +147,13 @@ export const AdminDashboardView: React.FC = () => {
   const [newRatePlanName, setNewRatePlanName] = useState('');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
+  const [newRateCurrencyType, setNewRateCurrencyType] = useState<'無償' | '有償' | '未確認'>('未確認');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
   const [newRateCurrPrice, setNewRateCurrPrice] = useState('');
 
   // Bulk Sync to Firestore State
   const [isSyncingRates, setIsSyncingRates] = useState(false);
+  const [isBuildingPublicCatalog, setIsBuildingPublicCatalog] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleBulkSyncRates = async () => {
@@ -163,6 +166,54 @@ export const AdminDashboardView: React.FC = () => {
       setSyncFeedback('Firestoreへの一括同期に失敗しました。');
     } finally {
       setIsSyncingRates(false);
+    }
+  };
+
+  const handleBuildPublicCatalog = async () => {
+    const estimatedGames = games.filter((game) => game.isHandled === true).length;
+    const estimatedProducts = products.filter((product) =>
+      product.verifiedForPublic === true &&
+      product.status === '掲載中' &&
+      product.category === '引退垢' &&
+      typeof product.price === 'number' &&
+      product.price > 0 &&
+      Boolean(product.title?.trim()) &&
+      Boolean(product.summary?.trim())
+    ).length;
+    const estimatedRates = stoneRates.filter((rate) =>
+      rate.currencyType === '無償' &&
+      rate.verifiedForPublic === true &&
+      rate.status === '取扱中' &&
+      rate.isPreparation === false &&
+      typeof rate.currentPrice === 'number' &&
+      rate.currentPrice > 0 &&
+      Boolean(rate.currencyAmount?.trim()) &&
+      Boolean(rate.planName?.trim()) &&
+      Boolean(rate.conditions?.trim())
+    ).length;
+    const confirmMessage = [
+      '公開専用カタログを作成・更新します。',
+      '',
+      '公開対象の目安（禁止語句などは実際の処理でさらに除外されます）:',
+      `ゲームタイトル: ${estimatedGames}件`,
+      `商品: ${estimatedProducts}件`,
+      `石垢料金: ${estimatedRates}件`,
+      '',
+      '0件の項目がある場合は、管理画面の確認状態を見直してから実行してください。',
+      '元の商品・価格履歴・商品番号台帳は変更しません。続行しますか？',
+    ].join('\\n');
+    if (!window.confirm(confirmMessage)) return;
+    setIsBuildingPublicCatalog(true);
+    setSyncFeedback(null);
+    try {
+      const result = await rebuildPublicCatalogMirrors();
+      setSyncFeedback(result.activated
+        ? `公開専用データを作成し、有効化しました。ゲームタイトル ${result.games}件・商品 ${result.products}件・石垢料金 ${result.rates}件・公開設定 ${result.settings}件。Firebase本番ルールの変更・本番サイトへの反映とは別です。`
+        : `新しい公開データは作成しましたが、より新しい更新が先に公開されたため、今回のデータは有効化していません。現在の公開内容は維持されています。`);
+    } catch (error) {
+      setSyncFeedback(error instanceof Error ? error.message : '公開専用カタログの作成に失敗しました。');
+    } finally {
+      setIsBuildingPublicCatalog(false);
     }
   };
 
@@ -291,7 +342,7 @@ export const AdminDashboardView: React.FC = () => {
       if (typeof event.target?.result !== 'string') return;
       const img = new Image();
       img.onload = () => {
-        const maxDim = 1280;
+        const maxDim = 720;
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(img.width * scale));
@@ -302,7 +353,7 @@ export const AdminDashboardView: React.FC = () => {
           return;
         }
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        onComplete(canvas.toDataURL('image/webp', 0.76));
+        onComplete(canvas.toDataURL('image/webp', 0.72));
       };
       img.onerror = () => onComplete(event.target!.result as string);
       img.src = event.target.result;
@@ -474,6 +525,7 @@ export const AdminDashboardView: React.FC = () => {
     setEditRatePlanName(isVerified ? plan.planName : '');
     setEditRateAmount(isVerified ? plan.currencyAmount : '');
     setEditRateConditions(isVerified ? plan.conditions : '');
+    setEditRateCurrencyType(plan.currencyType === '無償' || plan.currencyType === '有償' ? plan.currencyType : '未確認');
     setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
     setEditRateCurrPrice(isVerified && plan.currentPrice !== null ? String(plan.currentPrice) : '');
     setEditRateNotes(isVerified ? plan.notes || '' : '');
@@ -489,8 +541,9 @@ export const AdminDashboardView: React.FC = () => {
       window.alert('プラン名・通貨数量・確認済みの条件を入力してください。');
       return;
     }
-    const isVerifiedForPublic = currPriceVal !== null && currPriceVal > 0;
+    const isVerifiedForPublic = editRateCurrencyType === '無償' && currPriceVal !== null && currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
+      currencyType: editRateCurrencyType,
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
@@ -514,6 +567,7 @@ export const AdminDashboardView: React.FC = () => {
 
     const currPriceVal = newRateIsPriceConfirmed && newRateCurrPrice ? Number(newRateCurrPrice) : null;
     const isVerifiedForPublic =
+      newRateCurrencyType === '無償' &&
       Boolean(newRatePlanName.trim()) &&
       Boolean(newRateAmount.trim()) &&
       Boolean(newRateConditions.trim()) &&
@@ -526,6 +580,7 @@ export const AdminDashboardView: React.FC = () => {
       gameName: game.name,
       planName: newRatePlanName.trim(),
       currencyName: game.currencyName,
+      currencyType: newRateCurrencyType,
       currencyAmount: newRateAmount.trim(),
       conditions: newRateConditions.trim(),
       referencePrice: 0,
@@ -540,6 +595,7 @@ export const AdminDashboardView: React.FC = () => {
     setNewRatePlanName('');
     setNewRateAmount('');
     setNewRateConditions('');
+    setNewRateCurrencyType('未確認');
     setNewRateCurrPrice('');
     setNewRateIsPriceConfirmed(false);
   };
@@ -810,6 +866,15 @@ export const AdminDashboardView: React.FC = () => {
               >
                 <Database className="w-3.5 h-3.5 text-[#d4af37]" />
                 <span>{isSyncingRates ? 'Firestore同期中...' : '石垢プランをFirestoreへ同期'}</span>
+              </button>
+              <button
+                onClick={handleBuildPublicCatalog}
+                disabled={isBuildingPublicCatalog}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold text-emerald-200 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-700/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                title="公開条件を満たしたデータだけを公開専用コレクションへ複製"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>{isBuildingPublicCatalog ? '公開データ作成中...' : '公開専用データを準備'}</span>
               </button>
               <button
                 onClick={() => setIsAddRateModalOpen(true)}
@@ -1369,13 +1434,13 @@ export const AdminDashboardView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-stone-400 font-medium">Firestore Database ID</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  ONLINE
+                  STATUS
                 </span>
               </div>
               <div className="font-mono text-xs font-bold text-stone-200 truncate" title="ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699">
                 ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699
               </div>
-              <div className="text-[10px] text-stone-500">Named Enterprise Firestore</div>
+              <div className="text-[10px] text-stone-500">Named Firestore（エディション・課金状態はConsoleで要確認）</div>
             </div>
           </div>
 
@@ -1383,8 +1448,11 @@ export const AdminDashboardView: React.FC = () => {
           <div className="rounded-xl bg-[#111216] border border-stone-800 p-6 space-y-4 text-xs text-stone-300 leading-relaxed">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <span className="w-1.5 h-4 bg-[#d4af37] rounded-full inline-block" />
-              セキュリティルール（firestore.rules）適用概要
+              セキュリティルール設計概要（本番反映状況は別途確認）
             </h3>
+            <p className="text-[11px] text-amber-300/90">
+              ここに表示する内容はリポジトリ内のルール設計です。Firebase Consoleへの公開・適用済みかどうかを示すものではありません。本番反映は移行確認後に別途実施します。
+            </p>
 
             <div className="space-y-3">
               <div className="p-3.5 rounded-lg bg-[#0a0b0d] border border-stone-800 flex items-start gap-2.5">
@@ -1392,7 +1460,7 @@ export const AdminDashboardView: React.FC = () => {
                 <div>
                   <div className="font-semibold text-white">一般ユーザー（閲覧専用・未認証保護）</div>
                   <div className="text-stone-400 text-[11px] mt-0.5">
-                    取扱ゲーム一覧・公開商品カタログ・石垢料金表の「読み取り（get / list）」のみ許可。内部情報や番号発番台帳へのアクセスは拒否。
+                    有効な公開世代のカタログのみ読み取り可能。正規商品・ゲーム・料金データ、履歴、管理情報、番号発番台帳は一般ユーザーから拒否。
                   </div>
                 </div>
               </div>
@@ -1410,9 +1478,9 @@ export const AdminDashboardView: React.FC = () => {
               <div className="p-3.5 rounded-lg bg-[#0a0b0d] border border-stone-800 flex items-start gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-white">管理者権限のサーバー側検証（admins / verified email）</div>
+                  <div className="font-semibold text-white">管理者権限のサーバー側検証（admins / 所有者用メール・UID例外）</div>
                   <div className="text-stone-400 text-[11px] mt-0.5">
-                    商品の新規追加、編集、価格改定、非公開化、削除はFirebase Authenticationで認証された正規の管理者のみ書き込みが許可されます。
+                    管理者判定はadmins/管理者UIDと、移行前からの所有者用メール・UID例外で行います。所有者アカウントの確認が済むまで旧例外は維持します。
                   </div>
                 </div>
               </div>
@@ -1420,7 +1488,7 @@ export const AdminDashboardView: React.FC = () => {
 
             <div className="pt-3 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-[11px] text-stone-400">
-                マスターデータの初期同期状態：{isFirestoreConnected ? '同期稼働中' : '確認中'}
+                Firestoreサーバー応答：{isFirestoreConnected ? '応答あり（権限・同期状態は未検証）' : '応答を確認できず'}
               </div>
               <button
                 type="button"
@@ -1910,6 +1978,16 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               <div>
+                <label className="text-stone-300 block mb-1 font-semibold">通貨区分（必須）</label>
+                <select value={newRateCurrencyType} onChange={(e) => setNewRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="未確認">未確認（公開不可）</option>
+                  <option value="無償">無償（確認済み）</option>
+                  <option value="有償">有償（公開不可）</option>
+                </select>
+                <p className="text-[11px] text-amber-400 mt-1">無償であることを確認できた料金のみ公開対象になります。</p>
+              </div>
+
+              <div>
                 <label className="text-stone-300 block mb-1 font-semibold">通貨数量表記 *</label>
                 <input
                   type="text"
@@ -2017,6 +2095,16 @@ export const AdminDashboardView: React.FC = () => {
                   onChange={(e) => setEditRatePlanName(e.target.value)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                 />
+              </div>
+
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">通貨区分（必須）</label>
+                <select value={editRateCurrencyType} onChange={(e) => setEditRateCurrencyType(e.target.value as '無償' | '有償' | '未確認')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                  <option value="未確認">未確認（公開不可）</option>
+                  <option value="無償">無償（確認済み）</option>
+                  <option value="有償">有償（公開不可）</option>
+                </select>
+                <p className="text-[11px] text-amber-400 mt-1">無償であることを確認できた料金のみ公開対象になります。</p>
               </div>
 
               <div>

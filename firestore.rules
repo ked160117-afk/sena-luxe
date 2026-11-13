@@ -19,37 +19,217 @@ service cloud.firestore {
       );
     }
 
-    // Admins collection: Used for Role-Based Access Control (RBAC)
+    // Admin role records are not an admin-management API.
+    // A legacy bootstrap admin may create only their own record; no client may
+    // grant, edit, or revoke another user's admin role.
     match /admins/{adminId} {
       allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
-      allow write: if isAdmin();
+      allow create: if isAdmin() &&
+        request.auth.uid == adminId &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.keys().hasAll(['uid', 'email', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.role == 'super_admin' &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.updatedAt is string;
+      allow update, delete: if false;
     }
 
-    // Games Catalog: Publicly readable, admin writable
+    function validPublicGame(gameId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'code', 'name', 'shortName', 'category', 'currencyName',
+        'currencyUnit', 'iconUrl', 'currencyIconUrl', 'isHandled',
+        'description', 'order'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'id', 'code', 'name', 'shortName', 'category', 'currencyName',
+        'currencyUnit', 'iconUrl', 'currencyIconUrl', 'isHandled',
+        'description', 'order'
+      ]) &&
+      request.resource.data.id == gameId &&
+      request.resource.data.isHandled == true &&
+      request.resource.data.name is string &&
+      request.resource.data.name.size() <= 120 &&
+      request.resource.data.iconUrl is string &&
+      request.resource.data.iconUrl.size() <= 100000 &&
+      request.resource.data.currencyIconUrl is string &&
+      request.resource.data.currencyIconUrl.size() <= 100000 &&
+      request.resource.data.description is string &&
+      request.resource.data.description.size() <= 1000;
+    }
+
+    function validPublicProduct(productId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'productNumber', 'gameId', 'gameCode', 'gameName', 'category',
+        'title', 'summary', 'price', 'status', 'verifiedForPublic', 'imageUrl',
+        'deviceCompatibility', 'keyHighlights', 'createdAt', 'updatedAt', 'order'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'id', 'productNumber', 'gameId', 'gameCode', 'gameName', 'category',
+        'title', 'summary', 'price', 'status', 'verifiedForPublic', 'imageUrl',
+        'deviceCompatibility', 'keyHighlights', 'createdAt', 'updatedAt', 'order'
+      ]) &&
+      request.resource.data.id == productId &&
+      request.resource.data.productNumber is string &&
+      request.resource.data.productNumber.size() > 0 &&
+      request.resource.data.gameId is string &&
+      request.resource.data.gameId.size() > 0 &&
+      request.resource.data.gameName is string &&
+      request.resource.data.gameName.size() > 0 &&
+      request.resource.data.category == '引退垢' &&
+      request.resource.data.status == '掲載中' &&
+      request.resource.data.verifiedForPublic == true &&
+      request.resource.data.price is number &&
+      request.resource.data.price > 0 &&
+      request.resource.data.title is string &&
+      request.resource.data.title.size() > 0 &&
+      request.resource.data.title.size() <= 160 &&
+      request.resource.data.summary is string &&
+      request.resource.data.summary.size() <= 2000 &&
+      request.resource.data.imageUrl is string &&
+      request.resource.data.imageUrl.size() <= 250000 &&
+      request.resource.data.keyHighlights is list &&
+      request.resource.data.keyHighlights.size() <= 5;
+    }
+
+    function validPublicStoneRate(rateId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
+        'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
+        'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
+        'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
+        'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
+      ]) &&
+      request.resource.data.id == rateId &&
+      request.resource.data.gameId is string &&
+      request.resource.data.gameId.size() > 0 &&
+      request.resource.data.gameName is string &&
+      request.resource.data.gameName.size() > 0 &&
+      request.resource.data.currencyName is string &&
+      request.resource.data.status == '取扱中' &&
+      request.resource.data.currencyType == '無償' &&
+      request.resource.data.stockStatus == '在庫要確認' &&
+      request.resource.data.isPreparation == false &&
+      request.resource.data.verifiedForPublic == true &&
+      request.resource.data.currentPrice is number &&
+      request.resource.data.currentPrice > 0 &&
+      request.resource.data.planName is string &&
+      request.resource.data.planName.size() > 0 &&
+      request.resource.data.currencyAmount is string &&
+      request.resource.data.currencyAmount.size() <= 120 &&
+      request.resource.data.conditions is string &&
+      request.resource.data.conditions.size() <= 1000;
+    }
+
+    function validPublicSettings() {
+      return request.resource.data.keys().hasOnly([
+        'lineUrl', 'shopNotice', 'enableDirectLineCopy', 'contactDeskHours'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'lineUrl', 'shopNotice', 'enableDirectLineCopy', 'contactDeskHours'
+      ]) &&
+      request.resource.data.lineUrl is string &&
+      request.resource.data.lineUrl.size() <= 2048 &&
+      request.resource.data.shopNotice is string &&
+      request.resource.data.shopNotice.size() <= 2000 &&
+      request.resource.data.enableDirectLineCopy is bool &&
+      request.resource.data.contactDeskHours is string &&
+      request.resource.data.contactDeskHours.size() <= 200;
+    }
+
+    // A single pointer publishes a complete immutable catalog generation.
+    function isActiveGeneration(generationId) {
+      return exists(/databases/$(database)/documents/publicCatalogControl/active) &&
+        get(/databases/$(database)/documents/publicCatalogControl/active).data.generationId == generationId;
+    }
+
+    match /publicCatalogControl/{controlId} {
+      allow read: if controlId == 'active' || (controlId == 'publishSequence' && isAdmin());
+      allow create, update: if isAdmin() &&
+        controlId == 'active' &&
+        request.resource.data.keys().hasOnly(['generationId', 'publishRevision', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.keys().hasAll(['generationId', 'publishRevision', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.generationId is string &&
+        request.resource.data.generationId.size() <= 120 &&
+        request.resource.data.publishRevision is int &&
+        request.resource.data.publishRevision > 0 &&
+        request.resource.data.publishedAt is string &&
+        request.resource.data.games is int &&
+        request.resource.data.products is int &&
+        request.resource.data.rates is int;
+      allow create, update: if isAdmin() &&
+        controlId == 'publishSequence' &&
+        request.resource.data.keys().hasOnly(['revision', 'updatedAt']) &&
+        request.resource.data.keys().hasAll(['revision', 'updatedAt']) &&
+        request.resource.data.revision is int &&
+        request.resource.data.revision > 0 &&
+        request.resource.data.updatedAt is string;
+      allow delete: if false;
+    }
+
+    match /publicCatalogGenerations/{generationId} {
+      allow read, write: if isAdmin();
+      match /games/{gameId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicGame(gameId);
+        allow delete: if isAdmin();
+      }
+      match /products/{productId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicProduct(productId);
+        allow delete: if isAdmin();
+      }
+      match /stoneRates/{rateId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicStoneRate(rateId);
+        allow delete: if isAdmin();
+      }
+      match /settings/{settingId} {
+        allow read: if isActiveGeneration(generationId) && settingId == 'general';
+        allow create, update: if isAdmin() && settingId == 'general' && validPublicSettings();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Legacy flat mirrors are no longer used by the storefront.
+    // Keep them private while old generations remain available for rollback.
+    match /publicGames/{gameId} {
+      allow read, write: if isAdmin();
+    }
+    match /publicProducts/{productId} {
+      allow read, write: if isAdmin();
+    }
+    match /publicStoneRates/{rateId} {
+      allow read, write: if isAdmin();
+    }
+    match /publicSettings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Canonical game catalog, including candidates and internal fields: admin only.
     match /games/{gameId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
-    // Products: Publicly readable for active collection, admin write
+    // Canonical products, including drafts and unpublished records: admin only.
     match /products/{productId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
     }
 
-    // Stone Rate Plans: Publicly readable, admin write
+    // Canonical stone rates, internal notes, and price history: admin only.
     match /stoneRates/{rateId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
     }
 
-    // Product videos: visitors can play published videos; only admins can upload or modify.
+    // Product videos and chunks remain private until a separately reviewed public-video design.
     match /productVideos/{videoId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
       match /chunks/{chunkId} {
-        allow read: if true;
-        allow create, update, delete: if isAdmin();
+        allow read, create, update, delete: if isAdmin();
       }
     }
 
@@ -58,21 +238,51 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Customer Procurement Requests: Anyone can submit (create), only admin can read & manage
+    // Customer requests: public create only with a bounded, exact field schema.
+    // No client may set adminNotes, status, or arbitrary extra/private fields.
+    function validPublicRequest(requestId) {
+      return request.resource.data.keys().hasAll([
+          'id', 'gameTitle', 'requestType', 'desiredQuantity',
+          'budget', 'contactNotes', 'createdAt', 'status'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'gameTitle', 'requestType', 'desiredQuantity',
+          'budget', 'contactNotes', 'createdAt', 'status'
+        ]) &&
+        request.resource.data.id == requestId &&
+        request.resource.data.id is string &&
+        request.resource.data.id.size() <= 80 &&
+        request.resource.data.gameTitle is string &&
+        request.resource.data.gameTitle.size() > 0 &&
+        request.resource.data.gameTitle.size() <= 120 &&
+        request.resource.data.requestType is string &&
+        request.resource.data.requestType.size() > 0 &&
+        request.resource.data.requestType.size() <= 80 &&
+        request.resource.data.desiredQuantity is string &&
+        request.resource.data.desiredQuantity.size() <= 120 &&
+        request.resource.data.budget is string &&
+        request.resource.data.budget.size() <= 80 &&
+        request.resource.data.contactNotes is string &&
+        request.resource.data.contactNotes.size() <= 1000 &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.createdAt.size() <= 40 &&
+        request.resource.data.status == '受付済';
+    }
+
+    // Public users may submit a bounded request, but cannot read or mutate requests.
     match /requests/{requestId} {
-      allow create: if true;
+      allow create: if validPublicRequest(requestId);
       allow read, update, delete: if isAdmin();
     }
 
-    // Admin Settings (LINE URL, announcement notice): Public read, admin write
+    // Canonical admin settings: public visitors use publicSettings instead.
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
-    // Connection Health Check
+    // Connection Health Check is not part of the public catalog.
     match /test/{docId} {
-      allow read: if true;
+      allow read, write: if isAdmin();
     }
   }
 }

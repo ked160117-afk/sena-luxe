@@ -20,6 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { reservePublicCatalogRevision, stagePublicCatalogGeneration, activatePublicCatalogGeneration } from './publicCatalogPublisher';
 import {
   GameTitle,
   ProductItem,
@@ -44,6 +45,20 @@ const PRODUCT_VIDEO_COLLECTION = 'productVideos';
 const PRODUCT_VIDEO_MAX_BYTES = 15 * 1024 * 1024;
 const PRODUCT_VIDEO_CHUNK_BYTES = 300 * 1024;
 
+const PROHIBITED_SERVICE_TEXT = /(代行|作業サービス|作業代行|プレイ代行|育成代行|ガチャ代行|通貨追加|追加オプション|追加料金|追加費用)/i;
+
+function containsProhibitedServiceText(values: unknown[]): boolean {
+  return values.some((value) => typeof value === 'string' && PROHIBITED_SERVICE_TEXT.test(value));
+}
+
+// Client-side guard for clearer failures; Firestore Security Rules remain the real boundary.
+async function requireAdminForVideoAccess(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+    throw new Error('動画データへのアクセスには管理者認証が必要です。');
+  }
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -61,7 +76,7 @@ export async function uploadProductVideoToFirestore(
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<string> {
-  if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
+  await requireAdminForVideoAccess();
   if (!file.type.startsWith('video/')) throw new Error('動画ファイルを選択してください。');
   if (file.size <= 0 || file.size > PRODUCT_VIDEO_MAX_BYTES) {
     throw new Error('動画は15MB以下にしてください。スマホ側で短く録画するか、画質を下げてください。');
@@ -110,6 +125,7 @@ export async function uploadProductVideoToFirestore(
 
 /** Fetch a saved video only when a visitor presses the play button. */
 export async function getProductVideoBlob(videoId: string): Promise<Blob> {
+  await requireAdminForVideoAccess();
   const metadata = await getDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
   if (!metadata.exists()) throw new Error('登録動画が見つかりません。');
   const details = metadata.data();
@@ -133,6 +149,7 @@ export async function getProductVideoBlob(videoId: string): Promise<Blob> {
 
 /** Remove a video after it has been replaced or its product is deleted. */
 export async function deleteProductVideoFromFirestore(videoId: string): Promise<void> {
+  await requireAdminForVideoAccess();
   const chunks = await getDocs(collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks'));
   for (let start = 0; start < chunks.docs.length; start += 400) {
     const batch = writeBatch(db);
@@ -143,6 +160,164 @@ export async function deleteProductVideoFromFirestore(videoId: string): Promise<
 }
 
 
+
+/**
+ * Build sanitized, read-only public mirrors from canonical records.
+ * This is an admin-triggered migration step only; it never modifies canonical data.
+ * Product videos, private notes, price history, requests, settings, and sequence ledgers
+ * are deliberately excluded.
+ */
+export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number; generationId: string; activated: boolean }> {
+  const user = auth.currentUser;
+  if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+    throw new Error('公開カタログの同期には管理者認証が必要です。');
+  }
+
+  const publishRevision = await reservePublicCatalogRevision(db);
+
+  // Read canonical data first. No canonical record is changed by this publisher.
+  const [gamesSnap, productsSnap, ratesSnap, settingsSnap] = await Promise.all([
+    getDocs(collection(db, 'games')),
+    getDocs(collection(db, 'products')),
+    getDocs(collection(db, 'stoneRates')),
+    getDoc(doc(db, 'settings', 'general')),
+  ]);
+
+  const publicGames = gamesSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as GameTitle))
+    .filter((game) => game.isHandled === true)
+    .map((game) => ({
+      id: game.id,
+      code: game.code,
+      name: game.name,
+      shortName: game.shortName,
+      category: game.category,
+      currencyName: game.currencyName,
+      currencyUnit: game.currencyUnit,
+      iconUrl: typeof game.iconUrl === 'string' && game.iconUrl.length <= 100000 ? game.iconUrl : '',
+      currencyIconUrl: typeof game.currencyIconUrl === 'string' && game.currencyIconUrl.length <= 100000 ? game.currencyIconUrl : '',
+      isHandled: true,
+      description: game.description || '',
+      order: game.order ?? 999,
+    }));
+
+  const publicProducts = productsSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as ProductItem))
+    .filter((product) =>
+      product.verifiedForPublic === true &&
+      product.status === '掲載中' &&
+      product.category === '引退垢' &&
+      typeof product.price === 'number' &&
+      Number.isFinite(product.price) &&
+      product.price > 0 &&
+      typeof product.productNumber === 'string' && Boolean(product.productNumber.trim()) &&
+      typeof product.gameId === 'string' && Boolean(product.gameId.trim()) &&
+      typeof product.gameName === 'string' && Boolean(product.gameName.trim()) &&
+      typeof product.title === 'string' && Boolean(product.title.trim()) && product.title.length <= 160 &&
+      typeof product.summary === 'string' && Boolean(product.summary.trim()) && product.summary.length <= 2000 &&
+      !containsProhibitedServiceText([
+        product.category,
+        product.title,
+        product.summary,
+        ...(Array.isArray(product.keyHighlights) ? product.keyHighlights : []),
+      ])
+    )
+    .map((product) => ({
+      id: product.id,
+      productNumber: product.productNumber,
+      gameId: product.gameId,
+      gameCode: product.gameCode,
+      gameName: product.gameName,
+      category: product.category,
+      title: product.title,
+      summary: product.summary,
+      price: product.price,
+      status: '掲載中' as const,
+      verifiedForPublic: true,
+      imageUrl: typeof product.imageUrl === 'string' && product.imageUrl.length <= 250000 ? product.imageUrl : '',
+      deviceCompatibility: product.deviceCompatibility || '',
+      keyHighlights: Array.isArray(product.keyHighlights) ? product.keyHighlights.slice(0, 5) : [],
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      order: product.order ?? 0,
+    }));
+
+  const publicRates = ratesSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as StoneRatePlan))
+    .filter((rate) =>
+      rate.currencyType === '無償' &&
+      rate.verifiedForPublic === true &&
+      rate.status === '取扱中' &&
+      rate.isPreparation === false &&
+      typeof rate.currentPrice === 'number' &&
+      Number.isFinite(rate.currentPrice) &&
+      rate.currentPrice > 0 &&
+      typeof rate.gameId === 'string' && Boolean(rate.gameId.trim()) &&
+      typeof rate.gameName === 'string' && Boolean(rate.gameName.trim()) &&
+      typeof rate.planName === 'string' && Boolean(rate.planName.trim()) && rate.planName.length <= 160 &&
+      typeof rate.currencyName === 'string' &&
+      typeof rate.currencyAmount === 'string' && Boolean(rate.currencyAmount.trim()) && rate.currencyAmount.length <= 120 &&
+      typeof rate.conditions === 'string' && Boolean(rate.conditions.trim()) && rate.conditions.length <= 1000 &&
+      !containsProhibitedServiceText([rate.id, rate.gameName, rate.planName, rate.currencyName, rate.currencyAmount, rate.conditions, rate.deviceRequirement, rate.accountType, rate.notes])
+    )
+    .map((rate) => ({
+      id: rate.id,
+      gameId: rate.gameId,
+      gameCode: rate.gameCode,
+      gameName: rate.gameName,
+      planName: rate.planName,
+      currencyName: rate.currencyName,
+      currencyType: '無償',
+      currencyAmount: rate.currencyAmount,
+      conditions: rate.conditions,
+      currentPrice: rate.currentPrice,
+      confirmedDate: rate.confirmedDate,
+      status: '取扱中' as const,
+      stockStatus: '在庫要確認',
+      isPreparation: false,
+      verifiedForPublic: true,
+    }));
+
+  const sourceSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+  const publicSettings = {
+    lineUrl: typeof sourceSettings.lineUrl === 'string' ? sourceSettings.lineUrl : '',
+    shopNotice: typeof sourceSettings.shopNotice === 'string' ? sourceSettings.shopNotice : '',
+    enableDirectLineCopy: sourceSettings.enableDirectLineCopy === true,
+    contactDeskHours: typeof sourceSettings.contactDeskHours === 'string' ? sourceSettings.contactDeskHours : '公式LINEにてご案内',
+  };
+
+  // Build an immutable generation. The public pointer is switched only after
+  // every collection and the settings document have been committed successfully.
+  const generationId = `catalog-${Date.now()}-${crypto.randomUUID()}`;
+  const rows: Array<{ kind: string; id: string; data: Record<string, unknown> }> = [
+    ...publicGames.map((row) => ({ kind: 'games', id: row.id, data: row as unknown as Record<string, unknown> })),
+    ...publicProducts.map((row) => ({ kind: 'products', id: row.id, data: row as unknown as Record<string, unknown> })),
+    ...publicRates.map((row) => ({ kind: 'stoneRates', id: row.id, data: row as unknown as Record<string, unknown> })),
+  ];
+
+  await stagePublicCatalogGeneration(db, generationId, rows, publicSettings, {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+  });
+
+  const activated = await activatePublicCatalogGeneration(db, generationId, publishRevision, {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+  });
+
+  // Previous generations are intentionally retained for rollback. No cleanup is
+  // performed here, so a failed publish cannot delete the last known-good catalog.
+  return {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+    settings: 1,
+    generationId,
+    activated,
+  };
+}
 const COLLECTIONS = {
   GAMES: 'games',
   PRODUCTS: 'products',
@@ -159,6 +334,13 @@ const COLLECTIONS = {
  */
 export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSynced: number; ratesSynced: number }> {
   try {
+    // Defense in depth: this helper reads canonical games, rates, and sequence ledgers.
+    // Do not rely only on the dashboard being hidden from non-admin users.
+    const user = auth.currentUser;
+    if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+      throw new Error('マスターカタログの同期には管理者認証が必要です。');
+    }
+
     console.log('Initiating safe catalog sync to Firestore...');
     const [gamesSnapshot, ratesSnapshot, sequencesSnapshot] = await Promise.all([
       getDocs(collection(db, COLLECTIONS.GAMES)),
@@ -217,6 +399,13 @@ export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSyn
 // Seed master data if collections are empty or need update
 export async function seedInitialDataIfEmpty(): Promise<void> {
   try {
+    // Defense in depth: never inspect or seed canonical collections from a public session.
+    const user = auth.currentUser;
+    if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+      console.info('Skipping canonical Firestore seed: administrator authentication required.');
+      return;
+    }
+
     const gamesSnapshot = await getDocs(collection(db, COLLECTIONS.GAMES));
     const ratesSnapshot = await getDocs(collection(db, COLLECTIONS.STONE_RATES));
 
@@ -503,7 +692,7 @@ export async function promoteCandidateDoc(candidate: GameTitle): Promise<void> {
 export async function submitGameRequestDoc(
   req: Omit<GameRequestItem, 'id' | 'createdAt' | 'status'>
 ): Promise<GameRequestItem> {
-  const newId = `req-${Date.now()}`;
+  const newId = `req-${crypto.randomUUID()}`;
   const newItem: GameRequestItem = {
     ...req,
     id: newId,

@@ -6,9 +6,22 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// App Check remains disabled until a valid reCAPTCHA v3 site key is configured.
+// Register the web app/domain in Firebase Console and set recaptchaSiteKey before enabling enforcement.
+const recaptchaSiteKey = typeof firebaseConfig.recaptchaSiteKey === 'string'
+  ? firebaseConfig.recaptchaSiteKey.trim()
+  : '';
+export const appCheck = recaptchaSiteKey
+  ? initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+  : null;
 
 /* CRITICAL: Passing firestoreDatabaseId is mandatory for Named Databases */
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
