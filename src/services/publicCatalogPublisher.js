@@ -104,7 +104,8 @@ export async function stagePublicCatalogGeneration(database, generationId, rows,
   const allowedSettings = ['lineUrl', 'shopNotice', 'enableDirectLineCopy', 'contactDeskHours'];
   const settingKeys = Object.keys(publicSettings);
   if (settingKeys.length !== allowedSettings.length ||
-      !allowedSettings.every((key) => Object.prototype.hasOwnProperty.call(publicSettings, key))) {
+      !allowedSettings.every((key) => Object.prototype.hasOwnProperty.call(publicSettings, key) &&
+        publicSettings[key] !== undefined)) {
     throw new Error('公開設定に許可されていない項目、または不足項目があります。');
   }
 
