@@ -231,6 +231,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentUser(user);
       if (user) {
         const isAdmin = await checkIsUserAdmin(user.uid, user.email);
+        // Ignore stale async role checks if the account changed or signed out.
+        if (auth.currentUser?.uid !== user.uid) return;
         setIsAdminLoggedIn(isAdmin);
         if (isAdmin) {
           await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
@@ -624,6 +626,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.trim(), pass);
       const isAdmin = await checkIsUserAdmin(userCredential.user.uid, userCredential.user.email);
+      // Do not apply a role result to a different account after an auth-state change.
+      if (auth.currentUser?.uid !== userCredential.user.uid) {
+        return { success: false, error: '認証状態が変更されました。もう一度ログインしてください。' };
+      }
       if (!isAdmin) {
         await signOut(auth);
         return {
