@@ -87,13 +87,14 @@ export const AdminDashboardView: React.FC = () => {
     const estimatedProducts = products.filter((product) =>
       product.verifiedForPublic === true &&
       product.status === '掲載中' &&
-      (product.category === 'ゲーム内通貨・石垢' || product.category === '引退垢') &&
+      product.category === '引退垢' &&
       typeof product.price === 'number' &&
       product.price > 0 &&
       Boolean(product.title?.trim()) &&
       Boolean(product.summary?.trim())
     ).length;
     const estimatedRates = stoneRates.filter((rate) =>
+      rate.currencyType === '無償' &&
       rate.verifiedForPublic === true &&
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
