@@ -165,8 +165,11 @@ test('public game rules reject oversized app and currency icon payloads', async 
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const paidRate = { ...publicRate, currencyType: '有償' };
   const unknownRate = { ...publicRate, currencyType: '未確認' };
+  const missingTypeRate = { ...publicRate };
+  delete missingTypeRate.currencyType;
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/paid-rate`), paidRate));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/unknown-rate`), unknownRate));
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/stoneRates/missing-type-rate`), { ...missingTypeRate, id: 'missing-type-rate' }));
 });
 
 test('anonymous users can read only the active public catalog generation', async () => {
