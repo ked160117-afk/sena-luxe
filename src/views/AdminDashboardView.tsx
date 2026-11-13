@@ -168,7 +168,38 @@ export const AdminDashboardView: React.FC = () => {
   };
 
   const handleBuildPublicCatalog = async () => {
-    if (!window.confirm('公開専用カタログを作成・更新します。公開条件を満たした商品・料金だけを複製し、非公開になった公開用データは削除します。元の商品・価格履歴・商品番号台帳は変更しません。続行しますか？')) return;
+    const estimatedGames = games.filter((game) => game.isHandled === true).length;
+    const estimatedProducts = products.filter((product) =>
+      product.verifiedForPublic === true &&
+      product.status === '掲載中' &&
+      (product.category === 'ゲーム内通貨・石垢' || product.category === '引退垢') &&
+      typeof product.price === 'number' &&
+      product.price > 0 &&
+      Boolean(product.title?.trim()) &&
+      Boolean(product.summary?.trim())
+    ).length;
+    const estimatedRates = stoneRates.filter((rate) =>
+      rate.verifiedForPublic === true &&
+      rate.status === '取扱中' &&
+      rate.isPreparation === false &&
+      typeof rate.currentPrice === 'number' &&
+      rate.currentPrice > 0 &&
+      Boolean(rate.currencyAmount?.trim()) &&
+      Boolean(rate.planName?.trim()) &&
+      Boolean(rate.conditions?.trim())
+    ).length;
+    const confirmMessage = [
+      '公開専用カタログを作成・更新します。',
+      '',
+      '公開対象の目安（禁止語句などは実際の処理でさらに除外されます）:',
+      `ゲームタイトル: ${estimatedGames}件`,
+      `商品: ${estimatedProducts}件`,
+      `石垢料金: ${estimatedRates}件`,
+      '',
+      '0件の項目がある場合は、管理画面の確認状態を見直してから実行してください。',
+      '元の商品・価格履歴・商品番号台帳は変更しません。続行しますか？',
+    ].join('\\n');
+    if (!window.confirm(confirmMessage)) return;
     setIsBuildingPublicCatalog(true);
     setSyncFeedback(null);
     try {
