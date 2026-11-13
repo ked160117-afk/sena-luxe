@@ -74,5 +74,153 @@ service cloud.firestore {
     match /test/{docId} {
       allow read: if true;
     }
+    function validPublicGame(gameId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'code', 'name', 'shortName', 'category', 'currencyName',
+        'currencyUnit', 'iconUrl', 'currencyIconUrl', 'isHandled',
+        'description', 'order'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'id', 'code', 'name', 'shortName', 'category', 'currencyName',
+        'currencyUnit', 'iconUrl', 'currencyIconUrl', 'isHandled',
+        'description', 'order'
+      ]) &&
+      request.resource.data.id == gameId &&
+      request.resource.data.isHandled == true &&
+      request.resource.data.name is string &&
+      request.resource.data.name.size() <= 120 &&
+      request.resource.data.iconUrl is string &&
+      request.resource.data.iconUrl.size() <= 100000 &&
+      request.resource.data.currencyIconUrl is string &&
+      request.resource.data.currencyIconUrl.size() <= 100000 &&
+      request.resource.data.description is string &&
+      request.resource.data.description.size() <= 1000;
+    }
+
+    function validPublicProduct(productId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'productNumber', 'gameId', 'gameCode', 'gameName', 'category',
+        'title', 'summary', 'price', 'status', 'verifiedForPublic', 'imageUrl',
+        'deviceCompatibility', 'keyHighlights', 'createdAt', 'updatedAt', 'order'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'id', 'productNumber', 'gameId', 'gameCode', 'gameName', 'category',
+        'title', 'summary', 'price', 'status', 'verifiedForPublic', 'imageUrl',
+        'deviceCompatibility', 'keyHighlights', 'createdAt', 'updatedAt', 'order'
+      ]) &&
+      request.resource.data.id == productId &&
+      request.resource.data.category == '引退垢' &&
+      request.resource.data.status == '掲載中' &&
+      request.resource.data.verifiedForPublic == true &&
+      request.resource.data.price is number &&
+      request.resource.data.price > 0 &&
+      request.resource.data.title is string &&
+      request.resource.data.title.size() > 0 &&
+      request.resource.data.title.size() <= 160 &&
+      request.resource.data.summary is string &&
+      request.resource.data.summary.size() <= 2000 &&
+      request.resource.data.imageUrl is string &&
+      request.resource.data.imageUrl.size() <= 250000 &&
+      request.resource.data.keyHighlights is list &&
+      request.resource.data.keyHighlights.size() <= 5;
+    }
+
+    function validPublicStoneRate(rateId) {
+      return request.resource.data.keys().hasOnly([
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
+        'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
+        'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
+        'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
+        'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
+      ]) &&
+      request.resource.data.id == rateId &&
+      request.resource.data.status == '取扱中' &&
+      request.resource.data.currencyType == '無償' &&
+      request.resource.data.stockStatus == '在庫要確認' &&
+      request.resource.data.isPreparation == false &&
+      request.resource.data.verifiedForPublic == true &&
+      request.resource.data.currentPrice is number &&
+      request.resource.data.currentPrice > 0 &&
+      request.resource.data.planName is string &&
+      request.resource.data.planName.size() > 0 &&
+      request.resource.data.currencyAmount is string &&
+      request.resource.data.currencyAmount.size() <= 120 &&
+      request.resource.data.conditions is string &&
+      request.resource.data.conditions.size() <= 1000;
+    }
+
+    function validPublicSettings() {
+      return request.resource.data.keys().hasOnly([
+        'lineUrl', 'shopNotice', 'enableDirectLineCopy', 'contactDeskHours'
+      ]) &&
+      request.resource.data.keys().hasAll([
+        'lineUrl', 'shopNotice', 'enableDirectLineCopy', 'contactDeskHours'
+      ]) &&
+      request.resource.data.lineUrl is string &&
+      request.resource.data.lineUrl.size() <= 2048 &&
+      request.resource.data.shopNotice is string &&
+      request.resource.data.shopNotice.size() <= 2000 &&
+      request.resource.data.enableDirectLineCopy is bool &&
+      request.resource.data.contactDeskHours is string &&
+      request.resource.data.contactDeskHours.size() <= 200;
+    }
+
+    // A single pointer publishes a complete immutable catalog generation.
+    function isActiveGeneration(generationId) {
+      return exists(/databases/$(database)/documents/publicCatalogControl/active) &&
+        get(/databases/$(database)/documents/publicCatalogControl/active).data.generationId == generationId;
+    }
+
+    match /publicCatalogControl/{controlId} {
+      allow read: if controlId == 'active' || (controlId == 'publishSequence' && isAdmin());
+      allow create, update: if isAdmin() &&
+        controlId == 'active' &&
+        request.resource.data.keys().hasOnly(['generationId', 'publishRevision', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.keys().hasAll(['generationId', 'publishRevision', 'publishedAt', 'games', 'products', 'rates']) &&
+        request.resource.data.generationId is string &&
+        request.resource.data.generationId.size() <= 120 &&
+        request.resource.data.publishRevision is int &&
+        request.resource.data.publishRevision > 0 &&
+        request.resource.data.publishedAt is string &&
+        request.resource.data.games is int &&
+        request.resource.data.products is int &&
+        request.resource.data.rates is int;
+      allow create, update: if isAdmin() &&
+        controlId == 'publishSequence' &&
+        request.resource.data.keys().hasOnly(['revision', 'updatedAt']) &&
+        request.resource.data.keys().hasAll(['revision', 'updatedAt']) &&
+        request.resource.data.revision is int &&
+        request.resource.data.revision > 0 &&
+        request.resource.data.updatedAt is string;
+      allow delete: if false;
+    }
+
+    match /publicCatalogGenerations/{generationId} {
+      allow read, write: if isAdmin();
+      match /games/{gameId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicGame(gameId);
+        allow delete: if isAdmin();
+      }
+      match /products/{productId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicProduct(productId);
+        allow delete: if isAdmin();
+      }
+      match /stoneRates/{rateId} {
+        allow read: if isActiveGeneration(generationId);
+        allow create, update: if isAdmin() && validPublicStoneRate(rateId);
+        allow delete: if isAdmin();
+      }
+      match /settings/{settingId} {
+        allow read: if isActiveGeneration(generationId) && settingId == 'general';
+        allow create, update: if isAdmin() && settingId == 'general' && validPublicSettings();
+        allow delete: if isAdmin();
+      }
+    }
+
   }
 }

@@ -20,6 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { reservePublicCatalogRevision, stagePublicCatalogGeneration, activatePublicCatalogGeneration } from './publicCatalogPublisher';
 import {
   GameTitle,
   ProductItem,
@@ -43,6 +44,12 @@ import {
 const PRODUCT_VIDEO_COLLECTION = 'productVideos';
 const PRODUCT_VIDEO_MAX_BYTES = 15 * 1024 * 1024;
 const PRODUCT_VIDEO_CHUNK_BYTES = 300 * 1024;
+
+const PROHIBITED_SERVICE_TEXT = /(代行|作業サービス|作業代行|プレイ代行|育成代行|ガチャ代行|通貨追加|追加オプション|追加料金|追加費用)/i;
+
+function containsProhibitedServiceText(values: unknown[]): boolean {
+  return values.some((value) => typeof value === 'string' && PROHIBITED_SERVICE_TEXT.test(value));
+}
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -142,6 +149,146 @@ export async function deleteProductVideoFromFirestore(videoId: string): Promise<
   await deleteDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
 }
 
+
+
+export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number; generationId: string; activated: boolean }> {
+  const user = auth.currentUser;
+  if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
+    throw new Error('公開カタログの同期には管理者認証が必要です。');
+  }
+
+  const publishRevision = await reservePublicCatalogRevision(db);
+
+  // Read canonical data first. No canonical record is changed by this publisher.
+  const [gamesSnap, productsSnap, ratesSnap, settingsSnap] = await Promise.all([
+    getDocs(collection(db, 'games')),
+    getDocs(collection(db, 'products')),
+    getDocs(collection(db, 'stoneRates')),
+    getDoc(doc(db, 'settings', 'general')),
+  ]);
+
+  const publicGames = gamesSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as GameTitle))
+    .filter((game) => game.isHandled === true)
+    .map((game) => ({
+      id: game.id,
+      code: game.code,
+      name: game.name,
+      shortName: game.shortName,
+      category: game.category,
+      currencyName: game.currencyName,
+      currencyUnit: game.currencyUnit,
+      iconUrl: typeof game.iconUrl === 'string' && game.iconUrl.length <= 100000 ? game.iconUrl : '',
+      currencyIconUrl: typeof game.currencyIconUrl === 'string' && game.currencyIconUrl.length <= 100000 ? game.currencyIconUrl : '',
+      isHandled: true,
+      description: game.description || '',
+      order: game.order ?? 999,
+    }));
+
+  const publicProducts = productsSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as ProductItem))
+    .filter((product) =>
+      product.verifiedForPublic === true &&
+      product.status === '掲載中' &&
+      product.category === '引退垢' &&
+      typeof product.price === 'number' &&
+      product.price > 0 &&
+      Boolean(product.title?.trim()) &&
+      Boolean(product.summary?.trim()) &&
+      !containsProhibitedServiceText([product.category, product.title, product.summary, ...(product.keyHighlights || [])])
+    )
+    .map((product) => ({
+      id: product.id,
+      productNumber: product.productNumber,
+      gameId: product.gameId,
+      gameCode: product.gameCode,
+      gameName: product.gameName,
+      category: product.category,
+      title: product.title,
+      summary: product.summary,
+      price: product.price,
+      status: '掲載中' as const,
+      verifiedForPublic: true,
+      imageUrl: typeof product.imageUrl === 'string' && product.imageUrl.length <= 250000 ? product.imageUrl : '',
+      deviceCompatibility: product.deviceCompatibility || '',
+      keyHighlights: Array.isArray(product.keyHighlights) ? product.keyHighlights.slice(0, 5) : [],
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      order: product.order ?? 0,
+    }));
+
+  const publicRates = ratesSnap.docs
+    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as StoneRatePlan))
+    .filter((rate) =>
+      rate.currencyType === '無償' &&
+      rate.verifiedForPublic === true &&
+      rate.status === '取扱中' &&
+      rate.isPreparation === false &&
+      typeof rate.currentPrice === 'number' &&
+      rate.currentPrice > 0 &&
+      Boolean(rate.currencyAmount?.trim()) &&
+      Boolean(rate.planName?.trim()) &&
+      Boolean(rate.conditions?.trim()) &&
+      !containsProhibitedServiceText([rate.id, rate.gameName, rate.planName, rate.currencyName, rate.currencyAmount, rate.conditions, rate.deviceRequirement, rate.accountType, rate.notes])
+    )
+    .map((rate) => ({
+      id: rate.id,
+      gameId: rate.gameId,
+      gameCode: rate.gameCode,
+      gameName: rate.gameName,
+      planName: rate.planName,
+      currencyName: rate.currencyName,
+      currencyType: '無償' as const,
+      currencyAmount: rate.currencyAmount,
+      conditions: rate.conditions,
+      currentPrice: rate.currentPrice,
+      confirmedDate: rate.confirmedDate,
+      status: '取扱中' as const,
+      stockStatus: '在庫要確認',
+      isPreparation: false,
+      verifiedForPublic: true,
+    }));
+
+  const sourceSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+  const publicSettings = {
+    lineUrl: typeof sourceSettings.lineUrl === 'string' ? sourceSettings.lineUrl : '',
+    shopNotice: typeof sourceSettings.shopNotice === 'string' ? sourceSettings.shopNotice : '',
+    enableDirectLineCopy: sourceSettings.enableDirectLineCopy === true,
+    contactDeskHours: typeof sourceSettings.contactDeskHours === 'string' ? sourceSettings.contactDeskHours : '公式LINEにてご案内',
+  };
+
+  // Build an immutable generation. The public pointer is switched only after
+  // every collection and the settings document have been committed successfully.
+  const generationId = `catalog-${Date.now()}-${crypto.randomUUID()}`;
+  const rows: Array<{ kind: string; id: string; data: Record<string, unknown> }> = [
+    ...publicGames.map((row) => ({ kind: 'games', id: row.id, data: row as unknown as Record<string, unknown> })),
+    ...publicProducts.map((row) => ({ kind: 'products', id: row.id, data: row as unknown as Record<string, unknown> })),
+    ...publicRates.map((row) => ({ kind: 'stoneRates', id: row.id, data: row as unknown as Record<string, unknown> })),
+  ];
+
+  await stagePublicCatalogGeneration(db, generationId, rows, publicSettings, {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+  });
+
+  const activated = await activatePublicCatalogGeneration(db, generationId, publishRevision, {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+  });
+
+  // Previous generations are intentionally retained for rollback. No cleanup is
+  // performed here, so a failed publish cannot delete the last known-good catalog.
+  return {
+    games: publicGames.length,
+    products: publicProducts.length,
+    rates: publicRates.length,
+    settings: 1,
+    generationId,
+    activated,
+  };
+}
 
 const COLLECTIONS = {
   GAMES: 'games',
