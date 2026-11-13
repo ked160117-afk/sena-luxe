@@ -1,100 +1,81 @@
 # Firestore privacy split — listener and mutation audit
 
-Date: 2026-11-12
-Branch: security/public-private-firestore-split
-Status: audit only; no production or Firebase Console changes.
+Date: 2026-11-14
+Branch: integration/security-catalog-split
+Status: source review of the draft integration branch only. No production or Firebase Console changes.
 
-## Findings
+## Current draft-branch implementation
 
-### Public listeners currently read canonical collections
+### Public and admin listeners
 
-`StoreContext.tsx` attaches these listeners unconditionally, before admin authentication:
+- Public catalog listeners use the active immutable generation under `publicCatalogGenerations/{generationId}` for games, products, stone rates, and public settings.
+- The active generation is selected through `publicCatalogControl/active`.
+- Admin-only listeners read canonical games, products, stone rates, settings, sequences, and requests only after admin authorization.
+- The admin dashboard consumes the separate admin state.
+- Admin state is cleared when authorization is lost or the account changes.
+- Draft Firestore rules deny anonymous reads of canonical catalog, settings, video, sequence, request, and admin data. They allow public reads only from the active public generation and the narrowly scoped public request-create path.
+- These rules are in the repository only; they have not been published to the production named database.
 
-- `games`
-- `products`
-- `stoneRates`
-- `settings/general`
+### Admin mutation and publication paths
 
-This is incompatible with restrictive canonical rules. These listeners must be redirected to the sanitized public mirrors before canonical reads are denied.
+The StoreContext mutation wrappers currently call `rebuildPublicCatalogMirrors()` after successful canonical writes for:
+- product create, update, delete, and publish/unpublish status changes;
+- stone-rate price changes, plan edits, plan additions, and bulk preparation;
+- game edits, new handled titles, candidate creation, and candidate promotion;
+- public-facing settings changes.
 
-### Admin UI currently consumes the same context state
+The builder reads canonical data as an authorized admin, applies explicit public field allowlists and eligibility checks, stages a new immutable generation in bounded batches, and changes the active pointer only after staging succeeds. A failed staging operation leaves the previous active generation selected. Revision fencing prevents an older concurrent publisher from replacing a newer generation.
 
-`AdminDashboardView` reads `games`, `products`, `stoneRates`, and `settings` from the shared StoreContext. Therefore a listener switch alone would also deprive the admin dashboard of canonical records and private fields. Separate admin-only state/listeners are required, and the dashboard must consume those canonical admin states after authorization.
+This is a sequential canonical-write-then-publish workflow, not a single transaction spanning the canonical mutation and public snapshot. If the canonical write succeeds but publication fails, the previous public generation remains visible until an administrator retries publication. The UI surfaces a publication failure; it must not be described as a fully successful public update.
 
-### Mutation paths that need mirror consistency
+The current implementation performs a full catalog rebuild after each relevant admin mutation. This is simple and keeps the published snapshot coherent, but it can create substantial reads/writes as the catalog grows. Confirm the exact database free-tier assignment and current usage before running it against production. A future optimization could coalesce writes or publish only affected records, but must preserve the immutable-generation and atomic-pointer safety properties.
 
-Product:
-- `createProductAtomic` creates canonical product and advances `sequences` in one transaction.
-- `updateProductDoc` updates canonical product.
-- `deleteProductDoc` deletes canonical product and updates permanent-number ledger.
-- `toggleProductStatus` calls `updateProductDoc`.
-- Video upload currently writes `productVideos` metadata/chunks separately; public mirror builder intentionally excludes video fields.
+### Public data eligibility and exclusions
 
-Stone rates:
-- `updateStoneRatePriceDoc` writes price, status, verification flag and price history.
-- `updateStoneRateDoc` edits plan details.
-- `addStoneRatePlanDoc` creates a plan.
-- `setAllStoneRatesPreparation` batch-updates all canonical rates directly from StoreContext.
+- Public products are limited to verified, published `引退垢` entries with valid positive prices and required bounded display fields.
+- Public stone rates require explicit `currencyType: '無償'`, verified public status, active handling status, non-preparation state, and a valid positive price.
+- Public games must be handled titles.
+- Public settings use a fixed field allowlist.
+- Private notes, price history, requests, sequence ledgers, admin records, video metadata, and video chunks are not copied into public generations.
+- Product video playback is not implemented as a public feature by this migration; video data remains private.
 
-Games:
-- `addGameDoc`, `updateGameDoc`, and `promoteCandidateDoc` write canonical game records.
-- `addNewCandidateGame` currently uses `updateGameDoc` to create a candidate record.
+### Other admin and public workflows
 
-Settings:
-- `saveSettingsDoc` writes canonical `settings/general`.
+- Public request creation is schema- and length-validated in draft rules; public reads, updates, and deletes remain denied.
+- Request rate limiting is not implemented. App Check does not replace rate limiting.
+- Login no longer auto-creates admin role documents or auto-seeds initial catalog data.
+- Manual initial seed and bulk-sync controls show a warning that Firestore reads/writes may occur.
+- The legacy admin email/UID fallback remains in place to avoid accidental lockout. Confirm ownership, recovery, and MFA before any future removal or tightening.
+- App Check initialization is conditional, but the configured reCAPTCHA v3 site key is currently blank. App Check is therefore not active/enforced by this code as checked.
 
-Requests and sequences are separate private/admin workflows and must not be copied into public mirrors.
+## Automated verification on the draft branch
 
-## Important safety findings
+The latest previously checked CI run for the integration branch completed successfully for:
+- TypeScript/lint and production build;
+- Firestore Rules Emulator suites;
+- exact named-database target configuration check;
+- Cloudflare `_headers` build-asset inclusion;
+- browser bundle check for Node gRPC transport;
+- dependency audit gates.
 
-1. The current public mirror builder is a one-time/manual rebuild, not an automatic synchronization mechanism. It cannot yet keep mirrors current after each admin mutation.
-2. A public mirror must be changed in the same Firestore transaction/batch as the canonical mutation wherever feasible. Otherwise a failed mirror write can leave stale public content visible.
-3. Product deletion must remove the matching `publicProducts/{id}` document while preserving the sequence ledger's permanent-number record.
-4. Product status/category/verification/price edits must remove the public mirror whenever the product no longer meets the allowlist.
-5. Stone-rate price edits currently deliberately set `isPreparation: true` and `verifiedForPublic: false`; the public mirror must therefore remove the rate until it is separately confirmed and explicitly eligible.
-6. Game edits that set `isHandled: false` must remove the public mirror; candidates must never be exposed through `publicGames`.
-7. The current public listener's legacy stone-rate fallback can restore an initial catalog price when a Firestore price is null. This behavior must not be carried into the new public mirror reader: a public price must come only from the explicitly verified mirror record. Do not alter canonical records or price history as part of this change.
-8. Public settings must be projected using an explicit allowlist. Admin settings must continue to read/write canonical `settings/general`.
-9. Existing Firestore rules still permit anonymous reads of canonical catalog collections. Do not deploy restrictive rules until all public listeners and every relevant admin path are switched and verified.
-10. Product videos remain unresolved. Keep their metadata and chunks private; do not publish video URLs/IDs or enable public video reads until a separate reviewed design ties a video to an eligible currently published product.
+The emulator uses an isolated demo project/default database. It does not prove that the production named database has the intended rules, billing/free-tier assignment, data shape, or live access behavior. CI success is not production verification.
 
-## Safe implementation order
+## Remaining release gates
 
-1. Introduce distinct public and admin state in StoreContext without changing current listener behavior yet.
-2. Add admin-only canonical listeners and make AdminDashboard consume the admin state. Clear private state on logout/auth loss.
-3. Switch public listeners to `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general`; keep harmless static fallback catalog data only where it cannot invent stock or prices.
-4. Implement atomic canonical + mirror mutation helpers and cover all mutation paths above, including stale mirror deletion.
-5. Build mirrors once from verified canonical records while admin is authenticated.
-6. Run build/lint/tests and review the complete diff.
-7. Verify with anonymous and admin test sessions against the exact named Firestore database.
-8. Only after all checks pass, separately approve and publish restrictive rules to that exact database.
+1. Verify the configured named Firestore database's edition, free-tier assignment, billing plan, and current usage in Firebase Console. Do not enable Blaze or change billing without explicit approval.
+2. Register and configure reCAPTCHA v3 for Firebase App Check, set the public site key, verify token metrics and compatibility, and only then consider enforcement. Do not enable enforcement while the key is blank or tokens are unverified.
+3. Confirm the real admin account UID/email, recovery path, and MFA. Do not remove the legacy fallback until access is proven safe.
+4. Back up the production named database and plan a controlled release sequence that deploys rules to that exact named database, deploys the matching Worker build, signs in as admin, publishes a public generation, and verifies public and admin behavior.
+5. Run real-browser checks against the deployed site: public catalog loads from the active generation; anonymous reads of canonical/private collections are denied; admin CRUD, publication, logout/login, request intake, and numbering behave correctly.
+6. Verify live Worker response headers. CI currently verifies only that `dist/_headers` contains the configured headers; it does not verify the live response. A CSP is not included pending compatibility review.
+7. Review public request abuse controls and decide whether server-side rate limiting is required before broad launch.
+8. Keep public video playback out of scope until a separate reviewed design is implemented and tested.
 
 ## Not performed
 
-- No Firebase Console rules publication.
-- No live mirror rebuild or canonical data migration.
-- No changes to production Worker/deployment.
-- No deletion or rewriting of canonical products, prices, histories, or sequence ledgers.
-- No claim that anonymous access is blocked yet.
-
-
-## Follow-up source verification (2026-11-12)
-
-The earlier sections above record the original audit state. The following changes were subsequently implemented on this draft branch and supersede the earlier statements that the listener split or staged-generation publisher is pending:
-
-- Public `StoreContext` listeners now read `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings/general` only.
-- Admin-authorized listeners separately read canonical `games`, `products`, `stoneRates`, `settings/general`, `sequences`, and `requests`; private context state is cleared when admin authorization is lost or the user logs out.
-- Admin dashboard consumers were switched to the separate canonical admin state.
-- Admin mutation wrappers now invoke a full public-mirror rebuild after canonical writes, including product, rate, game, and settings mutation paths.
-- A later implementation supersedes the earlier in-place mirror rebuild: the publisher stages a unique immutable generation in bounded batches, then switches one active pointer only after staging completes. The active pointer remains unchanged if staging fails; emulator tests cover partial staging failure and stale concurrent publishers. Production named-database and real-browser behavior remain unverified.
-- The draft Firestore rules restrict canonical catalog/settings/video reads to admins and allow public reads only from mirrors. The rules have not been published to Firebase Console.
-- The draft `test/{docId}` rule is admin-only. `testFirestoreConnection()` treats permission-denied and all other non-offline errors as successful reachability, so ordinary visitors do not currently fail the connection check solely because they cannot read `test/connection`. This behavior is not a robust health or authorization test and should be redesigned separately.
-
-## Remaining release blockers
-
-1. Replace in-place multi-batch mirror refresh with a staged generation plus active pointer, or an equally safe design with a single publication boundary.
-2. Audit the full repository for Firestore reads outside the already inspected context/service paths and confirm no public component depends on canonical-only fields.
-3. Add automated Rules tests for anonymous and authorized-admin access against the exact named database configuration.
-4. Test every CRUD, publish/unpublish, bulk update, delete, numbering, price-history, and logout/login path.
-5. Run a controlled migration only after those checks; do not run the current non-atomic builder against production.
-6. Keep production Worker and Firebase Console rules unchanged until separately authorized and all release gates pass.
+- No Firebase Console rules publication or production database writes.
+- No production mirror rebuild or canonical data migration.
+- No Cloudflare Worker deployment or live response-header verification.
+- No billing-plan changes or paid services enabled.
+- No deletion or rewriting of canonical products, prices, price histories, or sequence ledgers.
+- No claim that production anonymous access is already blocked.
