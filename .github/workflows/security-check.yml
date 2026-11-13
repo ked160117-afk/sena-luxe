@@ -48,6 +48,10 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Verify Cloudflare security headers are included in build assets
+        run: |
+          node -e "const fs=require('node:fs'); const p='dist/_headers'; if(!fs.existsSync(p)) throw new Error('Cloudflare _headers file missing from dist'); const h=fs.readFileSync(p,'utf8'); for(const v of ['X-Frame-Options: DENY','X-Content-Type-Options: nosniff','Referrer-Policy: strict-origin-when-cross-origin','Permissions-Policy: camera=(), microphone=(), geolocation=()']) if(!h.includes(v)) throw new Error('Missing header: '+v); console.log('Cloudflare security header asset verified');"
+
       - name: Check browser bundle excludes Node gRPC transport
         run: |
           if grep -R -E '@grpc/grpc-js|GrpcConnection|grpc_connection' dist/assets; then
