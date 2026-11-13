@@ -395,8 +395,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Canonical Firestore listeners for the admin dashboard only.
-  // Public-facing state above remains unchanged until the mirror readers are
-  // switched in a later, separately reviewed step.
+  // Public-facing state is populated exclusively from the active allowlisted
+  // public catalog generation above; never fall back to canonical collections.
   useEffect(() => {
     if (!isAdminLoggedIn) {
       setAdminAllGames([]);
