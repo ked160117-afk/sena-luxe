@@ -43,12 +43,12 @@ The current admin check accepts a hard-coded email or UID in addition to an `adm
 - Consider MFA for every administrator.
 - Keep public self-registration disabled.
 
-### High — App Check is not configured in the app source
-The Firebase app config has an empty `recaptchaSiteKey`, and the source initialization currently has no Firebase App Check initialization. App Check is not a substitute for Firestore Rules, but it is an important additional abuse barrier for public request writes and database access.
+### High — App Check initializer is prepared but not configured or enforced
+The source now conditionally initializes Firebase App Check with `ReCaptchaV3Provider` only when `firebase-applet-config.json` contains a non-empty `recaptchaSiteKey`. The current key remains empty, so `appCheck` is null and no App Check token is sent. App Check is not a substitute for Firestore Rules, but it is an important additional abuse barrier for public request writes and database access.
 
 Required before enforcement:
-- Register the web app with Firebase App Check and choose an appropriate supported provider.
-- Add the real site key/configuration without exposing any secret.
+- Register the web app with Firebase App Check using the reCAPTCHA v3 provider and allow the production Worker domain.
+- Add the actual reCAPTCHA v3 site key to `firebase-applet-config.json` as `recaptchaSiteKey`. The site key is a public client key, not a server secret.
 - Test legitimate public browsing and admin sign-in first.
 - Monitor metrics before enabling enforcement for the exact named Firestore database.
 - Never enable enforcement until the app has been verified to send valid App Check tokens.
@@ -86,7 +86,7 @@ A conservative static `public/_headers` file has been added on the security bran
 | Sequences | Denied | Read/write | Draft rules only |
 | Admin records | No list/read of others; no write | Controlled admin access | Draft rules only |
 | Product videos/chunks | Denied | Read/write | Draft rules + client guard |
-| App Check | Enforced only after valid setup | Enforced only after valid setup | Not configured |
+| App Check | Token only after site key is configured | Token only after site key is configured | Conditional initializer drafted; current key empty and enforcement off |
 | Security Rules emulator tests | Tested anonymous reads/lists and request rules | Tested admin allowlists and private access | CI passed 7 test cases on isolated emulator default DB; named production DB still unverified |
 | Public mirror atomic switch | Read active generation only | Publish staged generation with monotonic revision fence | Implemented in draft code/rules; rule allowlists pass, actual concurrent publisher test pending |
 
