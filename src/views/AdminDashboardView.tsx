@@ -2137,7 +2137,7 @@ export const AdminDashboardView: React.FC = () => {
             <form onSubmit={handleSaveEditedRatePlan} className="space-y-4 text-xs">
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">石垢の種類</label>
-                <select value={newRateAccountType} onChange={(e) => setNewRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
+                <select value={editRateAccountType} onChange={(e) => setEditRateAccountType(e.target.value as '石垢' | '進行済み石垢')} className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white">
                   <option value="石垢">石垢</option>
                   <option value="進行済み石垢">進行済み石垢</option>
                 </select>
