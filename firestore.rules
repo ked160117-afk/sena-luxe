@@ -107,7 +107,7 @@ service cloud.firestore {
         'deviceCompatibility', 'keyHighlights', 'createdAt', 'updatedAt', 'order'
       ]) &&
       request.resource.data.id == productId &&
-      request.resource.data.category in ['ゲーム内通貨・石垢', '引退垢'] &&
+      request.resource.data.category == '引退垢' &&
       request.resource.data.status == '掲載中' &&
       request.resource.data.verifiedForPublic == true &&
       request.resource.data.price is number &&
@@ -125,17 +125,18 @@ service cloud.firestore {
 
     function validPublicStoneRate(rateId) {
       return request.resource.data.keys().hasOnly([
-        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName',
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
         'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
         'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
       ]) &&
       request.resource.data.keys().hasAll([
-        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName',
+        'id', 'gameId', 'gameCode', 'gameName', 'planName', 'currencyName', 'currencyType',
         'currencyAmount', 'conditions', 'currentPrice', 'confirmedDate',
         'status', 'stockStatus', 'isPreparation', 'verifiedForPublic'
       ]) &&
       request.resource.data.id == rateId &&
       request.resource.data.status == '取扱中' &&
+      request.resource.data.currencyType == '無償' &&
       request.resource.data.stockStatus == '在庫要確認' &&
       request.resource.data.isPreparation == false &&
       request.resource.data.verifiedForPublic == true &&
