@@ -7,6 +7,7 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 
 ## Confirmed current behavior
 - The app connects to the named database configured in `firebase-applet-config.json`: `ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699`.
+- Draft `firebase.json` now uses the multi-database array form with exactly that named database and `firestore.rules`; it deliberately does not configure `(default)`. CI checks that the rules target matches `firebase-applet-config.json`. When production deployment is separately approved, target only `firebase deploy --only firestore:ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699`.
 - On the draft branch, public listeners follow `publicCatalogControl/active` and subscribe only to `publicCatalogGenerations/{activeGeneration}/games`, `/products`, `/stoneRates`, and `/settings/general`; admin-only listeners subscribe to canonical collections after admin authorization.
 - Production rules have not been changed and still allow public reads of canonical `games`, `products`, `stoneRates`, `productVideos` and its chunks, `settings`, and `test`.
 - Draft rules restrict canonical catalog/settings/video reads to admins and expose only the currently active immutable generation. Legacy flat `publicGames`, `publicProducts`, `publicStoneRates`, and `publicSettings` collections are admin-only in the draft rules. These rules have not been published.
