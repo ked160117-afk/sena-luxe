@@ -61,7 +61,7 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 9. Pending: verify admin identity, recovery, and MFA strategy; preserve the current owner fallback until this is safely confirmed.
 10. Pending: configure Firebase App Check with a real provider/site key, observe valid traffic, and then decide whether to enforce it on the exact named database. A conditional reCAPTCHA v3 App Check initializer is in the draft source, but the configured site key is empty and enforcement remains off.
 11. Pending: perform controlled verification against the exact named production database. Do not assume the emulator's default database represents it.
-12. Before production rollout, prepare a no-downtime staging path. The current production Worker does not contain the new generation publisher; deploying the listener-split Worker before an active generation exists would temporarily show an empty public catalog. Use either a secured preview Worker or a separate additive admin-only preparation release/rules to build and verify the generation while the current storefront continues working. Do not tighten canonical rules yet. Once the active generation is confirmed, deploy the listener-split Worker, then publish restrictive rules to the exact named database (never `(default)` by mistake). Verify public browsing and direct anonymous denial of every canonical/private collection. A separate additive preparation draft is now available as PR #2: https://github.com/ked160117-afk/sena-luxe/pull/2. It keeps the current storefront listeners and canonical public reads intact while staging the new generation. Both PRs remain drafts and require separate approval before any deployment.
+12. Production cutover must not expose canonical collections publicly at any point. PR #2 is preparation-only and is NOT a final security release because its bridge rules retain public reads of canonical collections. Do not deploy PR #2. Prepare a temporary maintenance/closed-storefront mode, then during an explicitly approved short maintenance window deploy the listener-split Worker and restrictive rules to the exact named database (never `(default)`), authenticate as the verified admin, build and activate the public generation, and test the active public mirror plus anonymous denial of every canonical/private collection. Restore the storefront only after all checks pass. This sequence may cause a short outage; no zero-downtime promise is made. If a safe maintenance mechanism or verified admin recovery is unavailable, stop before changing production. PR #1 remains draft and unmerged.
 13. Confirm the public storefront remains functional and admin CRUD, request intake, numbering, price history, logout/login, error recovery, and rollback all work. Do not proceed to retired-account content work until this security task is genuinely complete.
 
 ## Required security-rule principles
@@ -104,7 +104,7 @@ Important consequence: a successful canonical write followed by a failed generat
 
 1. Partially complete: 9 emulator tests now cover a real partial generation batch failure, private staged documents, pointer rollback, concurrent revision reservation, and stale publish rejection. Real-browser and simultaneous full admin UI publisher checks remain before production release.
 2. Verify the public storefront and admin CRUD in a real browser, including product create/update/delete, publish/unpublish, rate verification/preparation, settings updates, numbering, price-history preservation, and logout/login.
-3. Resolve the production dependency audit findings without blind downgrades or unverified compatibility overrides.
+3. Dependency gate: latest production-only audit passed with 0 advisories; full dependency tree has 13 moderate, 0 high, and 0 critical. Continue monitoring moderate development-tool advisories; do not apply blind downgrades or unverified compatibility overrides.
 4. Confirm owner admin identity, recovery path, and MFA; do not remove the legacy owner fallback until verified.
 5. Register reCAPTCHA v3 for the web app/domain, set `recaptchaSiteKey`, verify valid tokens and traffic, then evaluate enforcement. The initializer is present but currently inactive because the key is empty.
 6. Verify the exact named production database and confirm anonymous users cannot read or enumerate canonical/private collections.
@@ -115,3 +115,11 @@ The following are release blockers, not claims of completion. No production rule
 ## Public request write hardening (2026-11-12)
 
 The draft rules now validate public request creation against an exact field allowlist and bounded string lengths. Clients cannot submit extra fields such as `adminNotes` or choose a non-initial status; the document ID must match the `id` field. Reads, updates, and deletes remain admin-only. The latest 7-case emulator suite passes these request tests. This reduces malformed/oversized writes but is not rate limiting or bot protection. Firebase App Check and abuse controls remain a separate release gate.
+
+
+## Cutover decision update (2026-11-13)
+
+- The no-public-canonical-read requirement takes priority over avoiding a brief outage. The previously described PR #2 bridge is explicitly rejected as a final rollout path because it temporarily preserves public reads of canonical collections.
+- Do not merge, deploy, publish rules, seed the public generation, or enable paid services without separate explicit approval.
+- Before the maintenance window, independently verify the owner account UID/email mapping, password recovery, and an alternate recovery route. The existing hard-coded email/UID bootstrap remains in place until the owner identity is proven; do not remove or rotate it speculatively.
+- The exact named production database has not yet been tested for anonymous access. Emulator tests are not production proof.
