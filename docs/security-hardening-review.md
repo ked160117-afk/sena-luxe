@@ -21,6 +21,10 @@ Scope: Firestore, Firebase Authentication, public catalog, admin operations, req
 
 ## Confirmed risks and release blockers
 
+### Critical — named Firestore database billing must be confirmed before migration
+
+The app is configured for the non-default named database `ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699`. Google Cloud's current Firestore pricing documentation states that named (non-default) databases require billing to be enabled and do not qualify for the free allocation. The project's actual billing account/plan cannot be verified from repository code. The generation-preparation action reads canonical collections and writes a new generation, so it can incur billable operations on this named database. Do not run the live preparation button, deploy rules, enable Blaze, or change billing until the owner verifies the project's billing state and accepts any possible charges. No live database reads/writes or billing changes were performed by this work.
+
 ### Critical — generation publication is implemented in draft code but not yet proven safe
 The builder now writes a new immutable generation under `publicCatalogGenerations/{generationId}`, writes its settings and count metadata, then switches the single `publicCatalogControl/active` document only after all batches commit. A separate admin-only monotonic publish revision is reserved before staging; the final pointer switch runs in a transaction and refuses to replace a pointer with an equal/newer revision. This fences the previously identified out-of-order concurrent publisher race. Public listeners follow the pointer; draft rules allow public reads only when the generation ID matches the active pointer. Older generations are retained for rollback and are not automatically deleted.
 
@@ -91,6 +95,7 @@ A conservative static `public/_headers` file has been added on the security bran
 
 ## Release gates
 
+0. Confirm named-database billing status and cost acceptance before any live migration; do not enable or change a paid plan without explicit approval.
 1. Complete staged/versioned mirror publication and rollback.
 2. Audit all Firestore reads/writes across the repository and all external/public routes.
 3. Keep Rules emulator tests passing and expand coverage for rollback and concurrent publishing.
