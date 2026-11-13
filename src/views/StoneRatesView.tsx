@@ -110,6 +110,19 @@ export const StoneRatesView: React.FC = () => {
             <span>お取引注意事項・FAQを確認</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
+          <button
+            type="button"
+            onClick={() => copyToClipboardAndOpenModal(
+              '【SENA LUXE 石垢在庫問い合わせ】\\nゲームタイトル：\\n希望プラン：\\n在庫状況を教えてください。',
+              '石垢',
+              '在庫問い合わせ',
+              '石垢の在庫確認'
+            )}
+            className="self-start sm:self-center shrink-0 px-4 py-2.5 rounded-lg bg-[#06C755] hover:bg-[#05b34c] text-black text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>LINEで問い合わせ</span>
+          </button>
         </div>
       </div>
 
