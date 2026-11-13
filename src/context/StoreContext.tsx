@@ -236,8 +236,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsAdminLoggedIn(isAdmin);
         if (isAdmin) {
           await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
-          // Only an authenticated administrator may read or seed canonical collections.
+          // Re-check after the asynchronous admin-document step before any canonical writes.
+          if (auth.currentUser?.uid !== user.uid) return;
+          // Only the same still-authenticated administrator may read or seed canonical collections.
           await seedInitialDataIfEmpty();
+          if (auth.currentUser?.uid !== user.uid) return;
         } else {
           setAdminAllGames([]);
           setAdminProducts([]);
@@ -638,6 +641,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
       }
       await ensureAdminDocument(userCredential.user.uid, userCredential.user.email || email.trim());
+      if (auth.currentUser?.uid !== userCredential.user.uid) {
+        return { success: false, error: '認証状態が変更されました。もう一度ログインしてください。' };
+      }
       setIsAdminLoggedIn(true);
       return { success: true };
     } catch (err: any) {
