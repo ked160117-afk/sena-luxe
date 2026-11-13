@@ -380,6 +380,9 @@ export const INITIAL_STONE_RATES: StoneRatePlan[] = RAW_STONE_RATES.map((plan) =
   const confirmed = plan.status === '取扱中' && typeof plan.currentPrice === 'number' && plan.currentPrice > 0;
   return {
     ...plan,
+    // The shop's FAQ explicitly states that every stone-account listing contains free currency only.
+    // Paid currency is never offered in the stone-account category.
+    currencyType: '無償',
     referencePrice: confirmed ? plan.referencePrice : 0,
     currentPrice: confirmed ? plan.currentPrice : null,
     confirmedDate: confirmed ? plan.confirmedDate : '価格確認中',
