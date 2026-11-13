@@ -19,23 +19,61 @@ service cloud.firestore {
       );
     }
 
-    // Admin role records are not an admin-management API.
-    // A legacy bootstrap admin may create only their own record; no client may
-    // grant, edit, or revoke another user's admin role.
+    // Admins collection: Used for Role-Based Access Control (RBAC)
     match /admins/{adminId} {
       allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
-      allow create: if isAdmin() &&
-        request.auth.uid == adminId &&
-        request.resource.data.keys().hasOnly(['uid', 'email', 'role', 'createdAt', 'updatedAt']) &&
-        request.resource.data.keys().hasAll(['uid', 'email', 'role', 'createdAt', 'updatedAt']) &&
-        request.resource.data.uid == request.auth.uid &&
-        request.resource.data.email == request.auth.token.email &&
-        request.resource.data.role == 'super_admin' &&
-        request.resource.data.createdAt is string &&
-        request.resource.data.updatedAt is string;
-      allow update, delete: if false;
+      allow write: if isAdmin();
     }
 
+    // Games Catalog: Publicly readable, admin writable
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Products: Publicly readable for active collection, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Stone Rate Plans: Publicly readable, admin write
+    match /stoneRates/{rateId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Product videos: visitors can play published videos; only admins can upload or modify.
+    match /productVideos/{videoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+      match /chunks/{chunkId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    // Serial Sequence & Permanent Retired Number Registry: Admin only
+    match /sequences/{gameCode} {
+      allow read, write: if isAdmin();
+    }
+
+    // Customer Procurement Requests: Anyone can submit (create), only admin can read & manage
+    match /requests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Admin Settings (LINE URL, announcement notice): Public read, admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Connection Health Check
+    match /test/{docId} {
+      allow read: if true;
+    }
     function validPublicGame(gameId) {
       return request.resource.data.keys().hasOnly([
         'id', 'code', 'name', 'shortName', 'category', 'currencyName',
@@ -181,94 +219,5 @@ service cloud.firestore {
       }
     }
 
-    // Legacy flat mirrors are no longer used by the storefront.
-    // Keep them private while old generations remain available for rollback.
-    match /publicGames/{gameId} {
-      allow read, write: if isAdmin();
-    }
-    match /publicProducts/{productId} {
-      allow read, write: if isAdmin();
-    }
-    match /publicStoneRates/{rateId} {
-      allow read, write: if isAdmin();
-    }
-    match /publicSettings/{settingId} {
-      allow read, write: if isAdmin();
-    }
-
-    // Canonical game catalog, including candidates and internal fields: admin only.
-    match /games/{gameId} {
-      allow read, write: if isAdmin();
-    }
-
-    // Canonical products, including drafts and unpublished records: admin only.
-    match /products/{productId} {
-      allow read, create, update, delete: if isAdmin();
-    }
-
-    // Canonical stone rates, internal notes, and price history: admin only.
-    match /stoneRates/{rateId} {
-      allow read, create, update, delete: if isAdmin();
-    }
-
-    // Product videos and chunks remain private until a separately reviewed public-video design.
-    match /productVideos/{videoId} {
-      allow read, create, update, delete: if isAdmin();
-      match /chunks/{chunkId} {
-        allow read, create, update, delete: if isAdmin();
-      }
-    }
-
-    // Serial Sequence & Permanent Retired Number Registry: Admin only
-    match /sequences/{gameCode} {
-      allow read, write: if isAdmin();
-    }
-
-    // Customer requests: public create only with a bounded, exact field schema.
-    // No client may set adminNotes, status, or arbitrary extra/private fields.
-    function validPublicRequest(requestId) {
-      return request.resource.data.keys().hasAll([
-          'id', 'gameTitle', 'requestType', 'desiredQuantity',
-          'budget', 'contactNotes', 'createdAt', 'status'
-        ]) &&
-        request.resource.data.keys().hasOnly([
-          'id', 'gameTitle', 'requestType', 'desiredQuantity',
-          'budget', 'contactNotes', 'createdAt', 'status'
-        ]) &&
-        request.resource.data.id == requestId &&
-        request.resource.data.id is string &&
-        request.resource.data.id.size() <= 80 &&
-        request.resource.data.gameTitle is string &&
-        request.resource.data.gameTitle.size() > 0 &&
-        request.resource.data.gameTitle.size() <= 120 &&
-        request.resource.data.requestType is string &&
-        request.resource.data.requestType.size() > 0 &&
-        request.resource.data.requestType.size() <= 80 &&
-        request.resource.data.desiredQuantity is string &&
-        request.resource.data.desiredQuantity.size() <= 120 &&
-        request.resource.data.budget is string &&
-        request.resource.data.budget.size() <= 80 &&
-        request.resource.data.contactNotes is string &&
-        request.resource.data.contactNotes.size() <= 1000 &&
-        request.resource.data.createdAt is string &&
-        request.resource.data.createdAt.size() <= 40 &&
-        request.resource.data.status == '受付済';
-    }
-
-    // Public users may submit a bounded request, but cannot read or mutate requests.
-    match /requests/{requestId} {
-      allow create: if validPublicRequest(requestId);
-      allow read, update, delete: if isAdmin();
-    }
-
-    // Canonical admin settings: public visitors use publicSettings instead.
-    match /settings/{settingId} {
-      allow read, write: if isAdmin();
-    }
-
-    // Connection Health Check is not part of the public catalog.
-    match /test/{docId} {
-      allow read, write: if isAdmin();
-    }
   }
 }
