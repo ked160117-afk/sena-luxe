@@ -9,7 +9,9 @@
     "deploy": "npm run build && wrangler deploy",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:rules": "firebase emulators:exec --only firestore --project sena-luxe-rules-test \"node --test tests/firestore.rules.test.js\"",
+    "test:rules:prep": "firebase emulators:exec --only firestore --project sena-luxe-prep-rules-test \"node --test tests/firestore.prep.rules.test.js\""
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -33,6 +35,16 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
-    "@types/express": "^4.17.21"
+    "@types/express": "^4.17.21",
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase-tools": "^15.36.0"
+  },
+  "overrides": {
+    "@modelcontextprotocol/sdk": {
+      "zod": "^4.6.6"
+    },
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "^1.14.7"
+    }
   }
 }
