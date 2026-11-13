@@ -69,7 +69,7 @@ service cloud.firestore {
         'deviceCompatibility', 'keyHighlights', 'createdAt', 'updatedAt', 'order'
       ]) &&
       request.resource.data.id == productId &&
-      request.resource.data.category in ['ゲーム内通貨・石垢', '引退垢'] &&
+      request.resource.data.category == '引退垢' &&
       request.resource.data.status == '掲載中' &&
       request.resource.data.verifiedForPublic == true &&
       request.resource.data.price is number &&
