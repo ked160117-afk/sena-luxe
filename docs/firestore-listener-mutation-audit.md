@@ -48,6 +48,11 @@ The current implementation performs a full catalog rebuild after each relevant a
 - The legacy admin email/UID fallback remains in place to avoid accidental lockout. Confirm ownership, recovery, and MFA before any future removal or tightening.
 - App Check initialization is conditional, but the configured reCAPTCHA v3 site key is currently blank. App Check is therefore not active/enforced by this code as checked.
 
+## Cost-safety guard in the admin UI
+
+- High-volume catalog publication, bulk stone-rate synchronization, bulk preparation changes, and initial master-data synchronization are disabled in the draft admin UI until the named database edition, free-tier assignment, and remaining quota are verified.
+- Ordinary single-record admin operations remain separate; no bulk operation or live database write was executed by this work.
+
 ## Automated verification on the draft branch
 
 The latest previously checked CI run for the integration branch completed successfully for:
