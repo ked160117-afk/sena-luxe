@@ -212,6 +212,9 @@ export const AdminDashboardView: React.FC = () => {
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleBulkSyncRates = async () => {
+    if (!window.confirm('不足しているゲーム・石垢プランをFirestoreへ追加します。データベースの無料枠と使用量を確認済みの場合のみ実行してください。既存データは上書きしません。続行しますか？')) {
+      return;
+    }
     setIsSyncingRates(true);
     setSyncFeedback(null);
     try {
@@ -1509,6 +1512,9 @@ export const AdminDashboardView: React.FC = () => {
               <button
                 type="button"
                 onClick={async () => {
+                  if (!window.confirm('Firestoreのゲーム・石垢プラン・設定を確認し、不足分を追加する場合があります。読み取り・書き込みが発生します。データベースの無料枠と使用量を確認済みの場合のみ実行してください。続行しますか？')) {
+                    return;
+                  }
                   try {
                     await seedInitialDataIfEmpty();
                     alert('Firestoreコレクションの初期データ確認および同期を実行いたしました。');
