@@ -229,19 +229,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) {
-        const isAdmin = await checkIsUserAdmin(user.uid, user.email);
-        // Ignore stale async role checks if the account changed or signed out.
-        if (auth.currentUser?.uid !== user.uid) return;
-        setIsAdminLoggedIn(isAdmin);
-        if (isAdmin) {
-          await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
-          // Re-check after the asynchronous admin-document step before any canonical writes.
-          if (auth.currentUser?.uid !== user.uid) return;
-          // Only the same still-authenticated administrator may read or seed canonical collections.
-          await seedInitialDataIfEmpty();
-          if (auth.currentUser?.uid !== user.uid) return;
+      const expectedUid = user?.uid ?? null;
+      try {
+        if (user) {
+          const isAdmin = await checkIsUserAdmin(user.uid, user.email);
+          // Ignore stale async role checks if the account changed or signed out.
+          if (auth.currentUser?.uid !== expectedUid) return;
+          setIsAdminLoggedIn(isAdmin);
+          if (isAdmin) {
+            await ensureAdminDocument(user.uid, user.email || 'ked160117@gmail.com');
+            // Re-check after the asynchronous admin-document step before any canonical writes.
+            if (auth.currentUser?.uid !== expectedUid) return;
+            // Only the same still-authenticated administrator may read or seed canonical collections.
+            await seedInitialDataIfEmpty();
+            if (auth.currentUser?.uid !== expectedUid) return;
+          } else {
+            setAdminAllGames([]);
+            setAdminProducts([]);
+            setAdminStoneRates([]);
+            setAdminSettings(INITIAL_SETTINGS);
+            setRequests([]);
+            setSequences(INITIAL_SEQUENCES);
+          }
         } else {
+          setIsAdminLoggedIn(false);
           setAdminAllGames([]);
           setAdminProducts([]);
           setAdminStoneRates([]);
@@ -249,7 +260,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setRequests([]);
           setSequences(INITIAL_SEQUENCES);
         }
-      } else {
+      } catch (error) {
+        // Fail closed if role lookup or admin initialization fails.
+        if (auth.currentUser?.uid !== expectedUid) return;
+        console.error('Firebase admin initialization failed:', error);
         setIsAdminLoggedIn(false);
         setAdminAllGames([]);
         setAdminProducts([]);
@@ -257,8 +271,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setAdminSettings(INITIAL_SETTINGS);
         setRequests([]);
         setSequences(INITIAL_SEQUENCES);
+      } finally {
+        // A stale callback must not finish the loading state for a newer account.
+        if (auth.currentUser?.uid === expectedUid) setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
 
     return () => unsubscribe();
