@@ -51,7 +51,7 @@ export async function activatePublicCatalogGeneration(database, generationId, pu
  * must not be changed until this function resolves successfully.
  */
 export async function stagePublicCatalogGeneration(database, generationId, rows, publicSettings, counts) {
-  if (typeof generationId !== 'string' || !generationId.trim() || generationId.length > 120) {
+  if (typeof generationId !== 'string' || !generationId.trim() || generationId.length > 120 || generationId.includes('/')) {
     throw new Error('公開世代IDが不正です。');
   }
   if (!Array.isArray(rows) || !counts || typeof counts !== 'object') {
@@ -94,6 +94,13 @@ export async function stagePublicCatalogGeneration(database, generationId, rows,
   if (settingKeys.length !== allowedSettings.length ||
       !allowedSettings.every((key) => Object.prototype.hasOwnProperty.call(publicSettings, key))) {
     throw new Error('公開設定に許可されていない項目、または不足項目があります。');
+  }
+
+  if (typeof publicSettings.lineUrl !== 'string' || publicSettings.lineUrl.length > 2048 ||
+      typeof publicSettings.shopNotice !== 'string' || publicSettings.shopNotice.length > 2000 ||
+      typeof publicSettings.enableDirectLineCopy !== 'boolean' ||
+      typeof publicSettings.contactDeskHours !== 'string' || publicSettings.contactDeskHours.length > 200) {
+    throw new Error('公開設定の値が不正です。');
   }
 
   const generationRef = (kind, id) =>
