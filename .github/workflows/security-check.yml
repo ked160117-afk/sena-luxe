@@ -45,6 +45,15 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Check browser bundle excludes Node gRPC transport
+        run: |
+          if grep -R -E '@grpc/grpc-js|GrpcConnection|grpc_connection' dist/assets; then
+            echo 'Node gRPC transport markers found in browser assets; review before release.'
+            exit 1
+          else
+            echo 'No Node gRPC transport markers found in browser assets.'
+          fi
+
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
