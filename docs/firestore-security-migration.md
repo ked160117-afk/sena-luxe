@@ -35,11 +35,11 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 | `admins` | None | Read/write by authorized admins | Admin authorization |
 
 ## Publication rules
-- A product may enter `publicProducts` only when `verifiedForPublic === true`, category is `ゲーム内通貨・石垢` or `引退垢`, status is `掲載中`, price is a positive number, and title/summary are non-empty.
+- A product may enter the active generation's `products` subcollection only when `verifiedForPublic === true`, category is `ゲーム内通貨・石垢` or `引退垢`, status is `掲載中`, price is a positive number, and title/summary are non-empty.
 - Every public product document must be constructed from an explicit field allowlist. Never spread the canonical product object into the public document.
 - Unpublishing, deleting, or invalidating a product must remove its public mirror in the same trusted write operation.
-- A stone rate may enter `publicStoneRates` only when explicitly verified, status is `取扱中`, preparation is false, current price is positive, and required display fields are non-empty. Do not copy `priceHistory`, internal notes, or reference prices unless separately approved for public display.
-- Only `isHandled === true` games should be mirrored to `publicGames`.
+- A stone rate may enter the active generation's `stoneRates` subcollection only when explicitly verified, status is `取扱中`, preparation is false, current price is positive, and required display fields are non-empty. Do not copy `priceHistory`, internal notes, or reference prices unless separately approved for public display.
+- Only `isHandled === true` games should be mirrored to the active generation's `games` subcollection.
 - Only the explicit public settings allowlist should be mirrored.
 - Video metadata and chunks remain private until an approved publishing design ties them to a currently public product. Do not make the existing entire video collection public.
 
@@ -79,13 +79,13 @@ This task is complete only when code is merged, rules are published to the corre
 
 ## Public settings mirror
 
-- The migration builder copies only `lineUrl`, `shopNotice`, `enableDirectLineCopy`, and `contactDeskHours` from `settings/general` to `publicSettings/general`.
+- The generation builder copies only `lineUrl`, `shopNotice`, `enableDirectLineCopy`, and `contactDeskHours` from canonical `settings/general` to `publicCatalogGenerations/{generationId}/settings/general`.
 - The public listener has been switched on the draft branch. No other settings fields are copied. Production rules remain unchanged.
 
 
 ## Write-path audit (2026-11-12)
 
-The following application write paths were confirmed during source inspection. They currently write canonical collections and do not yet maintain the corresponding public mirror in the same operation:
+The following application write paths were confirmed during source inspection. They write canonical collections first; the StoreContext admin mutation wrappers then rebuild a complete immutable public generation. They do not patch individual public documents in-place:
 
 - Products: createProductAtomic, updateProductDoc, deleteProductDoc, and the status toggle routed through updateProductDoc.
 - Stone rates: updateStoneRatePriceDoc, updateStoneRateDoc, addStoneRatePlanDoc, and the direct batch in StoreContext.setAllStoneRatesPreparation.
@@ -93,20 +93,19 @@ The following application write paths were confirmed during source inspection. T
 - Public settings: saveSettingsDoc.
 - The generation publisher is triggered by admin mutations and the admin dashboard; it creates an immutable snapshot then atomically switches the active pointer. Previous generations are retained for rollback.
 
-Important consequence: switching listeners or tightening rules before every write path is updated would cause stale or missing public catalog data. In particular, the current price-change operation intentionally marks a rate as unverified/preparation; its public mirror must be removed as part of that same logical change. A later verification/publish action must add it back only after all eligibility checks pass.
+Important consequence: a successful canonical write followed by a failed generation rebuild leaves the previous active generation visible (no partially staged generation becomes public), but the storefront can temporarily show the prior snapshot. The admin operation surfaces the publish failure; the admin must retry publication. The price-change operation marks a rate unverified/preparation, so the next successful generation excludes it. Retry/reconciliation behavior must be exercised before production.
 
 ## Next implementation gates
 
-1. Verify the staged/versioned publication mechanism with emulator tests; ensure public clients can read only the active generation and cannot enumerate staging data.
-2. Audit every public-facing component for reliance on omitted private fields, especially videoUrl/videoStorageId and settings fields.
-3. Make all mutations keep public mirrors consistent; cover unpublish/delete, category/verification/price changes, bulk preparation, and settings changes. Include retries/reconciliation for partial failures.
-4. Audit all Firestore reads outside StoreContext and firestoreService, including direct reads of `requests`, `sequences`, `admins`, and `test`.
-5. Add automated Firestore Rules tests (emulator if available) for anonymous and admin read/write permissions.
-6. Run build/type checks and focused tests for public browsing, admin CRUD, product numbering, price history preservation, and logout/login state reset.
-7. Only then execute the controlled mirror migration and test actual anonymous/admin access against the exact named database.
+1. Add and pass tests for generation staging failure, active-pointer rollback, and concurrent publishers.
+2. Verify the public storefront and admin CRUD in a real browser, including product create/update/delete, publish/unpublish, rate verification/preparation, settings updates, numbering, price-history preservation, and logout/login.
+3. Resolve the production dependency audit findings without blind downgrades or unverified compatibility overrides.
+4. Confirm owner admin identity, recovery path, and MFA; do not remove the legacy owner fallback until verified.
+5. Configure App Check using the actual Firebase Console provider/site key, observe valid traffic, then evaluate enforcement. App Check is currently not configured.
+6. Verify the exact named production database and confirm anonymous users cannot read or enumerate canonical/private collections.
+7. Only with separate approval, run the staged generation migration, publish rules to the exact named database, deploy the Worker, and verify live headers and public/admin behavior.
 
-No application listener or mutation behavior was changed by this audit note. This document is still on the draft branch only.
-
+The following are release blockers, not claims of completion. No production rules, live mirror migration, or Worker deployment has been performed.
 
 ## Public request write hardening (2026-11-12)
 
