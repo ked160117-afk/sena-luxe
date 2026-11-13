@@ -78,7 +78,7 @@ export interface StoneRatePlan {
   currentPrice: number | null; // 現在販売価格 (null = 価格確認中)
   priceDisplay?: string; // e.g. "3,000円〜", "2,000〜3,000円", "要相談"
   deviceRequirement?: string; // e.g. "iOS版", "Android版", "スマートフォンのみ"
-  accountType?: string; // e.g. "初期垢", "進行済み"
+  accountType?: string; // Normalized public labels: "石垢" or "進行済み石垢"
   confirmedDate: string; // e.g. 2026/11/01
   status: '取扱中' | '価格確認中' | '在庫準備中' | '現在準備中' | '要相談' | '要確認';
   stockStatus?: '在庫要確認' | '在庫あり' | '売り切れ';
