@@ -149,6 +149,9 @@ test('public stone-rate rules reject paid and unverified currency types', async 
   await assertSucceeds(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/free-rate`), baseRate));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/paid-rate`), { ...baseRate, id: 'paid-rate', currencyType: '有償' }));
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/unknown-rate`), { ...baseRate, id: 'unknown-rate', currencyType: '未確認' }));
+  const missingTypeRate = { ...baseRate };
+  delete missingTypeRate.currencyType;
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/stoneRates/missing-type-rate`), { ...missingTypeRate, id: 'missing-type-rate' }));
 });
 
 test('preparation release keeps current storefront reads and exposes only the active staged generation', async () => {
