@@ -1,4 +1,4 @@
-import { doc, runTransaction } from 'firebase/firestore';
+import { doc, runTransaction, setDoc, writeBatch } from 'firebase/firestore';
 
 /**
  * Reserve a monotonically increasing public-catalog revision before reading
@@ -43,5 +43,32 @@ export async function activatePublicCatalogGeneration(database, generationId, pu
       rates: counts.rates,
     });
     return true;
+  });
+}
+
+/**
+ * Stage an immutable catalog generation in bounded batches. The active pointer
+ * must not be changed until this function resolves successfully.
+ */
+export async function stagePublicCatalogGeneration(database, generationId, rows, publicSettings, counts) {
+  const generationRef = (kind, id) =>
+    doc(database, 'publicCatalogGenerations', generationId, kind, id);
+
+  for (let offset = 0; offset < rows.length; offset += 400) {
+    const batch = writeBatch(database);
+    rows.slice(offset, offset + 400).forEach((row) => {
+      batch.set(generationRef(row.kind, row.id), row.data);
+    });
+    await batch.commit();
+  }
+
+  await setDoc(doc(database, 'publicCatalogGenerations', generationId, 'settings', 'general'), publicSettings);
+  await setDoc(doc(database, 'publicCatalogGenerations', generationId), {
+    generationId,
+    games: counts.games,
+    products: counts.products,
+    rates: counts.rates,
+    settings: 1,
+    createdAt: new Date().toISOString(),
   });
 }
