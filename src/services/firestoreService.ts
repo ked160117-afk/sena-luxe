@@ -208,10 +208,19 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       product.status === '掲載中' &&
       product.category === '引退垢' &&
       typeof product.price === 'number' &&
+      Number.isFinite(product.price) &&
       product.price > 0 &&
-      Boolean(product.title?.trim()) &&
-      Boolean(product.summary?.trim()) &&
-      !containsProhibitedServiceText([product.category, product.title, product.summary, ...(product.keyHighlights || [])])
+      typeof product.productNumber === 'string' && Boolean(product.productNumber.trim()) &&
+      typeof product.gameId === 'string' && Boolean(product.gameId.trim()) &&
+      typeof product.gameName === 'string' && Boolean(product.gameName.trim()) &&
+      typeof product.title === 'string' && Boolean(product.title.trim()) && product.title.length <= 160 &&
+      typeof product.summary === 'string' && Boolean(product.summary.trim()) && product.summary.length <= 2000 &&
+      !containsProhibitedServiceText([
+        product.category,
+        product.title,
+        product.summary,
+        ...(Array.isArray(product.keyHighlights) ? product.keyHighlights : []),
+      ])
     )
     .map((product) => ({
       id: product.id,
@@ -241,10 +250,14 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       rate.status === '取扱中' &&
       rate.isPreparation === false &&
       typeof rate.currentPrice === 'number' &&
+      Number.isFinite(rate.currentPrice) &&
       rate.currentPrice > 0 &&
-      Boolean(rate.currencyAmount?.trim()) &&
-      Boolean(rate.planName?.trim()) &&
-      Boolean(rate.conditions?.trim()) &&
+      typeof rate.gameId === 'string' && Boolean(rate.gameId.trim()) &&
+      typeof rate.gameName === 'string' && Boolean(rate.gameName.trim()) &&
+      typeof rate.planName === 'string' && Boolean(rate.planName.trim()) && rate.planName.length <= 160 &&
+      typeof rate.currencyName === 'string' &&
+      typeof rate.currencyAmount === 'string' && Boolean(rate.currencyAmount.trim()) && rate.currencyAmount.length <= 120 &&
+      typeof rate.conditions === 'string' && Boolean(rate.conditions.trim()) && rate.conditions.length <= 1000 &&
       !containsProhibitedServiceText([rate.id, rate.gameName, rate.planName, rate.currencyName, rate.currencyAmount, rate.conditions, rate.deviceRequirement, rate.accountType, rate.notes])
     )
     .map((rate) => ({
