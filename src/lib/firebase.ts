@@ -27,18 +27,19 @@ export const appCheck = recaptchaSiteKey
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 
-// Connection verification health check
+// Connection verification health check.
+// Return true only after a server read succeeds. Permission errors, authentication
+// errors, and network failures must never be reported as a healthy connection.
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore offline or unreachable:', error.message);
-      return false;
-    }
-    // Document might not exist which is fine, as long as it reaches server
-    return true;
+    console.warn(
+      'Firestore connection check did not complete successfully:',
+      error instanceof Error ? error.message : String(error),
+    );
+    return false;
   }
 }
 
