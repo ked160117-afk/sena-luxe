@@ -57,7 +57,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
       setVideoLoading(false);
     }
   };
-  const isStoneCategory = category === 'ゲーム内通貨・石垢';
+  const isStoneCategory = category === '石垢' || category === '進行済み石垢' || category === 'ゲーム内通貨・石垢';
 
   // Stored videos are fetched only after a visitor explicitly presses play.
   if (videoStorageId) {
