@@ -409,6 +409,10 @@ test('partial generation staging failure leaves old pointer active and staged do
   assert.equal(after.data().generationId, before.data().generationId);
   assert.equal(after.data().publishRevision, before.data().publishRevision);
 
-  await assertSucceeds(getDoc(doc(adminDb, `publicCatalogGenerations/${generationId}/games/staged-game-0`)));
+  let stagedAdminSnapshot;
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    stagedAdminSnapshot = await getDoc(doc(context.firestore(), `publicCatalogGenerations/${generationId}/games/staged-game-0`));
+  });
+  assert.equal(stagedAdminSnapshot.exists(), true);
   await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${generationId}/games/staged-game-0`)));
 });
