@@ -12,7 +12,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
-import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore } from '../services/firestoreService';
+import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore, rebuildPublicCatalogMirrors } from '../services/firestoreService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
@@ -71,6 +71,62 @@ export const AdminDashboardView: React.FC = () => {
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
+
+  const [isBuildingPublicCatalog, setIsBuildingPublicCatalog] = useState(false);
+  const [publicCatalogStatus, setPublicCatalogStatus] = useState<{
+    games: number;
+    products: number;
+    rates: number;
+    generationId: string;
+    activated: boolean;
+  } | null>(null);
+  const [publicCatalogError, setPublicCatalogError] = useState<string | null>(null);
+
+  const handleBuildPublicCatalog = async () => {
+    const estimatedGames = games.filter((game) => game.isHandled === true).length;
+    const estimatedProducts = products.filter((product) =>
+      product.verifiedForPublic === true &&
+      product.status === '掲載中' &&
+      (product.category === 'ゲーム内通貨・石垢' || product.category === '引退垢') &&
+      typeof product.price === 'number' &&
+      product.price > 0 &&
+      Boolean(product.title?.trim()) &&
+      Boolean(product.summary?.trim())
+    ).length;
+    const estimatedRates = stoneRates.filter((rate) =>
+      rate.verifiedForPublic === true &&
+      rate.status === '取扱中' &&
+      rate.isPreparation === false &&
+      typeof rate.currentPrice === 'number' &&
+      rate.currentPrice > 0 &&
+      Boolean(rate.currencyAmount?.trim()) &&
+      Boolean(rate.planName?.trim()) &&
+      Boolean(rate.conditions?.trim())
+    ).length;
+    const confirmMessage = [
+      '公開専用データを事前作成します。現在のホームページ表示・商品データ・価格履歴には変更を加えません。',
+      '',
+      '公開対象の目安（禁止語句などは実際の処理でさらに除外されます）:',
+      `ゲームタイトル: ${estimatedGames}件`,
+      `商品: ${estimatedProducts}件`,
+      `石垢料金: ${estimatedRates}件`,
+      '',
+      '0件の項目がある場合は、管理画面の確認状態を見直してから実行してください。',
+      '続行しますか？',
+    ].join('\\n');
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsBuildingPublicCatalog(true);
+    setPublicCatalogError(null);
+    try {
+      const result = await rebuildPublicCatalogMirrors();
+      setPublicCatalogStatus(result);
+    } catch (error) {
+      setPublicCatalogError(error instanceof Error ? error.message : '公開専用データの事前作成に失敗しました。');
+    } finally {
+      setIsBuildingPublicCatalog(false);
+    }
+  };
 
   // File input refs for mobile photo upload
   const newProductFileInputRef = useRef<HTMLInputElement>(null);
@@ -1377,6 +1433,32 @@ export const AdminDashboardView: React.FC = () => {
               </div>
               <div className="text-[10px] text-stone-500">Named Enterprise Firestore</div>
             </div>
+          </div>
+
+          {/* Pre-stage public catalog without changing the current storefront listeners */}
+          <div className="rounded-xl bg-[#111216] border border-stone-800 p-5 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">公開専用データの事前準備</h3>
+              <p className="text-[11px] text-stone-400 mt-1 leading-relaxed">
+                現在のホームページ表示は変更せず、将来のセキュリティ切替に使う公開専用データだけを作成します。元の商品・価格・価格履歴・商品番号台帳は変更しません。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleBuildPublicCatalog}
+              disabled={isBuildingPublicCatalog || !isFirestoreConnected}
+              className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isBuildingPublicCatalog ? '公開専用データを作成中...' : '公開専用データを事前作成'}
+            </button>
+            {publicCatalogStatus && (
+              <div className="text-[11px] text-emerald-300 space-y-1">
+                <div>作成結果: ゲーム {publicCatalogStatus.games}件 / 商品 {publicCatalogStatus.products}件 / 石垢料金 {publicCatalogStatus.rates}件</div>
+                <div className="font-mono break-all">世代ID: {publicCatalogStatus.generationId}</div>
+                <div>{publicCatalogStatus.activated ? '公開用世代の準備が完了しました。現在のホームページ表示はまだ切り替わっていません。' : '新しい世代は作成されましたが、より新しい公開世代が既に有効なため切替は行っていません。'}</div>
+              </div>
+            )}
+            {publicCatalogError && <div className="text-[11px] text-red-300">{publicCatalogError}</div>}
           </div>
 
           {/* Security & Rules Info */}
