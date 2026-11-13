@@ -18,17 +18,15 @@ Status: source review of the draft integration branch only. No production or Fir
 
 ### Admin mutation and publication paths
 
-The StoreContext mutation wrappers currently call `rebuildPublicCatalogMirrors()` after successful canonical writes for:
-- product create, update, delete, and publish/unpublish status changes;
-- stone-rate price changes, plan edits, plan additions, and bulk preparation;
-- game edits, new handled titles, candidate creation, and candidate promotion;
-- public-facing settings changes.
+Canonical admin mutations and public catalog publication are deliberately separate in the current integration branch:
+- Product, stone-rate, game, request, and settings actions write only their canonical admin collections.
+- StoreContext does not automatically call `rebuildPublicCatalogMirrors()` after each mutation.
+- Public catalog generation rebuild is a separate, manual admin action in the dashboard.
+- That manual full-catalog publication action is currently disabled by the free-quota safety gate until the named database edition, free-tier assignment, and remaining quota are verified.
 
-The builder reads canonical data as an authorized admin, applies explicit public field allowlists and eligibility checks, stages a new immutable generation in bounded batches, and changes the active pointer only after staging succeeds. A failed staging operation leaves the previous active generation selected. Revision fencing prevents an older concurrent publisher from replacing a newer generation.
+When the publication action is eventually enabled and run, the builder reads canonical data as an authorized admin, applies explicit public field allowlists and eligibility checks, stages a new immutable generation in bounded batches, and changes the active pointer only after staging succeeds. A failed staging operation leaves the previous active generation selected. Revision fencing prevents an older concurrent publisher from replacing a newer generation.
 
-This is a sequential canonical-write-then-publish workflow, not a single transaction spanning the canonical mutation and public snapshot. If the canonical write succeeds but publication fails, the previous public generation remains visible until an administrator retries publication. The UI surfaces a publication failure; it must not be described as a fully successful public update.
-
-The current implementation performs a full catalog rebuild after each relevant admin mutation. This is simple and keeps the published snapshot coherent, but it can create substantial reads/writes as the catalog grows. Confirm the exact database free-tier assignment and current usage before running it against production. A future optimization could coalesce writes or publish only affected records, but must preserve the immutable-generation and atomic-pointer safety properties.
+This separation avoids unexpectedly triggering a full-catalog read/write operation after every ordinary admin edit. It also means a newly created or edited canonical product is not visible on the public storefront until an authorized administrator performs a successful manual generation publication. Do not describe a canonical save as a completed public listing. Before any production publication, verify the exact database free-tier assignment and current usage; do not enable billing or execute the operation while those facts remain unknown.
 
 ### Public data eligibility and exclusions
 
