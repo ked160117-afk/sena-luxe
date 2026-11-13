@@ -40,7 +40,7 @@ Prevent unauthenticated visitors from reading private product drafts, unlisted p
 | `admins` | None | Read/write by authorized admins | Admin authorization |
 
 ## Publication rules
-- A product may enter the active generation's `products` subcollection only when `verifiedForPublic === true`, category is `引退垢`, status is `掲載中`, price is a positive number, and title/summary are non-empty.
+- A product may enter the active generation's `products` subcollection only when `verifiedForPublic === true`, category is one of `引退垢`, `初期垢`, `石垢`, or `進行済み石垢`, status is `掲載中`, price is a positive number, and title/summary are non-empty. The former `ゲーム内通貨・石垢` label is accepted only as a legacy edit-time mapping to `石垢`, not as a new category.
 - Every public product document must be constructed from an explicit field allowlist. Never spread the canonical product object into the public document.
 - Unpublishing, deleting, or invalidating a product must remove its public mirror in the same trusted write operation.
 - A stone rate may enter the active generation's `stoneRates` subcollection only when `currencyType === '無償'` is explicitly recorded, it is otherwise explicitly verified, status is `取扱中`, preparation is false, current price is positive, and required display fields are non-empty. `有償`, `未確認`, and missing currency types are excluded. Do not copy `priceHistory`, internal notes, or reference prices unless separately approved for public display.
