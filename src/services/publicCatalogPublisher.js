@@ -51,6 +51,51 @@ export async function activatePublicCatalogGeneration(database, generationId, pu
  * must not be changed until this function resolves successfully.
  */
 export async function stagePublicCatalogGeneration(database, generationId, rows, publicSettings, counts) {
+  if (typeof generationId !== 'string' || !generationId.trim() || generationId.length > 120) {
+    throw new Error('公開世代IDが不正です。');
+  }
+  if (!Array.isArray(rows) || !counts || typeof counts !== 'object') {
+    throw new Error('公開データの形式が不正です。');
+  }
+
+  const allowedKinds = new Set(['games', 'products', 'stoneRates']);
+  const seen = new Set();
+  const actualCounts = { games: 0, products: 0, rates: 0 };
+
+  for (const row of rows) {
+    if (!row || !allowedKinds.has(row.kind) || typeof row.id !== 'string' ||
+        !row.id.trim() || row.id.includes('/') || !row.data ||
+        typeof row.data !== 'object' || Array.isArray(row.data)) {
+      throw new Error('公開データに不正なレコードが含まれています。');
+    }
+    const key = `${row.kind}/${row.id}`;
+    if (seen.has(key)) throw new Error('公開データに重複したIDがあります。');
+    seen.add(key);
+    if (row.data.id !== row.id) throw new Error('公開データのIDが一致しません。');
+
+    if (row.kind === 'games') actualCounts.games += 1;
+    if (row.kind === 'products') actualCounts.products += 1;
+    if (row.kind === 'stoneRates') actualCounts.rates += 1;
+  }
+
+  if (actualCounts.games !== counts.games ||
+      actualCounts.products !== counts.products ||
+      actualCounts.rates !== counts.rates ||
+      !Number.isInteger(counts.games) || !Number.isInteger(counts.products) ||
+      !Number.isInteger(counts.rates)) {
+    throw new Error('公開データの件数が一致しません。');
+  }
+
+  if (!publicSettings || typeof publicSettings !== 'object' || Array.isArray(publicSettings)) {
+    throw new Error('公開設定の形式が不正です。');
+  }
+  const allowedSettings = ['lineUrl', 'shopNotice', 'enableDirectLineCopy', 'contactDeskHours'];
+  const settingKeys = Object.keys(publicSettings);
+  if (settingKeys.length !== allowedSettings.length ||
+      !allowedSettings.every((key) => Object.prototype.hasOwnProperty.call(publicSettings, key))) {
+    throw new Error('公開設定に許可されていない項目、または不足項目があります。');
+  }
+
   const generationRef = (kind, id) =>
     doc(database, 'publicCatalogGenerations', generationId, kind, id);
 
