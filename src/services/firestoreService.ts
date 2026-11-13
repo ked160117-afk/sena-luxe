@@ -209,7 +209,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       price: product.price,
       status: '掲載中' as const,
       verifiedForPublic: true,
-      imageUrl: product.imageUrl || '',
+      imageUrl: typeof product.imageUrl === 'string' && product.imageUrl.length <= 250000 ? product.imageUrl : '',
       deviceCompatibility: product.deviceCompatibility || '',
       keyHighlights: Array.isArray(product.keyHighlights) ? product.keyHighlights.slice(0, 5) : [],
       createdAt: product.createdAt,
