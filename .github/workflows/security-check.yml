@@ -33,25 +33,7 @@ jobs:
           java-version: '21'
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Upload resolved dependency lockfile for reproducibility review
-        uses: actions/upload-artifact@v7
-        with:
-          name: generated-package-lock-${{ github.run_id }}
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Export lockfile chunks for repository lock-in
-        run: |
-          base64 -w0 package-lock.json > /tmp/package-lock.base64
-          split -b 40000 -d -a 3 /tmp/package-lock.base64 /tmp/package-lock.chunk.
-          for chunk in /tmp/package-lock.chunk.*; do
-            printf 'LOCKFILE_CHUNK_%s:' "${chunk##*.}"
-            cat "$chunk"
-            printf '\n'
-          done
+        run: npm ci
 
       - name: Verify Firestore rules target is the named production database only
         run: |
@@ -90,7 +72,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Explain flagged production dependency paths
         run: |
