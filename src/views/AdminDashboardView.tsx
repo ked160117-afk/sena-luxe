@@ -937,6 +937,7 @@ export const AdminDashboardView: React.FC = () => {
                   <tr key={plan.id} className="hover:bg-stone-900/40 transition-colors">
                     <td className="py-3 px-3 sm:px-4">
                       <div className="text-[11px] text-[#d4af37] font-medium">{plan.gameName}</div>
+                      <span className="inline-flex mt-1 text-[9px] px-1.5 py-0.5 rounded border border-[#d4af37]/30 text-[#e6c875]">{plan.accountType === '進行済み' || plan.accountType === '進行済み石垢' ? '進行済み石垢' : '石垢'}</span>
                       <div className="font-semibold text-white">{plan.verifiedForPublic ? plan.planName : '未確認プラン（非公開）'}</div>
                     </td>
                     <td className="py-3 px-3 sm:px-4">
