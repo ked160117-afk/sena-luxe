@@ -150,6 +150,11 @@ test('public product rules reject stone-account products; stone rates are the on
   await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/stone-account-product`), stoneAccountProduct));
 });
 
+test('public product rules reject image payloads above the bounded document limit', async () => {
+  const oversizedProduct = { ...publicProduct, id: 'oversized-image', imageUrl: 'x'.repeat(250001) };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/oversized-image`), oversizedProduct));
+});
+
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const paidRate = { ...publicRate, currencyType: '有償' };
   const unknownRate = { ...publicRate, currencyType: '未確認' };
