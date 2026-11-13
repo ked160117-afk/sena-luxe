@@ -14,6 +14,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { readFile } from 'node:fs/promises';
+import { reservePublicCatalogRevision, activatePublicCatalogGeneration } from '../src/services/publicCatalogPublisher.js';
 
 // The Firestore Emulator currently cannot reliably bind rules to the production named database.
 // These automated tests validate the rules against an isolated demo project's default database.
@@ -323,4 +324,56 @@ test('authorized admin can publish only allowlisted games, rates, settings, and 
   await assertFails(updateDoc(doc(adminDb, 'publicCatalogControl/active'), {
     privateAdminNote: 'must be rejected',
   }));
+});
+
+test('publisher revision fence preserves the active generation on failed staging and rejects stale concurrent publishes', async () => {
+  const pointerRef = doc(adminDb, 'publicCatalogControl/active');
+  const initialPointer = await getDoc(pointerRef);
+  const initialGeneration = initialPointer.data().generationId;
+  const initialRevision = initialPointer.data().publishRevision;
+
+  // Simulate a publisher reserving a revision and then failing during staging:
+  // because activation is never called, the known-good pointer stays untouched.
+  const failedStagingRevision = await reservePublicCatalogRevision(adminDb);
+  const afterFailedStaging = await getDoc(pointerRef);
+  assert.equal(afterFailedStaging.data().generationId, initialGeneration);
+  assert.equal(afterFailedStaging.data().publishRevision, initialRevision);
+
+  // Two concurrent publishers must receive unique, monotonically increasing revisions.
+  const [revisionA, revisionB] = await Promise.all([
+    reservePublicCatalogRevision(adminDb),
+    reservePublicCatalogRevision(adminDb),
+  ]);
+  assert.notEqual(revisionA, revisionB);
+  const olderRevision = Math.min(revisionA, revisionB);
+  const newerRevision = Math.max(revisionA, revisionB);
+  assert.ok(olderRevision > failedStagingRevision);
+
+  const counts = { games: 1, products: 1, rates: 1 };
+  assert.equal(
+    await activatePublicCatalogGeneration(adminDb, INACTIVE_GENERATION, newerRevision, counts),
+    true,
+  );
+  assert.equal(
+    await activatePublicCatalogGeneration(adminDb, ACTIVE_GENERATION, olderRevision, counts),
+    false,
+  );
+
+  let activePointer = await getDoc(pointerRef);
+  assert.equal(activePointer.data().generationId, INACTIVE_GENERATION);
+  assert.equal(activePointer.data().publishRevision, newerRevision);
+  await assertSucceeds(getDoc(doc(publicDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/staging-secret`)));
+  await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE_GENERATION}/products/product-a`)));
+
+  // Explicit rollback is a new, higher revision pointing to the retained old generation.
+  const rollbackRevision = await reservePublicCatalogRevision(adminDb);
+  assert.equal(
+    await activatePublicCatalogGeneration(adminDb, ACTIVE_GENERATION, rollbackRevision, counts),
+    true,
+  );
+  activePointer = await getDoc(pointerRef);
+  assert.equal(activePointer.data().generationId, ACTIVE_GENERATION);
+  assert.equal(activePointer.data().publishRevision, rollbackRevision);
+  await assertSucceeds(getDoc(doc(publicDb, `publicCatalogGenerations/${ACTIVE_GENERATION}/products/product-a`)));
+  await assertFails(getDoc(doc(publicDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/staging-secret`)));
 });
