@@ -161,7 +161,7 @@ export const AdminDashboardView: React.FC = () => {
   // ==========================================
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
-  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('ゲーム内通貨・石垢');
+  const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('引退垢');
   const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
   const [newProdVideoFile, setNewProdVideoFile] = useState<File | null>(null);
   const [newVideoUploadProgress, setNewVideoUploadProgress] = useState<number | null>(null);
@@ -451,6 +451,7 @@ export const AdminDashboardView: React.FC = () => {
     setNewProdPrice('');
     setNewProdIsPriceConfirmed(false);
     setNewProdStatus('掲載停止');
+    setNewProdCategory('引退垢');
   };
 
   // Open Product Edit Modal
