@@ -267,6 +267,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       planName: rate.planName,
       currencyName: rate.currencyName,
       currencyType: '無償',
+      accountType: typeof rate.accountType === 'string' && /進行済み|進行中|進行/.test(rate.accountType) ? '進行済み石垢' : '石垢',
       currencyAmount: rate.currencyAmount,
       conditions: rate.conditions,
       currentPrice: rate.currentPrice,
