@@ -95,7 +95,7 @@ export const AdminDashboardView: React.FC = () => {
     const estimatedProducts = products.filter((product) =>
       product.verifiedForPublic === true &&
       product.status === '掲載中' &&
-      product.category === '引退垢' &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(product.category) &&
       typeof product.price === 'number' &&
       product.price > 0 &&
       Boolean(product.title?.trim()) &&
@@ -399,7 +399,7 @@ export const AdminDashboardView: React.FC = () => {
     }
 
     const isVerifiedForPublic =
-      (newProdCategory === 'ゲーム内通貨・石垢' || newProdCategory === '引退垢') &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(newProdCategory) &&
       newProdIsPriceConfirmed &&
       Boolean(newProdPrice.trim()) &&
       Number(newProdPrice) > 0 &&
@@ -459,7 +459,7 @@ export const AdminDashboardView: React.FC = () => {
     const isVerified = product.verifiedForPublic === true;
     setEditingProduct(product);
     setEditProdTitle(product.title);
-    setEditProdCategory(product.category);
+    setEditProdCategory(product.category === 'ゲーム内通貨・石垢' ? '石垢' : product.category);
     setEditProdIsPriceConfirmed(isVerified && product.price !== null);
     setEditProdPrice(isVerified && product.price !== null ? String(product.price) : '');
     setEditProdSummary(isVerified ? product.summary || '' : '');
@@ -482,7 +482,7 @@ export const AdminDashboardView: React.FC = () => {
     }
 
     const isVerifiedForPublic =
-      (editProdCategory === 'ゲーム内通貨・石垢' || editProdCategory === '引退垢') &&
+      ['引退垢', '初期垢', '石垢', '進行済み石垢'].includes(editProdCategory) &&
       editProdIsPriceConfirmed &&
       Boolean(editProdPrice.trim()) &&
       Number(editProdPrice) > 0 &&
@@ -1595,8 +1595,10 @@ export const AdminDashboardView: React.FC = () => {
                     onChange={(e) => setNewProdCategory(e.target.value as ProductCategory)}
                     className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                   >
-                    <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
                     <option value="引退垢">引退垢</option>
+                    <option value="初期垢">初期垢</option>
+                    <option value="石垢">石垢</option>
+                    <option value="進行済み石垢">進行済み石垢</option>
                   </select>
                 </div>
                 <div>
@@ -1814,8 +1816,10 @@ export const AdminDashboardView: React.FC = () => {
                   onChange={(e) => setEditProdCategory(e.target.value as ProductCategory)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
                 >
-                  <option value="ゲーム内通貨・石垢">ゲーム内通貨・石垢</option>
                   <option value="引退垢">引退垢</option>
+                  <option value="初期垢">初期垢</option>
+                  <option value="石垢">石垢</option>
+                  <option value="進行済み石垢">進行済み石垢</option>
                 </select>
               </div>
 
