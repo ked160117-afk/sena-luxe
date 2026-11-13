@@ -31,7 +31,6 @@ import {
   updateRequestStatusDoc,
   saveSettingsDoc,
   checkIsUserAdmin,
-  rebuildPublicCatalogMirrors,
 } from '../services/firestoreService';
 import {
   GameTitle,
