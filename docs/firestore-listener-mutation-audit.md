@@ -30,7 +30,7 @@ This separation avoids unexpectedly triggering a full-catalog read/write operati
 
 ### Public data eligibility and exclusions
 
-- Public products are limited to verified, published `引退垢` entries with valid positive prices and required bounded display fields.
+- Public products are limited to verified, published `引退垢` / `初期垢` / `石垢` / `進行済み石垢` entries with valid positive prices and required bounded display fields.
 - Public stone rates require explicit `currencyType: '無償'`, verified public status, active handling status, non-preparation state, and a valid positive price.
 - Public games must be handled titles.
 - Public settings use a fixed field allowlist.
