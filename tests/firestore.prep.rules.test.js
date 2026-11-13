@@ -111,6 +111,11 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
+test('public product rules keep stone accounts out of the generic product catalog', async () => {
+  const stoneAccountProduct = { ...publicProduct, id: 'stone-account-product', category: 'ゲーム内通貨・石垢' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE}/products/stone-account-product`), stoneAccountProduct));
+});
+
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const baseRate = {
     id: 'rate-test',
