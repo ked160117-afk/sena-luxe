@@ -77,7 +77,7 @@ service cloud.firestore {
       request.resource.data.gameId.size() > 0 &&
       request.resource.data.gameName is string &&
       request.resource.data.gameName.size() > 0 &&
-      request.resource.data.category == '引退垢' &&
+      request.resource.data.category in ['引退垢', '初期垢', '石垢', '進行済み石垢'] &&
       request.resource.data.status == '掲載中' &&
       request.resource.data.verifiedForPublic == true &&
       request.resource.data.price is number &&
