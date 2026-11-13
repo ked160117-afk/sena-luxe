@@ -145,6 +145,11 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
+test('public product rules reject stone-account products; stone rates are the only public stone catalog', async () => {
+  const stoneAccountProduct = { ...publicProduct, category: 'ゲーム内通貨・石垢' };
+  await assertFails(setDoc(doc(adminDb, `publicCatalogGenerations/${INACTIVE_GENERATION}/products/stone-account-product`), stoneAccountProduct));
+});
+
 test('public stone-rate rules reject paid and unverified currency types', async () => {
   const paidRate = { ...publicRate, currencyType: '有償' };
   const unknownRate = { ...publicRate, currencyType: '未確認' };
