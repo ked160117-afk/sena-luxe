@@ -1446,13 +1446,13 @@ export const AdminDashboardView: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-stone-400 font-medium">Firestore Database ID</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  ONLINE
+                  応答あり
                 </span>
               </div>
               <div className="font-mono text-xs font-bold text-stone-200 truncate" title="ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699">
                 ai-studio-senaluxe-db843e7b-ccb6-43a4-9c9e-55c8dd6ab699
               </div>
-              <div className="text-[10px] text-stone-500">Named Enterprise Firestore</div>
+              <div className="text-[10px] text-stone-500">名前付きFirestore（エディション未確認）</div>
             </div>
           </div>
 
@@ -1523,7 +1523,7 @@ export const AdminDashboardView: React.FC = () => {
 
             <div className="pt-3 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-[11px] text-stone-400">
-                マスターデータの初期同期状態：{isFirestoreConnected ? '同期稼働中' : '確認中'}
+                Firestoreサーバー応答：{isFirestoreConnected ? '応答あり（権限・同期状態は未確認）' : '未確認'}
               </div>
               <button
                 type="button"
