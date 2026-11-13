@@ -1,6 +1,6 @@
 # Firestore privacy hardening migration plan
 
-Status (2026-11-13): public/admin listener split and immutable generation publisher are implemented on the draft security branch. TypeScript, all 7 Firestore Rules Emulator tests, and production build passed in CI. Production dependency audit still blocks release with 5 high findings. The emulator uses an isolated demo project's default database, not the production named database. No production Firestore rules, live data, or Worker deployment have been changed.
+Status (2026-11-13): public/admin listener split and immutable generation publisher are implemented on the draft security branch. Latest CI on the PR branch passed TypeScript, all 7 Firestore Rules Emulator tests, production build, exact named-database target validation, browser bundle check, and dependency gates. Production-only audit: 0 advisories. Full dependency tree: 13 moderate, 0 high, 0 critical (CI blocks high/critical). The emulator uses an isolated demo project's default database, not the production named database. Generation failure/rollback/concurrency, App Check, real-browser checks, and production deployment remain pending. No production Firestore rules, live data, or Worker deployment have been changed.
 
 ## Goal
 Prevent unauthenticated visitors from reading private product drafts, unlisted products, internal price history, inquiry records, sequence ledgers, admin settings, and admin records directly from Firestore. Publicly displayed catalog fields remain public by design.
