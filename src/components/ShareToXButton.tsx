@@ -44,7 +44,7 @@ export const ShareToXButton: React.FC<ShareToXButtonProps> = ({
     '',
     tags.map((tag) => `#${tag}`).join(' '),
   ].join('\n');
-  const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(postText)}`;
+  const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(postText)}`;
 
   return (
     <a
