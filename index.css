@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-cinzel: 'Cinzel', serif;
+    --font-serif-jp: 'Noto Serif JP', serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+}
+
+.font-cinzel {
+  font-family: var(--font-cinzel);
+}
+
+.font-serif-jp {
+  font-family: var(--font-serif-jp);
+}
+
+.font-sans-body {
+  font-family: var(--font-sans);
+}
+
+/* Luxury gold gradients */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #f7e7ce 0%, #e5c158 35%, #c59b27 70%, #fae69e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gold-subtle {
+  background: linear-gradient(135deg, #f0d588 0%, #cfa43b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.border-gold-subtle {
+  border-color: rgba(212, 175, 55, 0.22);
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #ecd17d 0%, #c59b27 50%, #9a7314 100%);
+}
+
+.gold-button-gradient {
+  background: linear-gradient(135deg, #ebd07b 0%, #caa034 50%, #a87f1e 100%);
+  color: #0b0c0e;
+}
+
+.gold-button-gradient:hover {
+  background: linear-gradient(135deg, #f5df93 0%, #d8ac3c 50%, #ba8e25 100%);
+}
+
+/* Subtle background grain & glow */
+.bg-radial-luxury {
+  background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.08) 0%, rgba(11, 12, 14, 0) 70%);
+}
+
+/* Custom scrollbar for desktop tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0b0c0e;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.45);
+}
