@@ -245,6 +245,11 @@ export const GameProductsView: React.FC = () => {
                       title={item.title}
                     />
                   </div>
+                  {item.imageUrls && item.imageUrls.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-1 mb-3" aria-label="商品画像一覧">
+                      {item.imageUrls.slice(1, 10).map((url, index) => <img key={index} src={url} alt={`${item.title} 商品画像 ${index + 2}`} loading="lazy" className="w-16 h-16 rounded-md object-cover border border-stone-700 shrink-0" />)}
+                    </div>
+                  )}
 
                   {/* Game Name and OS compatibility */}
                   <div className="flex items-center justify-between gap-2 mb-1">
