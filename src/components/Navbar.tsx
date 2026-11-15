@@ -5,10 +5,10 @@
 
 import React, { useState } from 'react';
 import { useStore, AppView } from '../context/StoreContext';
-import { Menu, X, Shield, MessageCircle } from 'lucide-react';
+import { Menu, X, MessageCircle } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentView, setCurrentView, isAdminLoggedIn } = useStore();
+  const { currentView, setCurrentView } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNav = (view: AppView) => {
@@ -67,15 +67,6 @@ export const Navbar: React.FC = () => {
               );
             })}
 
-            {isAdminLoggedIn && (
-              <button
-                onClick={() => handleNav('admin_dashboard')}
-                className="flex items-center gap-1.5 text-xs text-[#d4af37] hover:text-[#f7e7ce] px-2.5 py-1 rounded bg-[#d4af37]/10 border border-[#d4af37]/30 whitespace-nowrap"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                管理画面
-              </button>
-            )}
           </nav>
 
           {/* Zone 3: 1 Primary Action */}
@@ -145,21 +136,6 @@ export const Navbar: React.FC = () => {
               <span>公式LINEで問い合わせる</span>
             </a>
 
-            {isAdminLoggedIn ? (
-              <button
-                onClick={() => handleNav('admin_dashboard')}
-                className="w-full py-2.5 rounded-lg text-xs font-medium text-[#d4af37] border border-[#d4af37]/40 text-center"
-              >
-                管理者ダッシュボードを開く
-              </button>
-            ) : (
-              <button
-                onClick={() => handleNav('admin_login')}
-                className="w-full py-2 text-[11px] text-stone-500 hover:text-stone-400 text-center"
-              >
-                管理者ログイン
-              </button>
-            )}
           </div>
         </div>
       )}
