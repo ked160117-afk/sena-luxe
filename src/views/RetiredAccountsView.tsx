@@ -6,6 +6,7 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ProductCardImage } from '../components/ProductCardImage';
+import { ShareToXButton } from '../components/ShareToXButton';
 import { ArrowRight, MessageCircle, ShieldCheck } from 'lucide-react';
 
 export const RetiredAccountsView: React.FC = () => {
@@ -93,6 +94,13 @@ export const RetiredAccountsView: React.FC = () => {
                     <MessageCircle className="w-4 h-4" />
                     公式LINEで在庫・詳細を確認 <ArrowRight className="w-3.5 h-3.5" />
                   </button>
+                  <ShareToXButton
+                    gameName={item.gameName}
+                    gameShortName={game?.shortName}
+                    gameCode={item.gameCode}
+                    productTitle={item.title}
+                    category={item.category}
+                  />
                 </div>
               </article>
             );
