@@ -12,6 +12,7 @@ import { useStore } from '../context/StoreContext';
 import { ProductCategory, ProductStatus } from '../types';
 import { MessageCircle, ShieldAlert, Clock, ArrowRight, HelpCircle } from 'lucide-react';
 import { ProductCardImage } from '../components/ProductCardImage';
+import { ShareToXButton } from '../components/ShareToXButton';
 
 const CATEGORIES: (ProductCategory | 'ALL')[] = [
   'ALL',
@@ -299,6 +300,13 @@ export const GameProductsView: React.FC = () => {
                     <MessageCircle className="w-4 h-4 fill-black stroke-none" />
                     <span>在庫は公式LINEにてお問い合わせください</span>
                   </button>
+                  <ShareToXButton
+                    gameName={item.gameName}
+                    gameShortName={game?.shortName}
+                    gameCode={item.gameCode}
+                    productTitle={item.title}
+                    category={item.category}
+                  />
                 </div>
               </div>
             );
