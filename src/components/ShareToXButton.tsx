@@ -27,7 +27,7 @@ export const ShareToXButton: React.FC<ShareToXButtonProps> = ({
   const override = X_HASHTAG_NAMES[(gameCode || '').toUpperCase()];
   const fullName = toHashtag(override?.full || gameName);
   const shortName = toHashtag(override?.short || gameShortName || '');
-  const accountTag = category === 'ゲーム内通貨・石垢' ? '石垢' : '引退垢';
+  const accountTag = category === 'ゲーム内通貨・石垢' || category === '石垢' ? '石垢' : category === '初期垢' ? '初期垢' : '引退垢';
   const tags = Array.from(new Set([
     fullName,
     shortName,
