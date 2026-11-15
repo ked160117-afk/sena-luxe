@@ -213,6 +213,7 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
       status: '掲載中' as const,
       verifiedForPublic: true,
       imageUrl: typeof product.imageUrl === 'string' && product.imageUrl.length <= 250000 ? product.imageUrl : '',
+      imageUrls: Array.isArray(product.imageUrls) ? product.imageUrls.filter((url: unknown): url is string => typeof url === 'string' && url.length <= 250000).slice(0, 10) : (typeof product.imageUrl === 'string' && product.imageUrl ? [product.imageUrl] : []),
       deviceCompatibility: product.deviceCompatibility || '',
       keyHighlights: Array.isArray(product.keyHighlights) ? product.keyHighlights.slice(0, 5) : [],
       createdAt: product.createdAt,
@@ -514,6 +515,7 @@ export async function createProductAtomic(data: {
   summary: string;
   price: number | null;
   imageUrl?: string;
+  imageUrls?: string[];
   videoUrl?: string;
   videoStorageId?: string;
   deviceCompatibility?: ProductItem['deviceCompatibility'];
@@ -558,7 +560,8 @@ export async function createProductAtomic(data: {
         price: data.price,
         status: data.status || '掲載停止',
         verifiedForPublic: data.verifiedForPublic === true,
-        imageUrl: data.imageUrl,
+        imageUrl: data.imageUrls?.[0] || data.imageUrl,
+        imageUrls: data.imageUrls?.slice(0, 10),
         videoUrl: data.videoUrl,
         videoStorageId: data.videoStorageId,
         deviceCompatibility: data.deviceCompatibility,
