@@ -186,7 +186,10 @@ export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; pr
     }));
 
   const publicProducts = productsSnap.docs
-    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as ProductItem))
+    .map((snapshot) => {
+      const product = { id: snapshot.id, ...snapshot.data() } as ProductItem;
+      return { ...product, category: product.category === 'ゲーム内通貨・石垢' ? '石垢' : product.category };
+    })
     .filter((product) =>
       product.verifiedForPublic === true &&
       product.status === '掲載中' &&
