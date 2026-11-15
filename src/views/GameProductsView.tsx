@@ -145,12 +145,12 @@ export const GameProductsView: React.FC = () => {
           </div>
           <div className="space-y-1.5">
             <h3 className="text-base sm:text-lg font-semibold text-white">
-              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
+              {selectedCategory === '石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
                 ? '現在石垢の取り扱いはしておりません。'
                 : '現在商品を準備中です'}
             </h3>
             <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-              {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
+              {selectedCategory === '石垢' && visibleStoneRates.length === 0 && ['game-kitaou', 'game-czn', 'game-baki-tsp', 'game-crows-unlimited', 'game-racing-master', 'game-twinklestar', 'game-hxh-nen-survivor'].includes(selectedGame?.id || '')
                 ? 'ご用意できましたら対応します。'
                 : selectedGame ? `「${selectedGame.name}」の商品は現在準備中です。` : '商品は現在準備中です。'}
               <br className="hidden sm:inline" />
@@ -182,7 +182,7 @@ export const GameProductsView: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-8">
-          {selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0 && (
+          {selectedCategory === '石垢' && visibleStoneRates.length > 0 && (
             <section className="rounded-xl bg-[#111216] border border-[#d4af37]/30 overflow-hidden">
               <div className="px-4 sm:px-5 py-4 bg-gradient-to-r from-[#201a0d] to-[#111216] border-b border-[#d4af37]/25 flex items-center gap-3">
                 {selectedGame?.currencyIconUrl || selectedGame?.iconUrl ? (
