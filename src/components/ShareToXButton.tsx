@@ -34,7 +34,7 @@ export const ShareToXButton: React.FC<ShareToXButtonProps> = ({
     shortName,
     accountTag,
     'アカウント販売',
-    'アカ販売',
+    '赤販売',
     'セナリュックス',
   ].filter(Boolean)));
   const postText = [
