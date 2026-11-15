@@ -417,7 +417,7 @@ export const AdminDashboardView: React.FC = () => {
         const img = new Image();
         img.onerror = () => resolve(reader.result as string);
         img.onload = () => {
-          const maxDim = 1200;
+          const maxDim = 900;
           const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
           const canvas = document.createElement('canvas');
           canvas.width = Math.max(1, Math.round(img.width * scale));
@@ -425,7 +425,23 @@ export const AdminDashboardView: React.FC = () => {
           const ctx = canvas.getContext('2d');
           if (!ctx) { resolve(reader.result as string); return; }
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/webp', 0.72));
+          let quality = 0.65;
+          let encoded = canvas.toDataURL('image/webp', quality);
+          while (encoded.length > 180000 && canvas.width > 360 && canvas.height > 360) {
+            const smaller = document.createElement('canvas');
+            smaller.width = Math.max(1, Math.round(canvas.width * 0.8));
+            smaller.height = Math.max(1, Math.round(canvas.height * 0.8));
+            const smallerContext = smaller.getContext('2d');
+            if (!smallerContext) break;
+            smallerContext.drawImage(canvas, 0, 0, smaller.width, smaller.height);
+            canvas.width = smaller.width;
+            canvas.height = smaller.height;
+            const resizedContext = canvas.getContext('2d');
+            if (resizedContext) resizedContext.drawImage(smaller, 0, 0);
+            quality = Math.max(0.45, quality - 0.05);
+            encoded = canvas.toDataURL('image/webp', quality);
+          }
+          resolve(encoded);
         };
         img.src = reader.result;
       };
@@ -1741,7 +1757,7 @@ export const AdminDashboardView: React.FC = () => {
                     accept="image/*"
                     multiple
                     onChange={(e) => handleMultipleProductImages(e, (dataUrls) => {
-                      setNewProdImageUrls((current) => { const next = [...current, ...dataUrls]; setNewProdImageUrl(next[0] || ''); return next; });
+                      if (newProdImageUrls.length + dataUrls.length > 5) window.alert('商品画像は合計5枚まで登録できます。超過分は追加されません。'); const next = [...newProdImageUrls, ...dataUrls].slice(0, 5); setNewProdImageUrls(next); setNewProdImageUrl(next[0] || '');
                     })}
                     className="hidden"
                   />
@@ -1956,7 +1972,7 @@ export const AdminDashboardView: React.FC = () => {
                     accept="image/*"
                     multiple
                     onChange={(e) => handleMultipleProductImages(e, (dataUrls) => {
-                      setEditProdImageUrls((current) => { const next = [...current, ...dataUrls]; setEditProdImageUrl(next[0] || ''); return next; });
+                      if (editProdImageUrls.length + dataUrls.length > 5) window.alert('商品画像は合計5枚まで登録できます。超過分は追加されません。'); const next = [...editProdImageUrls, ...dataUrls].slice(0, 5); setEditProdImageUrls(next); setEditProdImageUrl(next[0] || '');
                     })}
                     className="hidden"
                   />
