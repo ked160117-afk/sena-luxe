@@ -177,6 +177,8 @@ export const AdminDashboardView: React.FC = () => {
   // Product Registration Modal State
   // ==========================================
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [createProductError, setCreateProductError] = useState<string | null>(null);
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('石垢');
   const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
@@ -467,9 +469,13 @@ export const AdminDashboardView: React.FC = () => {
   // Handle Product Add
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProdTitle.trim() || !newProdGameId) return;
+    if (isCreatingProduct) return;
+    if (!newProdTitle.trim() || !newProdGameId) {
+      setCreateProductError('ゲームタイトルと商品タイトルを入力してください。');
+      return;
+    }
     if (newProdVideoFile && newProdVideoFile.size > 15 * 1024 * 1024) {
-      window.alert('動画は15MB以下にしてください。');
+      setCreateProductError('動画は15MB以下にしてください。');
       return;
     }
 
@@ -480,7 +486,7 @@ export const AdminDashboardView: React.FC = () => {
       Number(newProdPrice) > 0 &&
       Boolean(newProdSummary.trim());
     if (newProdStatus === '掲載中' && !isVerifiedForPublic) {
-      window.alert('公開するには、商品説明と確認済み価格を入力してください。');
+      setCreateProductError('公開するには、商品説明と確認済み価格を入力してください。');
       return;
     }
 
@@ -489,45 +495,76 @@ export const AdminDashboardView: React.FC = () => {
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const createdProduct = await addNewProduct({
-      gameId: newProdGameId,
-      category: newProdCategory,
-      deviceCompatibility: newProdDevice,
-      title: newProdTitle.trim(),
-      summary: newProdSummary.trim(),
-      price: isVerifiedForPublic ? Number(newProdPrice) : null,
-      verifiedForPublic: isVerifiedForPublic,
-      imageUrl: newProdImageUrls[0] || newProdImageUrl.trim() || undefined,
-      imageUrls: newProdImageUrls.length ? newProdImageUrls : (newProdImageUrl.trim() ? [newProdImageUrl.trim()] : []),
-      keyHighlights: highlightsArr,
-      status: isVerifiedForPublic ? newProdStatus : '掲載停止',
-    });
+    setIsCreatingProduct(true);
+    setCreateProductError(null);
+    let uploadedVideoId: string | undefined;
+    let productCreated = false;
 
-    if (newProdVideoFile) {
-      try {
+    try {
+      // Upload video first so a failed upload cannot leave a half-created product.
+      if (newProdVideoFile) {
         setNewVideoUploadProgress(0);
-        const videoStorageId = await uploadProductVideoToFirestore(newProdVideoFile, setNewVideoUploadProgress);
-        await updateProduct(createdProduct.id, { videoStorageId });
-      } catch (error) {
-        console.error('Product video upload failed:', error);
-        window.alert('商品情報は登録されましたが、動画の登録に失敗しました。動画サイズとFirebaseの利用枠・ルールを確認してください。');
-      } finally {
-        setNewVideoUploadProgress(null);
+        uploadedVideoId = await uploadProductVideoToFirestore(newProdVideoFile, setNewVideoUploadProgress);
       }
-    }
 
-    setIsProductModalOpen(false);
-    setNewProdTitle('');
-    setNewProdSummary('');
-    setNewProdHighlights('');
-    setNewProdImageUrl('');
-    setNewProdImageUrls([]);
-    setNewProdVideoFile(null);
-    if (newProductVideoInputRef.current) newProductVideoInputRef.current.value = '';
-    setNewProdDevice('iOS・Android両方可');
-    setNewProdPrice('');
-    setNewProdIsPriceConfirmed(false);
-    setNewProdStatus('掲載停止');
+      await addNewProduct({
+        gameId: newProdGameId,
+        category: newProdCategory,
+        deviceCompatibility: newProdDevice,
+        title: newProdTitle.trim(),
+        summary: newProdSummary.trim(),
+        price: isVerifiedForPublic ? Number(newProdPrice) : null,
+        verifiedForPublic: isVerifiedForPublic,
+        imageUrl: newProdImageUrls[0] || newProdImageUrl.trim() || undefined,
+        imageUrls: newProdImageUrls.length ? newProdImageUrls : (newProdImageUrl.trim() ? [newProdImageUrl.trim()] : []),
+        videoStorageId: uploadedVideoId,
+        keyHighlights: highlightsArr,
+        status: isVerifiedForPublic ? newProdStatus : '掲載停止',
+      });
+      productCreated = true;
+
+      setIsProductModalOpen(false);
+      setNewProdTitle('');
+      setNewProdSummary('');
+      setNewProdHighlights('');
+      setNewProdImageUrl('');
+      setNewProdImageUrls([]);
+      setNewProdVideoFile(null);
+      if (newProductVideoInputRef.current) newProductVideoInputRef.current.value = '';
+      setNewProdDevice('iOS・Android両方可');
+      setNewProdPrice('');
+      setNewProdIsPriceConfirmed(false);
+      setNewProdStatus('掲載停止');
+      setCreateProductError(null);
+      window.alert('商品を登録しました。商品一覧に反映されるまで少しお待ちください。');
+    } catch (error) {
+      console.error('Product creation failed:', error);
+      if (uploadedVideoId && !productCreated) {
+        try {
+          await deleteProductVideoFromFirestore(uploadedVideoId);
+        } catch (cleanupError) {
+          console.warn('Could not clean up video after failed product creation:', cleanupError);
+        }
+      }
+      let detail = error instanceof Error ? error.message : String(error);
+      try {
+        const parsed = JSON.parse(detail);
+        if (typeof parsed.error === 'string') detail = parsed.error;
+      } catch {
+        // Keep the original error text when it is not structured JSON.
+      }
+      const friendly = detail.includes('permission-denied')
+        ? '保存権限がありません。管理者ログインとFirestoreの管理者権限を確認してください。'
+        : detail.includes('unavailable') || detail.includes('offline')
+          ? 'Firestoreに接続できません。通信状態を確認して、入力内容を残したまま再試行してください。'
+          : detail.includes('resource-exhausted')
+            ? 'Firestoreの無料利用枠または保存容量の上限に達した可能性があります。'
+            : `登録に失敗しました: ${detail}`;
+      setCreateProductError(friendly);
+    } finally {
+      setNewVideoUploadProgress(null);
+      setIsCreatingProduct(false);
+    }
   };
 
   // Open Product Edit Modal
@@ -1670,6 +1707,20 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
+              {createProductError && (
+                <div role="alert" className="rounded-lg border border-red-800 bg-red-950/50 p-3 text-xs text-red-200">
+                  {createProductError}
+                </div>
+              )}
+              {isCreatingProduct && (
+                <div className="rounded-lg border border-[#d4af37]/40 bg-[#d4af37]/10 p-3 text-xs text-[#f0d98a]">
+                  {newVideoUploadProgress !== null
+                    ? `動画をアップロード中です… ${newVideoUploadProgress}%`
+                    : '商品情報を保存しています…'}
+                  <p className="mt-1 text-[10px] text-stone-400">この画面を閉じたり、登録ボタンを再度押したりしないでください。</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-stone-300 block mb-1 font-semibold">対象ゲームタイトル</label>
@@ -1862,9 +1913,12 @@ export const AdminDashboardView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e]"
+                  disabled={isCreatingProduct}
+                  className="px-5 py-2 rounded font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  発番して登録
+                  {isCreatingProduct
+                    ? (newVideoUploadProgress !== null ? `動画アップロード中 ${newVideoUploadProgress}%` : '登録処理中…')
+                    : '発番して登録'}
                 </button>
               </div>
             </form>
