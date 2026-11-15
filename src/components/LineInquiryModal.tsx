@@ -4,11 +4,11 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useStore } from '../context/StoreContext';
+import { useStore, OFFICIAL_LINE_URL } from '../context/StoreContext';
 import { CheckCircle2, Copy, ExternalLink, X, MessageCircle } from 'lucide-react';
 
 export const LineInquiryModal: React.FC = () => {
-  const { lineModal, closeLineModal, settings } = useStore();
+  const { lineModal, closeLineModal } = useStore();
   const [copied, setCopied] = useState(lineModal.copiedSuccessfully);
 
   useEffect(() => {
@@ -18,7 +18,9 @@ export const LineInquiryModal: React.FC = () => {
   if (!lineModal.isOpen) return null;
 
   const handleOpenLine = () => {
-    window.open(settings.lineUrl, '_blank', 'noopener,noreferrer');
+    // Always use the verified SENA LUXE official friend-add URL.
+    // Firestore settings may contain an outdated LINE destination.
+    window.open(OFFICIAL_LINE_URL, '_blank', 'noopener,noreferrer');
   };
 
   const handleReCopy = async () => {
