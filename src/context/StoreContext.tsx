@@ -262,8 +262,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }
             }
 
-            let iconUrl = data.iconUrl || fallback?.iconUrl || '';
-            let currencyIconUrl = data.currencyIconUrl || fallback?.currencyIconUrl || '';
+            // Prefer the verified catalog artwork over stale Firestore URLs so icon corrections
+            // are reflected for existing game documents without deleting or rewriting them.
+            let iconUrl = fallback?.iconUrl || data.iconUrl || '';
+            let currencyIconUrl = fallback?.currencyIconUrl || data.currencyIconUrl || '';
             // Remove unverified stock images
             if (iconUrl.includes('images.unsplash.com')) {
               iconUrl = '';
