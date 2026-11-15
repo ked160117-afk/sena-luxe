@@ -22,9 +22,12 @@ export interface GameTitle {
 }
 
 export type ProductCategory =
+  | '石垢'
+  | '引退垢'
+  | '初期垢'
+  // Legacy values remain readable for existing Firestore records during migration.
   | 'ゲームアカウント'
   | 'ゲーム内通貨・石垢'
-  | '引退垢'
   | '育成済みデータ'
   | '限定キャラクター・アイテム';
 
