@@ -16,8 +16,9 @@ import { ShareToXButton } from '../components/ShareToXButton';
 
 const CATEGORIES: (ProductCategory | 'ALL')[] = [
   'ALL',
-  'ゲーム内通貨・石垢',
+  '石垢',
   '引退垢',
+  '初期垢',
 ];
 
 export const GameProductsView: React.FC = () => {
@@ -39,7 +40,7 @@ export const GameProductsView: React.FC = () => {
   // including records that may still exist in Firestore for historical/admin purposes.
   const isStoneAccountSale = (p: (typeof products)[number]) => {
     const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
-    return (p.category === 'ゲーム内通貨・石垢' || p.category === '引退垢') && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+    return (['石垢', '引退垢', '初期垢', 'ゲーム内通貨・石垢'] as string[]).includes(p.category) && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
   };
 
   // Stone-rate plans shown directly inside the game's 「ゲーム内通貨・石垢」 category.
@@ -137,7 +138,7 @@ export const GameProductsView: React.FC = () => {
       </div>
 
       {/* Product Grid or Preparation State */}
-      {filteredProducts.length === 0 && !(selectedCategory === 'ゲーム内通貨・石垢' && visibleStoneRates.length > 0) ? (
+      {filteredProducts.length === 0 && !(selectedCategory === '石垢' && visibleStoneRates.length > 0) ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
             <Clock className="w-6 h-6" />
@@ -195,7 +196,7 @@ export const GameProductsView: React.FC = () => {
                     }}
                   />
                 ) : <div className="w-9 h-9 rounded-lg bg-black/40 border border-[#d4af37]/30 flex items-center justify-center"><span className="text-[#d4af37]">◆</span></div>}
-                <div><h2 className="text-base font-bold text-[#f7e7ce]">ゲーム内通貨・石垢 料金表</h2><p className="text-[11px] text-stone-400">掲載プラン・価格・お問い合わせ</p></div>
+                <div><h2 className="text-base font-bold text-[#f7e7ce]">石垢 料金表</h2><p className="text-[11px] text-stone-400">掲載プラン・価格・お問い合わせ</p></div>
               </div>
               <div className="divide-y divide-stone-800">
                 {visibleStoneRates.map((plan) => {
