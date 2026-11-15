@@ -1,5 +1,5 @@
 /**
- * SENA LUXE - Complete Stone Rate Plans & Game Catalog (全43ゲーム・107料金プラン)
+ * SENA LUXE - Complete Stone Rate Plans & Game Catalog (全44ゲーム・107料金プラン)
  * All pricing, conditions, device requirements, and special notes faithfully preserved as instructed.
  */
 
@@ -546,6 +546,12 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     category: '変身ヒロイン×本格バトルRPG', currencyName: '対象外', currencyUnit: '—',
     iconUrl: 'https://play-lh.googleusercontent.com/thYXSAVvr5SYZ5Wsmh_607SuQb14muUa7XDquaIuoK9cFc7ju3qd-IbxdoLl0Ols-jxwfBC6ZmaX2tW-FIQtWOg=w240-h480',
     isHandled: true, description: '星騎士たちを育成して戦う本格バトルRPG。', order: 42,
+  },
+  {
+    id: 'game-echocalypse', code: 'ECP', name: 'Echocalypse -緋紅の神約-', shortName: 'エコカリプス',
+    category: '終末世界戦略RPG', currencyName: '要確認', currencyUnit: '—',
+    iconUrl: 'https://play-lh.googleusercontent.com/o84SHHB7GXRnOi1Mr3x8XPqBopKXRwrrMV2QL4a5ysdMsNZBvcGwSUZXMyrb15cwwveTxSgJMPyH-V3O5N4z4Q=w240-h480',
+    isHandled: true, description: '終末世界を舞台に、進化体の少女たちを率いて冒険する戦略RPG。', order: 44,
   },
   {
     id: 'game-hxh-nen-survivor', code: 'HNXS', name: 'HUNTER×HUNTER NEN×SURVIVOR', shortName: 'ネンサバ',
