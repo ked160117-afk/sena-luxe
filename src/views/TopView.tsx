@@ -1,28 +1,34 @@
 /**
  * SENA LUXE - Top Page View
  * Premium Game Collection
- * Structure priority: SENA LUXE logo -> Concept -> Game Title Selector -> Stone Rates / Requests / LINE Links
  */
 
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { ArrowRight, Sparkles, Gem, HelpCircle, MessageCircle, ExternalLink, ShieldCheck, Clock } from 'lucide-react';
+import { ArrowRight, Sparkles, Gem, HelpCircle, MessageCircle, ShieldCheck, Clock } from 'lucide-react';
 import { ProductCardImage } from '../components/ProductCardImage';
 import { GameCardIcon } from '../components/GameCardIcon';
 
+const PROXY_PATTERN = /(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i;
+
 export const TopView: React.FC = () => {
-  const { games, stoneRates, navigateToGameProducts, navigateToStoneRates, setCurrentView, products } = useStore();
-  // Public-facing product surfaces must never show legacy delegation/work-service records.
-  const publicStoneAccountProducts = products.filter((p) => {
-    const legacyServiceText = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
-    return p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢' && !/(代行|作業サービス|作業代行|プレイ代行|育成代行|通貨追加)/i.test(legacyServiceText);
+  const { games, stoneRates, navigateToGameProducts, navigateToStoneRates, setCurrentView, products } =
+    useStore();
+
+  const stoneProducts = products.filter((p) => {
+    const searchable = `${p.category} ${p.title} ${p.summary} ${(p.keyHighlights || []).join(' ')}`;
+    return (
+      p.status === '掲載中' &&
+      p.verifiedForPublic === true &&
+      (p.category === '石垢' || p.category === 'ゲーム内通貨・石垢') &&
+      !PROXY_PATTERN.test(searchable)
+    );
   });
 
   return (
     <div className="space-y-16 pb-12 animate-fade-in">
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-[#d4af37]/20 py-16 sm:py-24 bg-gradient-to-b from-[#0e0f14] via-[#0b0c0e] to-[#0b0c0e]">
-        {/* Subtle Ambient Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-80 bg-radial-luxury pointer-events-none" />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
@@ -40,11 +46,12 @@ export const TopView: React.FC = () => {
           </p>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-stone-300 leading-relaxed font-sans mb-10">
-            ゲーム内通貨を保有した石垢アカウントを掲載・販売する専門店です。<br className="hidden sm:inline" />
+            ゲーム内通貨を保有した石垢アカウントを掲載・販売する専門店です。
+            <br className="hidden sm:inline" />
             石垢の料金は専用料金表に掲載しています。在庫・商品内容・お支払いなど、不明点は公式LINEでご確認ください。
           </p>
 
-          {/* Featured retired account collection entry */}
+          {/* Retired Accounts CTA */}
           <div className="mb-5">
             <button
               type="button"
@@ -91,7 +98,7 @@ export const TopView: React.FC = () => {
         </div>
       </section>
 
-      {/* Primary Section: Select by Game Title (ゲームタイトルから探す) */}
+      {/* Primary Section: Select by Game Title */}
       <section id="games-selector" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="text-[11px] font-cinzel tracking-widest text-[#d4af37] uppercase">TITLES ARCHIVE</span>
@@ -101,7 +108,6 @@ export const TopView: React.FC = () => {
           </p>
         </div>
 
-        {/* 8 Handled Games Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {games.map((game) => (
             <div
@@ -110,10 +116,8 @@ export const TopView: React.FC = () => {
               className="group cursor-pointer rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/60 p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.12)] hover:-translate-y-1"
             >
               <div>
-                {/* Large App Icon or Black x Gold Luxury Crest */}
                 <GameCardIcon game={game} />
 
-                {/* Game Title */}
                 <h3 className="text-sm sm:text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors line-clamp-1">
                   {game.name}
                 </h3>
@@ -122,9 +126,8 @@ export const TopView: React.FC = () => {
                 </p>
               </div>
 
-              {/* Card Footer Actions */}
               <div className="pt-3.5 mt-3 border-t border-stone-800/80 space-y-1.5">
-                {!publicStoneAccountProducts.some((p) => p.gameId === game.id) && (
+                {!stoneProducts.some((p) => p.gameId === game.id) && (
                   <div className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1">
                     <Clock className="w-3 h-3 text-amber-400" />
                     <span>現在商品を準備中です</span>
@@ -152,10 +155,9 @@ export const TopView: React.FC = () => {
         </div>
       </section>
 
-      {/* Split Shortcut Highlights: Stone Rate Table & Custom Game Request */}
+      {/* Split Shortcut Highlights */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Stone Rates Banner */}
           <div
             onClick={() => navigateToStoneRates()}
             className="group cursor-pointer rounded-xl bg-gradient-to-br from-[#14151a] to-[#0e0f13] border border-[#d4af37]/30 hover:border-[#d4af37] p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_10px_35px_rgba(212,175,55,0.15)]"
@@ -176,7 +178,6 @@ export const TopView: React.FC = () => {
             </div>
           </div>
 
-          {/* Game Request Banner */}
           <div
             onClick={() => setCurrentView('faq')}
             className="group cursor-pointer rounded-xl bg-gradient-to-br from-[#14151a] to-[#0e0f13] border border-stone-800 hover:border-[#d4af37]/60 p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_10px_35px_rgba(0,0,0,0.8)]"
@@ -185,7 +186,7 @@ export const TopView: React.FC = () => {
               <div className="w-12 h-12 rounded-lg bg-stone-800/80 border border-stone-700 flex items-center justify-center text-[#d4af37] mb-4 group-hover:scale-105 transition-transform">
                 <HelpCircle className="w-6 h-6" />
               </div>
-              <span className="text-[10px] tracking-widest text-stone-400 font-cinzel uppercase">STONE ACCOUNT SALES</span>
+              <span className="text-[10px] tracking-widest text-stone-400 font-cinzel uppercase">STONE ACCOUNT NOTICE</span>
               <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">石垢販売について</h3>
               <p className="text-xs sm:text-sm text-stone-300 mt-2 leading-relaxed">
                 当店は石垢アカウントの販売専門店です。一覧にない商品や新しいゲームタイトルも、公式LINEからご相談いただけます。ゲームのプレイ代行・育成代行・通貨追加などの代行サービスは行っておりません。
@@ -199,7 +200,7 @@ export const TopView: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Selection Preview (Secondary to Game Selector) */}
+      {/* Featured Selection Preview */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -215,7 +216,7 @@ export const TopView: React.FC = () => {
           </button>
         </div>
 
-        {publicStoneAccountProducts.length === 0 ? (
+        {stoneProducts.length === 0 ? (
           <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-10 text-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
               <Clock className="w-6 h-6" />
@@ -223,7 +224,8 @@ export const TopView: React.FC = () => {
             <div className="space-y-1">
               <h3 className="text-base sm:text-lg font-semibold text-white">現在商品を準備中です</h3>
               <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto leading-relaxed">
-                掲載準備が完了した石垢アカウントを商品ページに掲載します。<br className="hidden sm:inline" />
+                掲載準備が完了した石垢アカウントを商品ページに掲載します。
+                <br className="hidden sm:inline" />
                 掲載中の商品がない場合も、一覧にない商品や新しいゲームタイトルについて公式LINEからご相談いただけます。ご希望を伺い、取扱い・在庫を確認してご案内します。
               </p>
             </div>
@@ -247,61 +249,72 @@ export const TopView: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products
-              .filter((p) => p.status === '掲載中' && p.verifiedForPublic === true && p.category === 'ゲーム内通貨・石垢')
-              .slice(0, 3)
-              .map((item) => {
-                const game = games.find((g) => g.id === item.gameId);
-                return (
-                  <div
-                    key={item.id}
-                    className="rounded-xl bg-[#121316] border border-stone-800 hover:border-[#d4af37]/40 p-5 flex flex-col justify-between transition-all"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between text-xs text-stone-400 mb-2">
-                        <span className="font-mono text-[#d4af37] font-semibold">{item.productNumber}</span>
-                        <span className="text-stone-400">{item.category}</span>
-                      </div>
+            {stoneProducts.slice(0, 3).map((item) => {
+              const game = games.find((g) => g.id === item.gameId);
+              const verifiedCurrencyName = stoneRates.find(
+                (r) => r.gameId === item.gameId && r.verifiedForPublic === true
+              )?.currencyName;
+              const hasVerifiedRate = stoneRates.some(
+                (r) => r.gameId === item.gameId && r.verifiedForPublic === true
+              );
 
-                      <div className="mb-3">
-                        <ProductCardImage
-                          category={item.category}
-                          gameName={item.gameName}
-                          gameCode={item.gameCode}
-                          currencyName={stoneRates.find((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true)?.currencyName}
-                          imageUrl={item.imageUrl}
-                          currencyIconUrl={stoneRates.some((plan) => plan.gameId === item.gameId && plan.verifiedForPublic === true) ? game?.currencyIconUrl : undefined}
-                          title={item.title}
-                        />
-                      </div>
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl bg-[#121316] border border-stone-800 hover:border-[#d4af37]/40 p-5 flex flex-col justify-between transition-all"
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs text-stone-400 mb-2">
+                      <span className="font-mono text-[#d4af37] font-semibold">{item.productNumber}</span>
+                      <span className="text-stone-400">{item.category}</span>
+                    </div>
 
-                      <h4 className="text-sm font-semibold text-stone-100 line-clamp-1">{item.title}</h4>
-                      <p className="text-xs text-stone-400 mt-1 line-clamp-2 leading-relaxed">{item.summary}</p>
-                      <div className="mt-4 pt-3 border-t border-stone-800/80 flex items-center justify-between">
-                        <div className="text-xs text-stone-400">
-                          <span className="text-stone-400">販売価格</span>
-                          <span className="font-mono font-semibold text-[#f7e7ce]">¥{item.price?.toLocaleString() ?? '確認中'}</span>
-                        </div>
-                        <span className="text-[11px] text-emerald-400 px-2 py-0.5 bg-emerald-950/60 rounded border border-emerald-800/60">
-                          {item.status}
+                    <div className="mb-3">
+                      <ProductCardImage
+                        category={item.category}
+                        gameName={item.gameName}
+                        gameCode={item.gameCode}
+                        currencyName={verifiedCurrencyName || game?.currencyName}
+                        imageUrl={item.imageUrl}
+                        additionalImages={item.additionalImages}
+                        imageUrls={item.imageUrls}
+                        videoUrl={item.videoUrl}
+                        videoStorageId={item.videoStorageId}
+                        currencyIconUrl={hasVerifiedRate ? item.currencyIconUrl || game?.currencyIconUrl : undefined}
+                        gameIconUrl={game?.iconUrl}
+                        title={item.title}
+                      />
+                    </div>
+
+                    <h4 className="text-sm font-semibold text-stone-100 line-clamp-1">{item.title}</h4>
+                    <p className="text-xs text-stone-400 mt-1 line-clamp-2 leading-relaxed">{item.summary}</p>
+                    <div className="mt-4 pt-3 border-t border-stone-800/80 flex items-center justify-between">
+                      <div className="text-xs text-stone-400">
+                        <span className="text-stone-400">販売価格 </span>
+                        <span className="font-mono font-semibold text-[#f7e7ce]">
+                          {item.price ? `¥${item.price.toLocaleString()}` : '確認中'}
                         </span>
                       </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-stone-800/60">
-                      <a
-                        href="https://lin.ee/6uy8hu9"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
-                        <span>商品詳細・お問い合わせ</span>
-                      </a>
+                      <span className="text-[11px] text-emerald-400 px-2 py-0.5 bg-emerald-950/60 rounded border border-emerald-800/60">
+                        {item.status}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="mt-4 pt-3 border-t border-stone-800/60">
+                    <a
+                      href="https://lin.ee/6uy8hu9"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 fill-black stroke-none" />
+                      <span>商品詳細・お問い合わせ</span>
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

@@ -69,7 +69,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-01T10:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -86,7 +85,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['初期リセマラ完了状態', '公式LINEにて個別対応'],
     createdAt: '2026-11-02T11:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -103,7 +101,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-01T12:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -120,7 +117,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-02T14:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -137,7 +133,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-01T15:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -154,7 +149,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-02T17:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -171,7 +165,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-01T14:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -188,7 +181,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-01T08:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -205,7 +197,6 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
     status: '掲載停止',
-    verifiedForPublic: false,
     keyHighlights: ['入荷次第ご案内', '公式LINEにて個別対応'],
     createdAt: '2026-11-03T11:00:00Z',
     updatedAt: '2026-11-07T05:00:00Z',
@@ -375,18 +366,19 @@ const RAW_STONE_RATES: StoneRatePlan[] = [
 ];
 
 export const INITIAL_STONE_RATES: StoneRatePlan[] = RAW_STONE_RATES.map((plan) => {
-  // Restore source-catalog prices only for plans already marked 取扱中.
-  // Other plans remain visible as 価格確認中 and are never assigned a guessed price.
-  const confirmed = plan.status === '取扱中' && typeof plan.currentPrice === 'number' && plan.currentPrice > 0;
+  const isVerified =
+    plan.status === '取扱中' &&
+    typeof plan.currentPrice === 'number' &&
+    plan.currentPrice > 0;
   return {
     ...plan,
-    referencePrice: confirmed ? plan.referencePrice : 0,
-    currentPrice: confirmed ? plan.currentPrice : null,
-    confirmedDate: confirmed ? plan.confirmedDate : '価格確認中',
-    status: confirmed ? '取扱中' : '価格確認中',
+    referencePrice: isVerified ? plan.referencePrice : 0,
+    currentPrice: isVerified ? plan.currentPrice : null,
+    confirmedDate: isVerified ? plan.confirmedDate : '価格確認中',
+    status: isVerified ? '取扱中' : '価格確認中',
     stockStatus: '在庫要確認',
-    isPreparation: !confirmed,
-    verifiedForPublic: confirmed,
+    isPreparation: !isVerified,
+    verifiedForPublic: isVerified,
   };
 });
 
@@ -478,6 +470,14 @@ export const INITIAL_SEQUENCES: Record<string, SerialSequence> = {
   MLBS: { gameCode: 'MLBS', lastSequence: 0, retiredNumbers: [] },
   WW: { gameCode: 'WW', lastSequence: 0, retiredNumbers: [] },
   YWPP: { gameCode: 'YWPP', lastSequence: 0, retiredNumbers: [] },
+  KTO: { gameCode: 'KTO', lastSequence: 0, retiredNumbers: [] },
+  CZN: { gameCode: 'CZN', lastSequence: 0, retiredNumbers: [] },
+  BAKI: { gameCode: 'BAKI', lastSequence: 0, retiredNumbers: [] },
+  CRWU: { gameCode: 'CRWU', lastSequence: 0, retiredNumbers: [] },
+  RACE: { gameCode: 'RACE', lastSequence: 0, retiredNumbers: [] },
+  TSKN: { gameCode: 'TSKN', lastSequence: 0, retiredNumbers: [] },
+  HNXS: { gameCode: 'HNXS', lastSequence: 0, retiredNumbers: [] },
+  ECP: { gameCode: 'ECP', lastSequence: 0, retiredNumbers: [] },
 };
 
 export const INITIAL_SETTINGS: AdminSettings = {

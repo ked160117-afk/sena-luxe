@@ -1,9 +1,9 @@
 /**
- * SENA LUXE - Stone Account Inquiry and Consultation
- * This page accepts inquiries about listed and unlisted stone account products.
+ * SENA LUXE - Stone Account Inquiry View (掲載商品問い合わせ / 石垢について相談・問い合わせ)
  */
+
 import React from 'react';
-import { MessageCircle, Gem, ShieldCheck } from 'lucide-react';
+import { Gem, ShieldCheck, MessageCircle } from 'lucide-react';
 
 export const RequestView: React.FC = () => {
   return (
@@ -29,12 +29,14 @@ export const RequestView: React.FC = () => {
             </p>
           </div>
         </div>
+
         <div className="border-t border-stone-800 pt-4 space-y-2">
           <h2 className="text-sm font-semibold text-white">お受けしていない内容</h2>
           <p className="text-xs text-stone-400 leading-relaxed">
             ゲームのプレイ代行・育成代行・通貨追加などの代行サービス、既存アカウントへの通貨追加は行っておりません。石垢アカウントの販売のみを取り扱います。
           </p>
         </div>
+
         <a
           href="https://lin.ee/6uy8hu9"
           target="_blank"

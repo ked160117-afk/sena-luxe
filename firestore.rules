@@ -43,6 +43,12 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Product media: visitors can load published product images/videos; only admins can upload or modify.
+    match /productMedia/{mediaId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     // Product videos: visitors can play published videos; only admins can upload or modify.
     match /productVideos/{videoId} {
       allow read: if true;

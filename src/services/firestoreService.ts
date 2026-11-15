@@ -20,7 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { reservePublicCatalogRevision, stagePublicCatalogGeneration, activatePublicCatalogGeneration } from './publicCatalogPublisher';
+import { deleteChunkedMediaIfManaged, estimateUtf8Bytes } from './mediaService';
 import {
   GameTitle,
   ProductItem,
@@ -40,260 +40,6 @@ import {
   INITIAL_SETTINGS,
 } from '../data/initialData';
 
-
-const PRODUCT_VIDEO_COLLECTION = 'productVideos';
-const PRODUCT_VIDEO_MAX_BYTES = 15 * 1024 * 1024;
-const PRODUCT_VIDEO_CHUNK_BYTES = 300 * 1024;
-
-const PROHIBITED_SERVICE_TEXT = /(代行|作業サービス|作業代行|プレイ代行|育成代行|ガチャ代行|通貨追加|追加オプション|追加料金|追加費用)/i;
-
-function containsProhibitedServiceText(values: unknown[]): boolean {
-  return values.some((value) => typeof value === 'string' && PROHIBITED_SERVICE_TEXT.test(value));
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length)));
-  }
-  return btoa(binary);
-}
-
-/**
- * Store a short product video directly from the admin device in Firestore.
- * This intentionally uses the existing Firestore service, not Firebase Storage,
- * Cloudflare R2, YouTube, or any paid video provider.
- */
-export async function uploadProductVideoToFirestore(
-  file: File,
-  onProgress?: (percent: number) => void
-): Promise<string> {
-  if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
-  if (!file.type.startsWith('video/')) throw new Error('動画ファイルを選択してください。');
-  if (file.size <= 0 || file.size > PRODUCT_VIDEO_MAX_BYTES) {
-    throw new Error('動画は15MB以下にしてください。スマホ側で短く録画するか、画質を下げてください。');
-  }
-
-  const videoId = `video-${Date.now()}-${crypto.randomUUID()}`;
-  const chunkCount = Math.ceil(file.size / PRODUCT_VIDEO_CHUNK_BYTES);
-  const chunksRef = collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks');
-
-  try {
-    for (let batchStart = 0; batchStart < chunkCount; batchStart += 5) {
-      const batch = writeBatch(db);
-      const batchEnd = Math.min(batchStart + 5, chunkCount);
-      for (let index = batchStart; index < batchEnd; index += 1) {
-        const start = index * PRODUCT_VIDEO_CHUNK_BYTES;
-        const end = Math.min(start + PRODUCT_VIDEO_CHUNK_BYTES, file.size);
-        const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
-        batch.set(doc(chunksRef, String(index).padStart(4, '0')), {
-          index,
-          data: bytesToBase64(bytes),
-        });
-      }
-      await batch.commit();
-      onProgress?.(Math.round((batchEnd / chunkCount) * 95));
-    }
-
-    await setDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId), {
-      id: videoId,
-      contentType: file.type || 'video/mp4',
-      fileName: file.name.slice(0, 120),
-      fileSize: file.size,
-      chunkCount,
-      createdAt: new Date().toISOString(),
-    });
-    onProgress?.(100);
-    return videoId;
-  } catch (error) {
-    try {
-      await deleteProductVideoFromFirestore(videoId);
-    } catch (cleanupError) {
-      console.warn('Could not clean incomplete video upload:', cleanupError);
-    }
-    throw error;
-  }
-}
-
-/** Fetch a saved video only when a visitor presses the play button. */
-export async function getProductVideoBlob(videoId: string): Promise<Blob> {
-  const metadata = await getDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
-  if (!metadata.exists()) throw new Error('登録動画が見つかりません。');
-  const details = metadata.data();
-  const chunkSnapshot = await getDocs(collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks'));
-  const ordered = chunkSnapshot.docs
-    .map((snapshot) => snapshot.data() as { index: number; data: string })
-    .sort((a, b) => a.index - b.index);
-
-  if (ordered.length !== Number(details.chunkCount)) {
-    throw new Error('動画データが不足しています。管理画面から再登録してください。');
-  }
-
-  const parts = ordered.map((chunk) => {
-    const binary = atob(chunk.data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    return bytes;
-  });
-  return new Blob(parts, { type: details.contentType || 'video/mp4' });
-}
-
-/** Remove a video after it has been replaced or its product is deleted. */
-export async function deleteProductVideoFromFirestore(videoId: string): Promise<void> {
-  const chunks = await getDocs(collection(db, PRODUCT_VIDEO_COLLECTION, videoId, 'chunks'));
-  for (let start = 0; start < chunks.docs.length; start += 400) {
-    const batch = writeBatch(db);
-    chunks.docs.slice(start, start + 400).forEach((snapshot) => batch.delete(snapshot.ref));
-    await batch.commit();
-  }
-  await deleteDoc(doc(db, PRODUCT_VIDEO_COLLECTION, videoId));
-}
-
-
-
-export async function rebuildPublicCatalogMirrors(): Promise<{ games: number; products: number; rates: number; settings: number; generationId: string; activated: boolean }> {
-  const user = auth.currentUser;
-  if (!user || !(await checkIsUserAdmin(user.uid, user.email))) {
-    throw new Error('公開カタログの同期には管理者認証が必要です。');
-  }
-
-  const publishRevision = await reservePublicCatalogRevision(db);
-
-  // Read canonical data first. No canonical record is changed by this publisher.
-  const [gamesSnap, productsSnap, ratesSnap, settingsSnap] = await Promise.all([
-    getDocs(collection(db, 'games')),
-    getDocs(collection(db, 'products')),
-    getDocs(collection(db, 'stoneRates')),
-    getDoc(doc(db, 'settings', 'general')),
-  ]);
-
-  const publicGames = gamesSnap.docs
-    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as GameTitle))
-    .filter((game) => game.isHandled === true)
-    .map((game) => ({
-      id: game.id,
-      code: game.code,
-      name: game.name,
-      shortName: game.shortName,
-      category: game.category,
-      currencyName: game.currencyName,
-      currencyUnit: game.currencyUnit,
-      iconUrl: typeof game.iconUrl === 'string' && game.iconUrl.length <= 100000 ? game.iconUrl : '',
-      currencyIconUrl: typeof game.currencyIconUrl === 'string' && game.currencyIconUrl.length <= 100000 ? game.currencyIconUrl : '',
-      isHandled: true,
-      description: game.description || '',
-      order: game.order ?? 999,
-    }));
-
-  const publicProducts = productsSnap.docs
-    .map((snapshot) => {
-      const product = { id: snapshot.id, ...snapshot.data() } as ProductItem;
-      return { ...product, category: product.category === 'ゲーム内通貨・石垢' ? '石垢' : product.category };
-    })
-    .filter((product) =>
-      product.verifiedForPublic === true &&
-      product.status === '掲載中' &&
-      ['石垢', '引退垢', '初期垢'].includes(product.category) &&
-      typeof product.price === 'number' &&
-      product.price > 0 &&
-      Boolean(product.title?.trim()) &&
-      Boolean(product.summary?.trim()) &&
-      !containsProhibitedServiceText([product.category, product.title, product.summary, ...(product.keyHighlights || [])])
-    )
-    .map((product) => ({
-      id: product.id,
-      productNumber: product.productNumber,
-      gameId: product.gameId,
-      gameCode: product.gameCode,
-      gameName: product.gameName,
-      category: product.category,
-      title: product.title,
-      summary: product.summary,
-      price: product.price,
-      status: '掲載中' as const,
-      verifiedForPublic: true,
-      imageUrl: typeof product.imageUrl === 'string' && product.imageUrl.length <= 250000 ? product.imageUrl : '',
-      imageUrls: Array.isArray(product.imageUrls) ? product.imageUrls.filter((url: unknown): url is string => typeof url === 'string' && url.length <= 250000).slice(0, 10) : (typeof product.imageUrl === 'string' && product.imageUrl ? [product.imageUrl] : []),
-      deviceCompatibility: product.deviceCompatibility || '',
-      keyHighlights: Array.isArray(product.keyHighlights) ? product.keyHighlights.slice(0, 5) : [],
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
-      order: product.order ?? 0,
-    }));
-
-  const publicRates = ratesSnap.docs
-    .map((snapshot) => ({ id: snapshot.id, ...snapshot.data() } as StoneRatePlan))
-    .filter((rate) =>
-      rate.currencyType === '無償' &&
-      rate.verifiedForPublic === true &&
-      rate.status === '取扱中' &&
-      rate.isPreparation === false &&
-      typeof rate.currentPrice === 'number' &&
-      rate.currentPrice > 0 &&
-      Boolean(rate.currencyAmount?.trim()) &&
-      Boolean(rate.planName?.trim()) &&
-      Boolean(rate.conditions?.trim()) &&
-      !containsProhibitedServiceText([rate.id, rate.gameName, rate.planName, rate.currencyName, rate.currencyAmount, rate.conditions, rate.deviceRequirement, rate.accountType, rate.notes])
-    )
-    .map((rate) => ({
-      id: rate.id,
-      gameId: rate.gameId,
-      gameCode: rate.gameCode,
-      gameName: rate.gameName,
-      planName: rate.planName,
-      currencyName: rate.currencyName,
-      currencyType: '無償' as const,
-      currencyAmount: rate.currencyAmount,
-      conditions: rate.conditions,
-      currentPrice: rate.currentPrice,
-      confirmedDate: rate.confirmedDate,
-      status: '取扱中' as const,
-      stockStatus: '在庫要確認',
-      isPreparation: false,
-      verifiedForPublic: true,
-    }));
-
-  const sourceSettings = settingsSnap.exists() ? settingsSnap.data() : {};
-  const publicSettings = {
-    lineUrl: typeof sourceSettings.lineUrl === 'string' ? sourceSettings.lineUrl : '',
-    shopNotice: typeof sourceSettings.shopNotice === 'string' ? sourceSettings.shopNotice : '',
-    enableDirectLineCopy: sourceSettings.enableDirectLineCopy === true,
-    contactDeskHours: typeof sourceSettings.contactDeskHours === 'string' ? sourceSettings.contactDeskHours : '公式LINEにてご案内',
-  };
-
-  // Build an immutable generation. The public pointer is switched only after
-  // every collection and the settings document have been committed successfully.
-  const generationId = `catalog-${Date.now()}-${crypto.randomUUID()}`;
-  const rows: Array<{ kind: string; id: string; data: Record<string, unknown> }> = [
-    ...publicGames.map((row) => ({ kind: 'games', id: row.id, data: row as unknown as Record<string, unknown> })),
-    ...publicProducts.map((row) => ({ kind: 'products', id: row.id, data: row as unknown as Record<string, unknown> })),
-    ...publicRates.map((row) => ({ kind: 'stoneRates', id: row.id, data: row as unknown as Record<string, unknown> })),
-  ];
-
-  await stagePublicCatalogGeneration(db, generationId, rows, publicSettings, {
-    games: publicGames.length,
-    products: publicProducts.length,
-    rates: publicRates.length,
-  });
-
-  const activated = await activatePublicCatalogGeneration(db, generationId, publishRevision, {
-    games: publicGames.length,
-    products: publicProducts.length,
-    rates: publicRates.length,
-  });
-
-  // Previous generations are intentionally retained for rollback. No cleanup is
-  // performed here, so a failed publish cannot delete the last known-good catalog.
-  return {
-    games: publicGames.length,
-    products: publicProducts.length,
-    rates: publicRates.length,
-    settings: 1,
-    generationId,
-    activated,
-  };
-}
-
 const COLLECTIONS = {
   GAMES: 'games',
   PRODUCTS: 'products',
@@ -305,78 +51,53 @@ const COLLECTIONS = {
 };
 
 /**
- * Add-only catalog sync to Firestore.
- * Creates missing records only; existing products, prices, histories, icons, and sequence ledgers are never overwritten.
+ * Bulk sync all 36 games and 118 stone rate plans to Firestore using safe batches.
+ * Preserves existing documents and merges updates safely without deleting products or sequence ledgers.
  */
 export async function syncAllStoneRatesAndGamesToFirestore(): Promise<{ gamesSynced: number; ratesSynced: number }> {
   try {
-    console.log('Initiating safe catalog sync to Firestore...');
-    const [gamesSnapshot, ratesSnapshot, sequencesSnapshot] = await Promise.all([
-      getDocs(collection(db, COLLECTIONS.GAMES)),
-      getDocs(collection(db, COLLECTIONS.STONE_RATES)),
-      getDocs(collection(db, COLLECTIONS.SEQUENCES)),
-    ]);
-
-    const existingGameIds = new Set(gamesSnapshot.docs.map((d) => d.id));
-    const existingRateIds = new Set(ratesSnapshot.docs.map((d) => d.id));
-    const existingSequenceIds = new Set(sequencesSnapshot.docs.map((d) => d.id));
+    console.log('Initiating bulk sync of games and stone rates to Firestore...');
     const batch = writeBatch(db);
-    let gamesSynced = 0;
-    let ratesSynced = 0;
 
-    // Create only missing game records. Existing icons and admin edits are never overwritten.
+    // 1. Sync Games
     const allGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES];
     for (const game of allGames) {
-      if (existingGameIds.has(game.id)) continue;
-      batch.set(doc(db, COLLECTIONS.GAMES, game.id), game);
-      gamesSynced += 1;
+      const ref = doc(db, COLLECTIONS.GAMES, game.id);
+      batch.set(ref, game, { merge: true });
     }
 
-    // Create only missing sequence ledgers. Existing numbering and retired numbers are preserved.
+    // 2. Sync Sequences for all game codes
     for (const [code, seq] of Object.entries(INITIAL_SEQUENCES)) {
-      if (existingSequenceIds.has(code)) continue;
-      batch.set(doc(db, COLLECTIONS.SEQUENCES, code), seq);
+      const ref = doc(db, COLLECTIONS.SEQUENCES, code);
+      // Use merge to prevent overwriting existing lastSequence or retired numbers
+      batch.set(ref, seq, { merge: true });
     }
 
-    // Create only missing stone plans in preparation state. Never overwrite prices or histories.
+    // 3. Sync Stone Rates (preserving verified statuses & pricing)
     for (const plan of INITIAL_STONE_RATES) {
-      if (existingRateIds.has(plan.id)) continue;
-      batch.set(doc(db, COLLECTIONS.STONE_RATES, plan.id), {
-        ...plan,
-        referencePrice: 0,
-        currentPrice: null,
-        confirmedDate: '価格確認中',
-        status: '現在準備中',
-        stockStatus: '在庫要確認',
-        isPreparation: true,
-        verifiedForPublic: false,
-      });
-      ratesSynced += 1;
+      const ref = doc(db, COLLECTIONS.STONE_RATES, plan.id);
+      batch.set(ref, plan, { merge: true });
     }
 
-    if (gamesSynced + ratesSynced > 0 || Object.keys(INITIAL_SEQUENCES).some((code) => !existingSequenceIds.has(code))) {
-      await batch.commit();
-    }
-    console.log(`Safe Firestore sync complete: ${gamesSynced} new games, ${ratesSynced} new rate plans. Existing records were preserved.`);
-    return { gamesSynced, ratesSynced };
+    await batch.commit();
+    console.log(`Firestore batch sync complete: ${allGames.length} games, ${INITIAL_STONE_RATES.length} rate plans.`);
+    return { gamesSynced: allGames.length, ratesSynced: INITIAL_STONE_RATES.length };
   } catch (error) {
     console.warn('syncAllStoneRatesAndGamesToFirestore notice:', error);
     return { gamesSynced: 0, ratesSynced: 0 };
   }
 }
 
-// Seed master data if collections are empty or need update
+// Seed master data ONLY when both collections are completely empty (never overwrite existing DB data)
 export async function seedInitialDataIfEmpty(): Promise<void> {
   try {
     const gamesSnapshot = await getDocs(collection(db, COLLECTIONS.GAMES));
     const ratesSnapshot = await getDocs(collection(db, COLLECTIONS.STONE_RATES));
 
-    // If catalog collections are incomplete, add only missing records
-    if (gamesSnapshot.empty || ratesSnapshot.empty || gamesSnapshot.size < INITIAL_GAMES.length || ratesSnapshot.size < INITIAL_STONE_RATES.length) {
-      console.log('Syncing / Seeding SENA LUXE catalog into Firestore...');
+    if (gamesSnapshot.empty && ratesSnapshot.empty) {
+      console.log('Seeding initial SENA LUXE catalog into empty Firestore...');
       await syncAllStoneRatesAndGamesToFirestore();
 
-      // Seed Products if none exist (do not overwrite existing products)
       const prodsSnap = await getDocs(collection(db, COLLECTIONS.PRODUCTS));
       if (prodsSnap.empty) {
         const prodBatch = writeBatch(db);
@@ -386,7 +107,6 @@ export async function seedInitialDataIfEmpty(): Promise<void> {
         await prodBatch.commit();
       }
 
-      // Seed Settings if not exists
       const settingsSnap = await getDoc(doc(db, COLLECTIONS.SETTINGS, 'general'));
       if (!settingsSnap.exists()) {
         await setDoc(doc(db, COLLECTIONS.SETTINGS, 'general'), INITIAL_SETTINGS);
@@ -397,112 +117,25 @@ export async function seedInitialDataIfEmpty(): Promise<void> {
   }
 }
 
-/**
- * One-time, guarded migration for the nine unpublished starter samples.
- * Keeps every sample document, frees only sample-reserved serials, and preserves
- * every real product number and non-sample retired-number entry.
- */
-export async function prepareInitialProductNumbering(): Promise<{ samplesRenumbered: number; nextNumbers: Record<string, string> }> {
-  if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
-  const sampleSeeds = [
-    { id: 'prod-fp-001', code: 'FP', sequence: 1 },
-    { id: 'prod-fp-002', code: 'FP', sequence: 2 },
-    { id: 'prod-um-001', code: 'UM', sequence: 1 },
-    { id: 'prod-kt-001', code: 'KT', sequence: 1 },
-    { id: 'prod-nk-001', code: 'NK', sequence: 1 },
-    { id: 'prod-ef-001', code: 'EF', sequence: 1 },
-    { id: 'prod-ko-001', code: 'KO', sequence: 1 },
-    { id: 'prod-ps-001', code: 'PS', sequence: 1 },
-    { id: 'prod-kb-001', code: 'KB', sequence: 1 },
-  ];
-  const codes = [...new Set(sampleSeeds.map((sample) => sample.code))];
-
-  // Read the full product catalogue first. Sequence documents are re-read inside
-  // the transaction, so concurrent legitimate product creation remains protected.
-  const productsSnapshot = await getDocs(query(collection(db, COLLECTIONS.PRODUCTS)));
-
-  return runTransaction(db, async (transaction) => {
-    const sampleSnapshots = await Promise.all(sampleSeeds.map((sample) =>
-      transaction.get(doc(db, COLLECTIONS.PRODUCTS, sample.id))
-    ));
-    const sequenceSnapshots = await Promise.all(codes.map((code) =>
-      transaction.get(doc(db, COLLECTIONS.SEQUENCES, code))
-    ));
-    const productsById = new Map(sampleSeeds.map((sample, index) => [sample.id, sampleSnapshots[index]]));
-    const samplesById = new Set(sampleSeeds.map((sample) => sample.id));
-
-    for (const sample of sampleSeeds) {
-      const snapshot = productsById.get(sample.id)!;
-      if (!snapshot.exists()) continue;
-      const data = snapshot.data();
-      const expectedNumber = 'SL-' + sample.code + '-' + String(sample.sequence).padStart(3, '0');
-      const sampleNumber = 'SAMPLE-' + sample.code + '-' + String(sample.sequence).padStart(3, '0');
-      const recognized =
-        typeof data.title === 'string' && data.title.includes('準備中') &&
-        typeof data.summary === 'string' && data.summary.includes('サンプル登録データ') &&
-        data.status === '掲載停止' && data.verifiedForPublic !== true;
-      if (!recognized || (data.productNumber !== expectedNumber && data.productNumber !== sampleNumber)) {
-        throw new Error('サンプル商品 ' + sample.id + ' の内容が想定と異なるため、安全のため変更を中止しました。');
-      }
+function stripUndefinedFields<T extends Record<string, unknown>>(obj: T): T {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      result[key] = value
+        .filter((item) => item !== undefined)
+        .map((item) =>
+          item !== null && typeof item === 'object' && !Array.isArray(item)
+            ? stripUndefinedFields(item as Record<string, unknown>)
+            : item
+        );
+    } else if (value !== null && typeof value === 'object') {
+      result[key] = stripUndefinedFields(value as Record<string, unknown>);
+    } else {
+      result[key] = value;
     }
-
-    const sequenceDataByCode = new Map<string, SerialSequence>();
-    sequenceSnapshots.forEach((snapshot, index) => {
-      sequenceDataByCode.set(codes[index], snapshot.exists()
-        ? snapshot.data() as SerialSequence
-        : { gameCode: codes[index], lastSequence: 0, retiredNumbers: [] });
-    });
-
-    const nextNumbers: Record<string, string> = {};
-    let samplesRenumbered = 0;
-    for (const sample of sampleSeeds) {
-      const snapshot = productsById.get(sample.id)!;
-      if (!snapshot.exists()) continue;
-      const sampleNumber = 'SAMPLE-' + sample.code + '-' + String(sample.sequence).padStart(3, '0');
-      if (snapshot.data().productNumber !== sampleNumber) {
-        transaction.update(snapshot.ref, { productNumber: sampleNumber, updatedAt: new Date().toISOString() });
-        samplesRenumbered += 1;
-      }
-    }
-
-    for (const code of codes) {
-      const current = sequenceDataByCode.get(code)!;
-      const codeSamples = sampleSeeds.filter((sample) => sample.code === code);
-      const seedNumbers = new Set(codeSamples.map((sample) =>
-        'SL-' + code + '-' + String(sample.sequence).padStart(3, '0')
-      ));
-      const isSampleLedgerEntry = (entry: SerialSequence['retiredNumbers'][number]) =>
-        seedNumbers.has(entry.productNumber) && entry.productTitle.includes('サンプル');
-      const remainingRetired = (current.retiredNumbers || []).filter((entry) => !isSampleLedgerEntry(entry));
-      const onlySeedHistory = (current.retiredNumbers || []).every(isSampleLedgerEntry);
-      const seedMax = Math.max(0, ...codeSamples.map((sample) => sample.sequence));
-      const baseSequence = onlySeedHistory && (current.lastSequence || 0) <= seedMax ? 0 : (current.lastSequence || 0);
-
-      let highestExisting = baseSequence;
-      const prefix = 'SL-' + code + '-';
-      for (const productSnapshot of productsSnapshot.docs) {
-        const product = productSnapshot.data();
-        if (samplesById.has(productSnapshot.id) || product.gameCode !== code) continue;
-        const number = product.productNumber;
-        if (typeof number === 'string' && number.startsWith(prefix)) {
-          const parsed = Number(number.slice(prefix.length));
-          if (Number.isInteger(parsed) && parsed > 0) highestExisting = Math.max(highestExisting, parsed);
-        }
-      }
-      for (const entry of remainingRetired) {
-        if (entry.productNumber.startsWith(prefix)) {
-          const parsed = Number(entry.productNumber.slice(prefix.length));
-          if (Number.isInteger(parsed) && parsed > 0) highestExisting = Math.max(highestExisting, parsed);
-        }
-      }
-
-      transaction.set(doc(db, COLLECTIONS.SEQUENCES, code), {
-        gameCode: code, lastSequence: highestExisting, retiredNumbers: remainingRetired,
-      });
-      nextNumbers[code] = 'SL-' + code + '-' + String(highestExisting + 1).padStart(3, '0');
-    }
-    return { samplesRenumbered, nextNumbers };
-  });
+  }
+  return result as T;
 }
 
 // Atomic Product Issuance with Firestore Transaction
@@ -511,18 +144,18 @@ export async function createProductAtomic(data: {
   gameCode: string;
   gameName: string;
   category: ProductCategory;
+  deviceCompatibility?: string;
   title: string;
   summary: string;
   price: number | null;
+  verifiedForPublic?: boolean;
   imageUrl?: string;
-  imageUrls?: string[];
+  additionalImages?: string[];
   videoUrl?: string;
   videoStorageId?: string;
-  deviceCompatibility?: ProductItem['deviceCompatibility'];
   currencyIconUrl?: string;
   keyHighlights: string[];
   status?: ProductStatus;
-  verifiedForPublic?: boolean;
 }): Promise<ProductItem> {
   const code = data.gameCode.toUpperCase();
   const seqDocRef = doc(db, COLLECTIONS.SEQUENCES, code);
@@ -548,50 +181,67 @@ export async function createProductAtomic(data: {
       const newProdId = `prod-${code.toLowerCase()}-${Date.now()}`;
       const prodDocRef = doc(db, COLLECTIONS.PRODUCTS, newProdId);
 
-      const productToSave: ProductItem = {
+      const trimmedImageUrl = typeof data.imageUrl === 'string' ? data.imageUrl.trim() : '';
+      const cleanAdditionalImages = Array.isArray(data.additionalImages)
+        ? data.additionalImages
+            .filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+            .map((img) => img.trim())
+            .slice(0, 4)
+        : [];
+      const trimmedVideoUrl = typeof data.videoUrl === 'string' ? data.videoUrl.trim() : '';
+      const trimmedVideoStorageId = typeof data.videoStorageId === 'string' ? data.videoStorageId.trim() : '';
+      const trimmedCurrencyIconUrl = typeof data.currencyIconUrl === 'string' ? data.currencyIconUrl.trim() : '';
+      const trimmedDevice = typeof data.deviceCompatibility === 'string' ? data.deviceCompatibility.trim() : '';
+
+      const productToSave: ProductItem = stripUndefinedFields({
         id: newProdId,
         productNumber,
         gameId: data.gameId,
         gameCode: code,
         gameName: data.gameName,
         category: data.category,
+        ...(trimmedDevice ? { deviceCompatibility: trimmedDevice } : {}),
         title: data.title,
         summary: data.summary,
-        price: data.price,
-        status: data.status || '掲載停止',
-        verifiedForPublic: data.verifiedForPublic === true,
-        imageUrl: data.imageUrls?.[0] || data.imageUrl,
-        imageUrls: data.imageUrls?.slice(0, 10),
-        videoUrl: data.videoUrl,
-        videoStorageId: data.videoStorageId,
-        deviceCompatibility: data.deviceCompatibility,
-        currencyIconUrl: data.currencyIconUrl,
-        keyHighlights: data.keyHighlights,
+        price: typeof data.price === 'number' && !Number.isNaN(data.price) ? data.price : null,
+        status: data.status || '掲載中',
+        ...(data.verifiedForPublic !== undefined ? { verifiedForPublic: data.verifiedForPublic } : {}),
+        ...(trimmedImageUrl ? { imageUrl: trimmedImageUrl } : {}),
+        ...(cleanAdditionalImages.length > 0 ? { additionalImages: cleanAdditionalImages } : {}),
+        ...(trimmedVideoUrl ? { videoUrl: trimmedVideoUrl } : {}),
+        ...(trimmedVideoStorageId ? { videoStorageId: trimmedVideoStorageId } : {}),
+        ...(trimmedCurrencyIconUrl ? { currencyIconUrl: trimmedCurrencyIconUrl } : {}),
+        keyHighlights: Array.isArray(data.keyHighlights)
+          ? data.keyHighlights.filter((v): v is string => typeof v === 'string')
+          : [],
         createdAt: nowStr,
         updatedAt: nowStr,
-      };
+      });
 
-      const updatedRetired = [
-        ...retiredNumbers,
-        {
-          productNumber,
-          productTitle: data.title,
-          issuedAt: nowStr.split('T')[0],
-          reason: '新規商品登録により安全発番',
-        },
-      ];
+      const updatedRetired = stripUndefinedFields({
+        gameCode: code,
+        lastSequence: nextSequence,
+        retiredNumbers: [
+          ...retiredNumbers,
+          {
+            productNumber,
+            productTitle: data.title,
+            issuedAt: nowStr.split('T')[0],
+            reason: '新規商品登録により安全発番',
+          },
+        ],
+      });
 
-      // Atomic Writes in transaction
+      const payloadBytes = estimateUtf8Bytes(productToSave);
+      if (payloadBytes > 980_000) {
+        throw new Error(
+          'FIRESTORE_DOC_TOO_LARGE: 商品データの合計サイズがFirestoreの1ドキュメント上限（約1MB）を超えました。画像の枚数を減らすか再選択して圧縮してください。'
+        );
+      }
+
+      // Atomic Writes in transaction (all fields verified free of undefined)
       transaction.set(prodDocRef, productToSave);
-      transaction.set(
-        seqDocRef,
-        {
-          gameCode: code,
-          lastSequence: nextSequence,
-          retiredNumbers: updatedRetired,
-        },
-        { merge: true }
-      );
+      transaction.set(seqDocRef, updatedRetired, { merge: true });
 
       return productToSave;
     });
@@ -606,10 +256,24 @@ export async function createProductAtomic(data: {
 export async function updateProductDoc(id: string, updates: Partial<ProductItem>): Promise<void> {
   try {
     const prodRef = doc(db, COLLECTIONS.PRODUCTS, id);
-    await updateDoc(prodRef, {
-      ...updates,
+    const normalizedUpdates: Record<string, unknown> = { ...updates };
+    if (Array.isArray(normalizedUpdates.additionalImages)) {
+      normalizedUpdates.additionalImages = normalizedUpdates.additionalImages
+        .filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+        .map((img) => img.trim())
+        .slice(0, 4);
+    }
+    const cleanUpdates = stripUndefinedFields({
+      ...normalizedUpdates,
       updatedAt: new Date().toISOString(),
     });
+    const payloadBytes = estimateUtf8Bytes(cleanUpdates);
+    if (payloadBytes > 960_000) {
+      throw new Error(
+        'FIRESTORE_DOC_TOO_LARGE: 更新データの合計サイズがFirestoreの1ドキュメント上限（約1MB）を超えました。画像の枚数を減らすか再選択して圧縮してください。'
+      );
+    }
+    await updateDoc(prodRef, cleanUpdates);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${COLLECTIONS.PRODUCTS}/${id}`);
   }
@@ -643,12 +307,9 @@ export async function deleteProductDoc(product: ProductItem, reason: string = '�
 
       transaction.delete(prodRef);
     });
-    if (product.videoStorageId) {
-      try {
-        await deleteProductVideoFromFirestore(product.videoStorageId);
-      } catch (videoError) {
-        console.warn('Deleted product but could not remove its video chunks:', videoError);
-      }
+
+    if (product.videoUrl) {
+      void deleteChunkedMediaIfManaged(product.videoUrl);
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `${COLLECTIONS.PRODUCTS}/${product.id}`);
@@ -666,9 +327,9 @@ export async function updateStoneRatePriceDoc(
   const now = new Date();
   const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
 
-  const oldPrice = existingPlan.verifiedForPublic ? existingPlan.currentPrice : null;
+  const oldPrice = existingPlan.currentPrice ?? existingPlan.referencePrice;
   const history =
-    oldPrice !== null && newPrice !== null && newPrice !== oldPrice
+    newPrice !== null && newPrice !== oldPrice
       ? [
           {
             date: dateStr,
@@ -684,9 +345,7 @@ export async function updateStoneRatePriceDoc(
     await updateDoc(planRef, {
       currentPrice: newPrice,
       confirmedDate: dateStr,
-      status: newPrice === null ? '価格確認中' : '現在準備中',
-      isPreparation: true,
-      verifiedForPublic: false,
+      status: newPrice === null ? '価格確認中' : '取扱中',
       priceHistory: history,
     });
   } catch (error) {
@@ -753,8 +412,21 @@ export async function promoteCandidateDoc(candidate: GameTitle): Promise<void> {
       isHandled: true,
     });
 
-    // Do not create a sample plan or estimated price when a title is promoted.
-    // A real plan must be entered and explicitly verified by an admin.
+    // Add initial stone plan
+    await addStoneRatePlanDoc({
+      gameId: candidate.id,
+      gameCode: candidate.code,
+      gameName: candidate.name,
+      planName: `${candidate.shortName} 取扱開始記念プラン`,
+      currencyName: candidate.currencyName,
+      currencyAmount: '初期ストック大量',
+      conditions: '新規取扱開始・即納対応',
+      referencePrice: 3500,
+      currentPrice: 3200,
+      confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
+      status: '取扱中',
+      notes: '取扱開始に伴う特別提供',
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `${COLLECTIONS.GAMES}/${candidate.id}`);
   }

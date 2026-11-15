@@ -1,6 +1,6 @@
 /**
  * SENA LUXE - Game Catalog View (ゲーム一覧)
- * Full list of 8 handled titles with large app icons, details, and shortcuts
+ * Full list of handled titles with official app icons, verified currencies, and shortcuts
  */
 
 import React from 'react';
@@ -33,61 +33,68 @@ export const GamesView: React.FC = () => {
         </button>
       </div>
 
-      {/* Handled Games 8 Titles Grid */}
+      {/* Handled Games Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {games.map((game) => {
-          const verifiedCurrencies = Array.from(new Set(stoneRates.filter((plan) => plan.gameId === game.id && plan.verifiedForPublic === true).map((plan) => plan.currencyName).filter(Boolean)));
+          const verifiedCurrencies = Array.from(
+            new Set(
+              stoneRates
+                .filter((r) => r.gameId === game.id && r.verifiedForPublic === true)
+                .map((r) => r.currencyName)
+                .filter(Boolean)
+            )
+          );
+
           return (
-          <div
-            key={game.id}
-            className="group rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/60 p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_10px_35px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.12)]"
-          >
-            <div>
-              {/* Large App Icon or Black x Gold Luxury Crest */}
-              <GameCardIcon game={game} />
+            <div
+              key={game.id}
+              className="group rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/60 p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_10px_35px_rgba(0,0,0,0.8),0_0_20px_rgba(212,175,55,0.12)]"
+            >
+              <div>
+                <GameCardIcon game={game} />
 
-              {/* Game Title & Currency Info */}
-              <h3 className="text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors">
-                {game.name}
-              </h3>
-              <div className="text-[11px] text-[#d4af37]/90 font-medium mt-1">
-                {verifiedCurrencies.length > 0 ? `取扱通貨: ${verifiedCurrencies.join('・')}` : 'ゲーム内通貨情報確認中'}
+                <h3 className="text-base font-semibold text-stone-100 group-hover:text-gold-subtle transition-colors">
+                  {game.name}
+                </h3>
+                <div className="text-[11px] text-[#d4af37]/90 font-medium mt-1">
+                  {verifiedCurrencies.length > 0
+                    ? `取扱通貨: ${verifiedCurrencies.join('・')}`
+                    : 'ゲーム内通貨情報確認中'}
+                </div>
+                <p className="text-xs text-stone-400 mt-2 line-clamp-3 leading-relaxed">
+                  {game.description}
+                </p>
               </div>
-              <p className="text-xs text-stone-400 mt-2 line-clamp-3 leading-relaxed">
-                {game.description}
-              </p>
-            </div>
 
-            {/* Actions */}
-            <div className="pt-4 mt-4 border-t border-stone-800/80 space-y-2">
-              <button
-                onClick={() => navigateToGameProducts(game.id)}
-                className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>石垢商品一覧を見る</span>
-              </button>
-
-              <div className="grid grid-cols-2 gap-2">
+              <div className="pt-4 mt-4 border-t border-stone-800/80 space-y-2">
                 <button
-                  onClick={() => navigateToStoneRates(game.id)}
-                  className="py-2 px-2 rounded-lg text-[11px] font-medium text-stone-300 bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-[#d4af37]/40 transition-colors flex items-center justify-center gap-1"
+                  onClick={() => navigateToGameProducts(game.id)}
+                  className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  <Gem className="w-3 h-3 text-[#d4af37]" />
-                  <span>石垢料金表</span>
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>石垢商品一覧を見る</span>
                 </button>
-                <a
-                  href="https://lin.ee/6uy8hu9"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2 px-2 rounded-lg text-[11px] font-medium text-white bg-[#06C755]/20 hover:bg-[#06C755]/30 border border-[#06C755]/40 transition-colors flex items-center justify-center gap-1"
-                >
-                  <MessageCircle className="w-3 h-3 text-[#06C755]" />
-                  <span>LINE問い合わせ</span>
-                </a>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => navigateToStoneRates(game.id)}
+                    className="py-2 px-2 rounded-lg text-[11px] font-medium text-stone-300 bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-[#d4af37]/40 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Gem className="w-3 h-3 text-[#d4af37]" />
+                    <span>石垢料金表</span>
+                  </button>
+                  <a
+                    href="https://lin.ee/6uy8hu9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-2 rounded-lg text-[11px] font-medium text-white bg-[#06C755]/20 hover:bg-[#06C755]/30 border border-[#06C755]/40 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <MessageCircle className="w-3 h-3 text-[#06C755]" />
+                    <span>LINE問い合わせ</span>
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
           );
         })}
       </div>
