@@ -81,7 +81,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
     gameId: 'game-fp',
     gameCode: 'FP',
     gameName: '呪術廻戦 ファントムパレード',
-    category: 'ゲーム内通貨・石垢',
+    category: '石垢',
     title: 'ファンパレ 廻珠ストックアカウント（準備中）',
     summary: '（サンプル登録データ・現在非公開。実在価格・在庫確認待ち）',
     price: null,
