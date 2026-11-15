@@ -1835,6 +1835,19 @@ export const AdminDashboardView: React.FC = () => {
               </div>
 
               <div>
+                <label className="text-stone-300 block mb-1 font-semibold">OS</label>
+                <select
+                  value={editProdDevice}
+                  onChange={(e) => setEditProdDevice(e.target.value as NonNullable<ProductItem['deviceCompatibility']>)}
+                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                >
+                  <option value="iOSのみ">iOSのみ</option>
+                  <option value="Androidのみ">Androidのみ</option>
+                  <option value="iOS・Android両方可">iOS・Android両方可</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="text-stone-300 block mb-1 font-semibold">商品タイトル *</label>
                 <input
                   type="text"
