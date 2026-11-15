@@ -6,7 +6,7 @@
  *   renders the official SENA LUXE Black x Gold luxury crest placeholder.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GameTitle } from '../types';
 
 interface GameCardIconProps {
@@ -20,6 +20,11 @@ interface GameCardIconProps {
   showBadges?: boolean;
 }
 
+const VERIFIED_OFFICIAL_ICON_FALLBACKS: Record<string, string> = {
+  OPBR: 'https://play-lh.googleusercontent.com/N-cQRxsEqco6aWT29lG3BqSF1PjYYsks6C4qTORVn2NoUloJqa-XGdi2n9D3QeDi5wbeVp5_bBx-HKDTHz9ftUQ=w240-h480',
+  HSR: 'https://play-lh.googleusercontent.com/aWrGocSA7hEuk1qAPe7L4T57LvLKrwwH26kC2_LOqxRQMQX7j3uHYojC-EKWgYEV2PdrmE0ahqvvhLhXrAGk6Q=w240-h480',
+};
+
 export const GameCardIcon: React.FC<GameCardIconProps> = ({
   game,
   className = '',
@@ -27,12 +32,30 @@ export const GameCardIcon: React.FC<GameCardIconProps> = ({
   showBadges = true,
 }) => {
   const [imageError, setImageError] = useState(false);
+  const [imageSrc, setImageSrc] = useState(game.iconUrl || '');
+  const [fallbackAttempted, setFallbackAttempted] = useState(false);
+  const fallbackIconUrl = VERIFIED_OFFICIAL_ICON_FALLBACKS[game.code.toUpperCase()];
+
+  useEffect(() => {
+    setImageSrc(game.iconUrl || '');
+    setImageError(false);
+    setFallbackAttempted(false);
+  }, [game.iconUrl, game.code]);
+
+  const handleImageError = () => {
+    if (!fallbackAttempted && fallbackIconUrl && imageSrc !== fallbackIconUrl) {
+      setFallbackAttempted(true);
+      setImageSrc(fallbackIconUrl);
+      return;
+    }
+    setImageError(true);
+  };
 
   // Consider unverified stock photos (Unsplash) or empty strings as "unregistered"
   const hasOfficialImage =
-    Boolean(game.iconUrl?.trim()) &&
-    !game.iconUrl!.includes('images.unsplash.com') &&
-    !game.iconUrl!.includes('placeholder') &&
+    Boolean(imageSrc.trim()) &&
+    !imageSrc.includes('images.unsplash.com') &&
+    !imageSrc.includes('placeholder') &&
     !imageError;
 
   // 1. Small thumbnail (used in admin lists, small badges)
@@ -40,9 +63,9 @@ export const GameCardIcon: React.FC<GameCardIconProps> = ({
     if (hasOfficialImage) {
       return (
         <img
-          src={game.iconUrl}
+          src={imageSrc}
           alt={game.name}
-          onError={() => setImageError(true)}
+          onError={handleImageError}
           className={`rounded-lg object-cover border border-stone-700 shrink-0 ${className || 'w-11 h-11'}`}
           loading="lazy"
         />
@@ -65,9 +88,9 @@ export const GameCardIcon: React.FC<GameCardIconProps> = ({
     return (
       <div className={`relative aspect-square w-full rounded-lg overflow-hidden bg-stone-900 border border-stone-800 mb-3.5 group-hover:border-[#d4af37]/40 transition-colors ${className}`}>
         <img
-          src={game.iconUrl}
+          src={imageSrc}
           alt={game.name}
-          onError={() => setImageError(true)}
+          onError={handleImageError}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
