@@ -31,16 +31,21 @@ export const GameCardIcon: React.FC<GameCardIconProps> = ({
   size = 'lg',
   showBadges = true,
 }) => {
+  const normalizedCode = game.code.trim().toUpperCase();
+  // For OPBR and HSR, always prefer the verified official Google Play app icon.
+  // Firestore may still contain an older but loadable image URL, so an onError
+  // fallback alone cannot replace it.
+  const fallbackUrl = FALLBACK_GAME_ICON_URLS[normalizedCode];
+  const preferredUrl = fallbackUrl || game.iconUrl || '';
   const [imageError, setImageError] = useState(false);
-  const [resolvedUrl, setResolvedUrl] = useState(game.iconUrl || '');
+  const [resolvedUrl, setResolvedUrl] = useState(preferredUrl);
   const [triedFallback, setTriedFallback] = useState(false);
-  const fallbackUrl = FALLBACK_GAME_ICON_URLS[game.code.toUpperCase()];
 
   useEffect(() => {
-    setResolvedUrl(game.iconUrl || '');
+    setResolvedUrl(preferredUrl);
     setImageError(false);
     setTriedFallback(false);
-  }, [game.iconUrl, game.code]);
+  }, [preferredUrl]);
 
   const handleImageError = () => {
     if (!triedFallback && fallbackUrl && resolvedUrl !== fallbackUrl) {
