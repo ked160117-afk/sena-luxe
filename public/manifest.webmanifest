@@ -1,0 +1,24 @@
+{
+  "name": "SENA LUXE - PREMIUM GAME COLLECTION",
+  "short_name": "SENA LUXE",
+  "description": "高級ゲーム専門セレクトショップ SENA LUXE",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/sena-luxe-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/sena-luxe-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
