@@ -1,5 +1,4 @@
 import React from 'react';
-import { Share2 } from 'lucide-react';
 import { ProductCategory } from '../types';
 
 interface ShareToXButtonProps {
@@ -35,7 +34,7 @@ export const ShareToXButton: React.FC<ShareToXButtonProps> = ({
     accountTag,
     'アカウント販売',
     '垢販売',
-    'セナリュックス',
+    'SENALUXE',
   ].filter(Boolean)));
   const postText = [
     productTitle,
@@ -55,7 +54,7 @@ export const ShareToXButton: React.FC<ShareToXButtonProps> = ({
       aria-label={`「${productTitle}」をXで投稿`}
       className="w-full mt-2 py-2.5 px-3 rounded-lg text-xs font-semibold text-[#f7e7ce] bg-[#17181d] border border-[#d4af37]/50 hover:bg-[#24252b] transition-colors flex items-center justify-center gap-2"
     >
-      <Share2 className="w-4 h-4" />
+      <span aria-hidden="true" className="text-sm font-black leading-none">𝕏</span>
       Xで投稿する
     </a>
   );
