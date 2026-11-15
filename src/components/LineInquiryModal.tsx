@@ -17,12 +17,6 @@ export const LineInquiryModal: React.FC = () => {
 
   if (!lineModal.isOpen) return null;
 
-  const handleOpenLine = () => {
-    // Always use the verified SENA LUXE official friend-add URL.
-    // Firestore settings may contain an outdated LINE destination.
-    window.open(OFFICIAL_LINE_URL, '_blank', 'noopener,noreferrer');
-  };
-
   const handleReCopy = async () => {
     try {
       await navigator.clipboard.writeText(lineModal.formattedText);
@@ -108,14 +102,16 @@ export const LineInquiryModal: React.FC = () => {
 
         {/* Action Button: Open LINE */}
         <div className="space-y-3">
-          <button
-            onClick={handleOpenLine}
+          <a
+            href={OFFICIAL_LINE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-full py-3.5 px-4 rounded-lg font-semibold text-black bg-[#06C755] hover:bg-[#05b34c] transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(6,199,85,0.3)] hover:shadow-[0_6px_20px_rgba(6,199,85,0.4)]"
           >
             <MessageCircle className="w-5 h-5 fill-black stroke-none" />
             <span>LINEを開いて問い合わせる</span>
             <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
-          </button>
+          </a>
 
           <button
             onClick={closeLineModal}
