@@ -10,9 +10,21 @@
  * - Firebase Connection & Security Architecture
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore, rebuildPublicCatalogMirrors, prepareInitialProductNumbering } from '../services/firestoreService';
+import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore } from '../services/firestoreService';
+import {
+  optimizeImageForFirestore,
+  saveVideoForProduct,
+  resolveMediaPlayableUrl,
+  deleteChunkedMediaIfManaged,
+  isChunkedMediaUrl,
+  MAX_PRODUCT_IMAGES,
+  PRODUCT_IMAGE_MAX_DIMENSION,
+  PRODUCT_IMAGE_TARGET_CHARS,
+  MAX_VIDEO_INPUT_BYTES,
+  normalizeVideoMimeType,
+} from '../services/mediaService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
@@ -38,6 +50,9 @@ import {
   Clock,
   Eye,
   EyeOff,
+  Video,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 
 type AdminTab = 'products' | 'rates' | 'games' | 'sequences' | 'requests' | 'settings' | 'firebase';
@@ -71,98 +86,19 @@ export const AdminDashboardView: React.FC = () => {
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
-  const [isPreparingNumbering, setIsPreparingNumbering] = useState(false);
-  const [numberingPreparationMessage, setNumberingPreparationMessage] = useState<string | null>(null);
-  const [numberingPreparationError, setNumberingPreparationError] = useState<string | null>(null);
 
-  const [isBuildingPublicCatalog, setIsBuildingPublicCatalog] = useState(false);
-  const [publicCatalogStatus, setPublicCatalogStatus] = useState<{
-    games: number;
-    products: number;
-    rates: number;
-    generationId: string;
-    activated: boolean;
-  } | null>(null);
-  const [publicCatalogError, setPublicCatalogError] = useState<string | null>(null);
-
-  const handleBuildPublicCatalog = async () => {
-    const estimatedGames = games.filter((game) => game.isHandled === true).length;
-    const estimatedProducts = products.filter((product) =>
-      product.verifiedForPublic === true &&
-      product.status === '掲載中' &&
-      product.category === '引退垢' &&
-      typeof product.price === 'number' &&
-      product.price > 0 &&
-      Boolean(product.title?.trim()) &&
-      Boolean(product.summary?.trim())
-    ).length;
-    const estimatedRates = stoneRates.filter((rate) =>
-      rate.currencyType === '無償' &&
-      rate.verifiedForPublic === true &&
-      rate.status === '取扱中' &&
-      rate.isPreparation === false &&
-      typeof rate.currentPrice === 'number' &&
-      rate.currentPrice > 0 &&
-      Boolean(rate.currencyAmount?.trim()) &&
-      Boolean(rate.planName?.trim()) &&
-      Boolean(rate.conditions?.trim())
-    ).length;
-    const confirmMessage = [
-      '公開専用データを事前作成します。現在のホームページ表示・商品データ・価格履歴には変更を加えません。',
-      '',
-      '公開対象の目安（禁止語句などは実際の処理でさらに除外されます）:',
-      `ゲームタイトル: ${estimatedGames}件`,
-      `商品: ${estimatedProducts}件`,
-      `石垢料金（無償確認済みのみ）: ${estimatedRates}件`,
-      '',
-      '石垢料金は「無償」と明示確認されたものだけを公開します。有償・未確認のデータは公開対象外です。',
-      '0件の項目がある場合は、管理画面の確認状態を見直してから実行してください。',
-      '続行しますか？',
-    ].join('\\n');
-    if (!window.confirm(confirmMessage)) return;
-
-    setIsBuildingPublicCatalog(true);
-    setPublicCatalogError(null);
-    try {
-      const result = await rebuildPublicCatalogMirrors();
-      setPublicCatalogStatus(result);
-    } catch (error) {
-      setPublicCatalogError(error instanceof Error ? error.message : '公開専用データの事前作成に失敗しました。');
-    } finally {
-      setIsBuildingPublicCatalog(false);
-    }
-  };
-
-  const handlePrepareInitialNumbering = async () => {
-    const confirmed = window.confirm(
-      '初期サンプル9件は削除せず保持したまま、商品番号だけを SAMPLE-... に変更します。サンプル分の番号台帳だけを整理し、実際の商品・実際の永久欠番は保持します。\n\n正式商品の次回番号を各ゲーム SL-XX-001 から始められる状態にします。内容が想定と異なる場合は自動中止します。実行しますか？'
-    );
-    if (!confirmed) return;
-
-    setIsPreparingNumbering(true);
-    setNumberingPreparationMessage(null);
-    setNumberingPreparationError(null);
-    try {
-      const result = await prepareInitialProductNumbering();
-      const nextList = Object.values(result.nextNumbers).join(' / ');
-      setNumberingPreparationMessage(
-        `準備完了：サンプル商品番号を ${result.samplesRenumbered} 件整理しました。次回番号：${nextList}`
-      );
-    } catch (error) {
-      setNumberingPreparationError(error instanceof Error ? error.message : '番号の準備に失敗しました。データは安全のため変更を中止しました。');
-    } finally {
-      setIsPreparingNumbering(false);
-    }
-  };
-
-  // File input refs for mobile photo upload
+  // File input refs for mobile photo & video upload
   const newProductFileInputRef = useRef<HTMLInputElement>(null);
-  const editProductFileInputRef = useRef<HTMLInputElement>(null);
   const newProductVideoInputRef = useRef<HTMLInputElement>(null);
+  const editProductFileInputRef = useRef<HTMLInputElement>(null);
   const editProductVideoInputRef = useRef<HTMLInputElement>(null);
   const newGameFileInputRef = useRef<HTMLInputElement>(null);
   const gameIconFileInputRef = useRef<HTMLInputElement>(null);
   const currencyIconFileInputRef = useRef<HTMLInputElement>(null);
+  // Track ONLY locally-selected picker Blob URLs so shared mediaService cache URLs are never revoked prematurely
+  const newLocalVideoBlobRef = useRef<string | null>(null);
+  const editLocalVideoBlobRef = useRef<string | null>(null);
+  const activeEditModalSeqRef = useRef(0);
 
   // ==========================================
   // Game Icon & Currency Icon Management Modal State
@@ -172,42 +108,52 @@ export const AdminDashboardView: React.FC = () => {
   const [tempCurrencyIconUrl, setTempCurrencyIconUrl] = useState('');
   const [isSavingIcon, setIsSavingIcon] = useState(false);
   const [isBulkSettingPrep, setIsBulkSettingPrep] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   // ==========================================
   // Product Registration Modal State
   // ==========================================
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
-  const [createProductError, setCreateProductError] = useState<string | null>(null);
   const [newProdGameId, setNewProdGameId] = useState(games[0]?.id || '');
   const [newProdCategory, setNewProdCategory] = useState<ProductCategory>('石垢');
-  const [newProdDevice, setNewProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
-  const [newProdVideoFile, setNewProdVideoFile] = useState<File | null>(null);
-  const [newVideoUploadProgress, setNewVideoUploadProgress] = useState<number | null>(null);
+  const [newProdDeviceCompatibility, setNewProdDeviceCompatibility] = useState('iOS・Android両方可');
   const [newProdTitle, setNewProdTitle] = useState('');
   const [newProdSummary, setNewProdSummary] = useState('');
   const [newProdIsPriceConfirmed, setNewProdIsPriceConfirmed] = useState(false); // default to 価格確認中
   const [newProdPrice, setNewProdPrice] = useState<string>('');
-  const [newProdImageUrl, setNewProdImageUrl] = useState('');
-  const [newProdImageUrls, setNewProdImageUrls] = useState<string[]>([]);
+  const [newProdImages, setNewProdImages] = useState<string[]>([]);
+  const [newProdImageUrlInput, setNewProdImageUrlInput] = useState('');
+  const [newProdImageError, setNewProdImageError] = useState<string | null>(null);
+  const [newProdVideoFile, setNewProdVideoFile] = useState<File | null>(null);
+  const [newProdVideoPreviewUrl, setNewProdVideoPreviewUrl] = useState('');
+  const [newProdVideoUrl, setNewProdVideoUrl] = useState('');
+  const [newProdVideoError, setNewProdVideoError] = useState<string | null>(null);
+  const [newProdSubmitError, setNewProdSubmitError] = useState<string | null>(null);
+  const [isSubmittingNewProd, setIsSubmittingNewProd] = useState(false);
   const [newProdHighlights, setNewProdHighlights] = useState('');
-  const [newProdStatus, setNewProdStatus] = useState<ProductStatus>('掲載停止');
+  const [newProdStatus, setNewProdStatus] = useState<ProductStatus>('掲載中');
 
   // ==========================================
   // Product Edit Modal State
   // ==========================================
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [editProdTitle, setEditProdTitle] = useState('');
-  const [editProdCategory, setEditProdCategory] = useState<ProductCategory>('ゲームアカウント');
+  const [editProdCategory, setEditProdCategory] = useState<ProductCategory>('石垢');
+  const [editProdDeviceCompatibility, setEditProdDeviceCompatibility] = useState('iOS・Android両方可');
   const [editProdIsPriceConfirmed, setEditProdIsPriceConfirmed] = useState(true);
   const [editProdPrice, setEditProdPrice] = useState<string>('');
   const [editProdSummary, setEditProdSummary] = useState('');
   const [editProdHighlights, setEditProdHighlights] = useState('');
-  const [editProdImageUrl, setEditProdImageUrl] = useState('');
-  const [editProdImageUrls, setEditProdImageUrls] = useState<string[]>([]);
-  const [editProdDevice, setEditProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
+  const [editProdImages, setEditProdImages] = useState<string[]>([]);
+  const [editProdImageUrlInput, setEditProdImageUrlInput] = useState('');
+  const [editProdImageError, setEditProdImageError] = useState<string | null>(null);
   const [editProdVideoFile, setEditProdVideoFile] = useState<File | null>(null);
-  const [editVideoUploadProgress, setEditVideoUploadProgress] = useState<number | null>(null);
+  const [editProdVideoPreviewUrl, setEditProdVideoPreviewUrl] = useState('');
+  const [editProdVideoUrl, setEditProdVideoUrl] = useState('');
+  const [editProdVideoError, setEditProdVideoError] = useState<string | null>(null);
+  const [isResolvingEditVideo, setIsResolvingEditVideo] = useState(false);
+  const [editProdSubmitError, setEditProdSubmitError] = useState<string | null>(null);
+  const [isSubmittingEditProd, setIsSubmittingEditProd] = useState(false);
   const [editProdStatus, setEditProdStatus] = useState<ProductStatus>('掲載中');
   const [editProdOrder, setEditProdOrder] = useState<string>('0');
 
@@ -223,6 +169,7 @@ export const AdminDashboardView: React.FC = () => {
   const [editRatePlanName, setEditRatePlanName] = useState('');
   const [editRateAmount, setEditRateAmount] = useState('');
   const [editRateConditions, setEditRateConditions] = useState('');
+  const [editRateRefPrice, setEditRateRefPrice] = useState('');
   const [editRateIsPriceConfirmed, setEditRateIsPriceConfirmed] = useState(true);
   const [editRateCurrPrice, setEditRateCurrPrice] = useState('');
   const [editRateNotes, setEditRateNotes] = useState('');
@@ -233,6 +180,7 @@ export const AdminDashboardView: React.FC = () => {
   const [newRatePlanName, setNewRatePlanName] = useState('');
   const [newRateAmount, setNewRateAmount] = useState('');
   const [newRateConditions, setNewRateConditions] = useState('');
+  const [newRateRefPrice, setNewRateRefPrice] = useState('3500');
   const [newRateIsPriceConfirmed, setNewRateIsPriceConfirmed] = useState(false);
   const [newRateCurrPrice, setNewRateCurrPrice] = useState('');
 
@@ -245,7 +193,7 @@ export const AdminDashboardView: React.FC = () => {
     setSyncFeedback(null);
     try {
       const res = await syncAllStoneRatesAndGamesToFirestore();
-      setSyncFeedback(`Firestore同期完了: 新規ゲーム${res.gamesSynced}件、新規石垢プラン${res.ratesSynced}件を追加しました。既存データ・履歴・商品番号台帳は上書きしていません。`);
+      setSyncFeedback(`Firestore一括同期完了: ゲーム${res.gamesSynced}件、石垢料金プラン${res.ratesSynced}件を反映・永続保存しました。`);
     } catch {
       setSyncFeedback('Firestoreへの一括同期に失敗しました。');
     } finally {
@@ -255,7 +203,7 @@ export const AdminDashboardView: React.FC = () => {
 
   // Bulk set all stone rates to preparation status
   const handleBulkSetPreparation = async () => {
-    if (!window.confirm('全43タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更しますか？\n（価格や商品データは維持されます）')) {
+    if (!window.confirm('全44タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更しますか？\n（価格や商品データは維持されます）')) {
       return;
     }
     setIsBulkSettingPrep(true);
@@ -294,49 +242,27 @@ export const AdminDashboardView: React.FC = () => {
     }
   };
 
-  // Canvas image optimization for icons (256x256 WebP, <30KB)
-  const handleCompressedIconUpload = (
+  // Canvas image optimization for icons (256x256 WebP/JPEG compact Data URL)
+  const handleCompressedIconUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    onComplete: (dataUrl: string) => void
+    onComplete: (url: string) => void
   ) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (typeof event.target?.result !== 'string') return;
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxDim = 256;
-        let width = img.width;
-        let height = img.height;
-        if (width > height) {
-          if (width > maxDim) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          }
-        } else {
-          if (height > maxDim) {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/webp', 0.88);
-          onComplete(dataUrl);
-        } else {
-          onComplete(event.target!.result as string);
-        }
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    setIsUploadingMedia(true);
+    try {
+      const compressedUrl = await optimizeImageForFirestore(file, {
+        maxDimension: 256,
+        targetMaxChars: 80_000,
+      });
+      onComplete(compressedUrl);
+    } catch (err: any) {
+      alert(err?.message || 'アイコン画像の最適化に失敗しました。');
+    } finally {
+      setIsUploadingMedia(false);
+    }
   };
 
   // ==========================================
@@ -360,295 +286,531 @@ export const AdminDashboardView: React.FC = () => {
   const [tempContactHours, setTempContactHours] = useState(settings.contactDeskHours || '公式LINEにてご案内');
   const [settingsSavedToast, setSettingsSavedToast] = useState(false);
 
-  // Compress product photos before storing them to keep Firestore documents and pages lighter.
-  const handleFileUpload = (
+  const revokeLocalPickerBlob = (mode: 'new' | 'edit') => {
+    const ref = mode === 'new' ? newLocalVideoBlobRef : editLocalVideoBlobRef;
+    if (ref.current && ref.current.startsWith('blob:')) {
+      URL.revokeObjectURL(ref.current);
+    }
+    ref.current = null;
+  };
+
+  // Revoke only locally-created picker Blob URLs on component unmount
+  useEffect(() => {
+    return () => {
+      revokeLocalPickerBlob('new');
+      revokeLocalPickerBlob('edit');
+    };
+  }, []);
+
+  // Helper: Automatically resize & compress uploaded product images (up to 5 total) to fit cleanly within Firestore 1MB limit
+  const handleProductImagesUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    onComplete: (dataUrl: string) => void
+    currentImages: string[],
+    setImages: React.Dispatch<React.SetStateAction<string[]>>,
+    setImageError: React.Dispatch<React.SetStateAction<string | null>>,
+    setSubmitError: React.Dispatch<React.SetStateAction<string | null>>
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('画像サイズは5MB以下にしてください。');
-      e.target.value = '';
+    const selectedFiles = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (selectedFiles.length === 0) return;
+
+    setImageError(null);
+    setSubmitError(null);
+
+    const remainingSlots = MAX_PRODUCT_IMAGES - currentImages.length;
+    if (remainingSlots <= 0) {
+      setImageError(`商品画像は最大${MAX_PRODUCT_IMAGES}枚までです。不要な画像を削除してから追加してください。`);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (typeof event.target?.result !== 'string') return;
-      const img = new Image();
-      img.onload = () => {
-        const maxDim = 720;
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          onComplete(event.target!.result as string);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        onComplete(canvas.toDataURL('image/webp', 0.72));
-      };
-      img.onerror = () => onComplete(event.target!.result as string);
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
+    const filesToProcess = selectedFiles.slice(0, remainingSlots);
+    if (selectedFiles.length > remainingSlots) {
+      setImageError(
+        `最大${MAX_PRODUCT_IMAGES}枚までのため、選択されたうち先頭${remainingSlots}枚を追加します。`
+      );
+    }
 
-
-
-
-  // Compress and add multiple product photos while preserving their selected order.
-  const handleMultipleProductImages = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    onComplete: (dataUrls: string[]) => void
-  ) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
-    if (!files.length) return;
-    const accepted = files.filter((file) => file.size <= 5 * 1024 * 1024);
-    if (accepted.length !== files.length) window.alert('5MBを超える画像は除外しました。画像は1枚5MB以下にしてください。');
-    const compress = (file: File) => new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error('画像を読み込めませんでした。'));
-      reader.onload = () => {
-        if (typeof reader.result !== 'string') { reject(new Error('画像を読み込めませんでした。')); return; }
-        const img = new Image();
-        img.onerror = () => resolve(reader.result as string);
-        img.onload = () => {
-          const maxDim = 900;
-          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * scale));
-          canvas.height = Math.max(1, Math.round(img.height * scale));
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { resolve(reader.result as string); return; }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          let quality = 0.65;
-          let encoded = canvas.toDataURL('image/webp', quality);
-          while (encoded.length > 180000 && canvas.width > 360 && canvas.height > 360) {
-            const smaller = document.createElement('canvas');
-            smaller.width = Math.max(1, Math.round(canvas.width * 0.8));
-            smaller.height = Math.max(1, Math.round(canvas.height * 0.8));
-            const smallerContext = smaller.getContext('2d');
-            if (!smallerContext) break;
-            smallerContext.drawImage(canvas, 0, 0, smaller.width, smaller.height);
-            canvas.width = smaller.width;
-            canvas.height = smaller.height;
-            const resizedContext = canvas.getContext('2d');
-            if (resizedContext) resizedContext.drawImage(smaller, 0, 0);
-            quality = Math.max(0.45, quality - 0.05);
-            encoded = canvas.toDataURL('image/webp', quality);
-          }
-          resolve(encoded);
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
+    setIsUploadingMedia(true);
     try {
-      const uploaded = await Promise.all(accepted.map(compress));
-      onComplete(uploaded);
-    } catch (error) {
-      console.error('Product image processing failed:', error);
-      window.alert('画像の読み込みに失敗しました。別の画像をお試しください。');
+      const compressedList: string[] = [];
+      for (const file of filesToProcess) {
+        const optimizedUrl = await optimizeImageForFirestore(file, {
+          maxDimension: PRODUCT_IMAGE_MAX_DIMENSION,
+          targetMaxChars: PRODUCT_IMAGE_TARGET_CHARS,
+        });
+        compressedList.push(optimizedUrl);
+      }
+
+      if (compressedList.length > 0) {
+        setImages((prev) => [...prev, ...compressedList].slice(0, MAX_PRODUCT_IMAGES));
+      }
+    } catch (err: any) {
+      const msg =
+        err?.message ||
+        '画像ファイルの処理に失敗しました。再度画像を選択してください。';
+      setImageError(msg);
+      setSubmitError(msg);
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
-  const moveProductImage = (images: string[], setImages: (next: string[]) => void, index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= images.length) return;
-    const next = [...images];
-    [next[index], next[target]] = [next[target], next[index]];
-    setImages(next);
+  const handleAddImageUrl = (
+    urlInput: string,
+    setUrlInput: React.Dispatch<React.SetStateAction<string>>,
+    currentImages: string[],
+    setImages: React.Dispatch<React.SetStateAction<string[]>>,
+    setImageError: React.Dispatch<React.SetStateAction<string | null>>,
+    setSubmitError: React.Dispatch<React.SetStateAction<string | null>>
+  ) => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    if (currentImages.length >= MAX_PRODUCT_IMAGES) {
+      setImageError(`商品画像は最大${MAX_PRODUCT_IMAGES}枚まで登録できます。`);
+      return;
+    }
+    setImageError(null);
+    setSubmitError(null);
+    setImages((prev) => [...prev, trimmed].slice(0, MAX_PRODUCT_IMAGES));
+    setUrlInput('');
+  };
+
+  const handleRemoveProductImage = (
+    index: number,
+    setImages: React.Dispatch<React.SetStateAction<string[]>>,
+    setImageError: React.Dispatch<React.SetStateAction<string | null>>
+  ) => {
+    setImageError(null);
+    setImages((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handlePromoteProductImageToMain = (
+    index: number,
+    setImages: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    if (index <= 0) return;
+    setImages((prev) => {
+      if (index >= prev.length) return prev;
+      const target = prev[index];
+      const others = prev.filter((_, idx) => idx !== index);
+      return [target, ...others];
+    });
+  };
+
+  // Clear selected video file & preview for New Product Modal
+  const handleRemoveNewProdVideo = () => {
+    revokeLocalPickerBlob('new');
+    setNewProdVideoFile(null);
+    setNewProdVideoPreviewUrl('');
+    setNewProdVideoUrl('');
+    setNewProdVideoError(null);
+    setNewProdSubmitError(null);
+    if (newProductVideoInputRef.current) {
+      newProductVideoInputRef.current.value = '';
+    }
+  };
+
+  // Clear selected video file & preview for Edit Product Modal
+  const handleRemoveEditProdVideo = () => {
+    revokeLocalPickerBlob('edit');
+    activeEditModalSeqRef.current += 1;
+    setIsResolvingEditVideo(false);
+    setEditProdVideoFile(null);
+    setEditProdVideoPreviewUrl('');
+    setEditProdVideoUrl('');
+    setEditProdVideoError(null);
+    setEditProdSubmitError(null);
+    if (editProductVideoInputRef.current) {
+      editProductVideoInputRef.current.value = '';
+    }
+  };
+
+  // Handle video file selection: immediately buffer <= 10MB into an in-memory File so OS handle cannot expire
+  const handleVideoFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: 'new' | 'edit'
+  ) => {
+    const pickedFile = e.target.files?.[0];
+    // Reset input value so re-selecting another (or same) file always fires onChange
+    e.target.value = '';
+    if (!pickedFile) return;
+
+    const setError = mode === 'new' ? setNewProdVideoError : setEditProdVideoError;
+    const setSubmitErr = mode === 'new' ? setNewProdSubmitError : setEditProdSubmitError;
+    const setFile = mode === 'new' ? setNewProdVideoFile : setEditProdVideoFile;
+    const setPreview = mode === 'new' ? setNewProdVideoPreviewUrl : setEditProdVideoPreviewUrl;
+    const setUrl = mode === 'new' ? setNewProdVideoUrl : setEditProdVideoUrl;
+
+    setError(null);
+    setSubmitErr(null);
+    if (mode === 'edit') {
+      activeEditModalSeqRef.current += 1;
+      setIsResolvingEditVideo(false);
+    }
+
+    const lowerName = pickedFile.name.toLowerCase();
+    const isVideoMimeOrExt =
+      pickedFile.type.startsWith('video/') ||
+      /\.(mp4|mov|webm|m4v|avi|mkv)$/.test(lowerName);
+
+    if (!isVideoMimeOrExt) {
+      revokeLocalPickerBlob(mode);
+      setFile(null);
+      setPreview('');
+      setError('対応していないファイル形式です。MP4・MOV・WebMなどの動画ファイルを選択してください。');
+      return;
+    }
+
+    if (pickedFile.size === 0) {
+      revokeLocalPickerBlob(mode);
+      setFile(null);
+      setPreview('');
+      setError('選択された動画ファイルが空（0バイト）か、端末側から参照できません。別の動画ファイルを選択してください。');
+      return;
+    }
+
+    if (pickedFile.size > MAX_VIDEO_INPUT_BYTES) {
+      revokeLocalPickerBlob(mode);
+      setFile(null);
+      setPreview('');
+      const sizeMb = (pickedFile.size / (1024 * 1024)).toFixed(2);
+      setError(
+        `選択された動画ファイル（${sizeMb}MB）は保存上限（10MB）を超えています。10MB以下の動画を選択するか、外部動画URLをご入力ください。`
+      );
+      return;
+    }
+
+    try {
+      // Buffer into RAM immediately so mobile/desktop picker File handle never expires before saving
+      const arrayBuffer = await pickedFile.arrayBuffer();
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error('EMPTY_BUFFER');
+      }
+      const safeMime = normalizeVideoMimeType(pickedFile.type, pickedFile.name);
+      const materializedFile = new File([arrayBuffer], pickedFile.name, {
+        type: safeMime,
+        lastModified: pickedFile.lastModified,
+      });
+
+      const objectUrl = URL.createObjectURL(materializedFile);
+      revokeLocalPickerBlob(mode);
+      if (mode === 'new') {
+        newLocalVideoBlobRef.current = objectUrl;
+      } else {
+        editLocalVideoBlobRef.current = objectUrl;
+      }
+
+      setFile(materializedFile);
+      setUrl('');
+      setPreview(objectUrl);
+    } catch {
+      revokeLocalPickerBlob(mode);
+      setFile(null);
+      setPreview('');
+      setError(
+        '選択された動画ファイルの読み込みに失敗しました（アクセス権限または一時参照の失効）。動画を再選択するか、「動画を削除」を押して画像のみで登録してください。'
+      );
+    }
+  };
+
+  // Save video cleanly: compact inline OR Firestore chunked storage (`fs-media://`) up to 10MB
+  const readVideoFileForSave = async (file: File, existingImages?: string | string[]): Promise<string> => {
+    return saveVideoForProduct(file, existingImages);
   };
 
   // Handle Product Add
-  const handleCreateProduct = async (e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) => {
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isCreatingProduct) return;
-    if (!newProdTitle.trim() || !newProdGameId) {
-      setCreateProductError('ゲームタイトルと商品タイトルを入力してください。');
-      return;
-    }
-    if (newProdVideoFile && newProdVideoFile.size > 15 * 1024 * 1024) {
-      setCreateProductError('動画は15MB以下にしてください。');
-      return;
-    }
+    if (!newProdTitle.trim() || !newProdGameId || isSubmittingNewProd) return;
 
-    const isVerifiedForPublic =
-      (['石垢', '引退垢', '初期垢'] as ProductCategory[]).includes(newProdCategory) &&
-      newProdIsPriceConfirmed &&
-      Boolean(newProdPrice.trim()) &&
-      Number(newProdPrice) > 0 &&
-      Boolean(newProdSummary.trim());
-    if (newProdStatus === '掲載中' && !isVerifiedForPublic) {
-      setCreateProductError('公開するには、商品説明と確認済み価格を入力してください。');
-      return;
-    }
+    setNewProdSubmitError(null);
+    setNewProdVideoError(null);
+    setNewProdImageError(null);
+    setIsSubmittingNewProd(true);
 
-    const highlightsArr = newProdHighlights
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    setIsCreatingProduct(true);
-    setCreateProductError(null);
-    let uploadedVideoId: string | undefined;
-    let productCreated = false;
+    let uploadedChunkedVideoRef: string | undefined;
 
     try {
-      // Upload video first so a failed upload cannot leave a half-created product.
+      const pendingUrl = newProdImageUrlInput.trim();
+      const finalImages = [
+        ...newProdImages,
+        ...(pendingUrl && newProdImages.length < MAX_PRODUCT_IMAGES ? [pendingUrl] : []),
+      ]
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, MAX_PRODUCT_IMAGES);
+
+      let resolvedVideoUrl: string | undefined = newProdVideoUrl.trim() || undefined;
+
       if (newProdVideoFile) {
-        setNewVideoUploadProgress(0);
-        uploadedVideoId = await uploadProductVideoToFirestore(newProdVideoFile, setNewVideoUploadProgress);
+        try {
+          resolvedVideoUrl = await readVideoFileForSave(newProdVideoFile, finalImages);
+          if (isChunkedMediaUrl(resolvedVideoUrl)) {
+            uploadedChunkedVideoRef = resolvedVideoUrl;
+          }
+        } catch (videoErr: any) {
+          const msg =
+            videoErr?.message ||
+            '動画ファイルの読み込みに失敗しました。「動画を削除」を押してから再選択するか、動画なしで登録してください。';
+          setNewProdVideoError(msg);
+          setNewProdSubmitError(msg);
+          setIsSubmittingNewProd(false);
+          return;
+        }
+      }
+
+      const highlightsArr = newProdHighlights
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const [mainImageUrl, ...additionalImageUrls] = finalImages;
+      const trimmedVideoUrl = resolvedVideoUrl ? resolvedVideoUrl.trim() : '';
+      const parsedPrice =
+        newProdIsPriceConfirmed && newProdPrice.trim() !== '' && !Number.isNaN(Number(newProdPrice))
+          ? Number(newProdPrice)
+          : null;
+      const finalSummary = newProdSummary.trim() || '専任スタッフによる動作・安全性検証済みアカウント。';
+      const isVerifiedForPublic =
+        ['石垢', '引退垢', '初期垢'].includes(newProdCategory) &&
+        newProdIsPriceConfirmed &&
+        parsedPrice !== null &&
+        parsedPrice > 0 &&
+        Boolean(newProdTitle.trim()) &&
+        Boolean(finalSummary);
+
+      if (newProdStatus === '掲載中' && !isVerifiedForPublic) {
+        if (uploadedChunkedVideoRef) {
+          void deleteChunkedMediaIfManaged(uploadedChunkedVideoRef);
+        }
+        setNewProdSubmitError('一般公開（掲載中）にするには、「石垢」「引退垢」「初期垢」カテゴリーと確認済みの販売価格（1円以上）を設定してください。');
+        setIsSubmittingNewProd(false);
+        return;
       }
 
       await addNewProduct({
         gameId: newProdGameId,
         category: newProdCategory,
-        deviceCompatibility: newProdDevice,
+        deviceCompatibility: newProdDeviceCompatibility,
         title: newProdTitle.trim(),
-        summary: newProdSummary.trim(),
-        price: isVerifiedForPublic ? Number(newProdPrice) : null,
+        summary: finalSummary,
+        price: parsedPrice,
         verifiedForPublic: isVerifiedForPublic,
-        imageUrl: newProdImageUrls[0] || newProdImageUrl.trim() || undefined,
-        imageUrls: newProdImageUrls.length ? newProdImageUrls : (newProdImageUrl.trim() ? [newProdImageUrl.trim()] : []),
-        videoStorageId: uploadedVideoId,
+        ...(mainImageUrl ? { imageUrl: mainImageUrl } : {}),
+        ...(additionalImageUrls.length > 0 ? { additionalImages: additionalImageUrls } : {}),
+        ...(trimmedVideoUrl ? { videoUrl: trimmedVideoUrl } : {}),
         keyHighlights: highlightsArr,
-        status: isVerifiedForPublic ? newProdStatus : '掲載停止',
+        status: newProdStatus,
       });
-      productCreated = true;
 
+      handleRemoveNewProdVideo();
       setIsProductModalOpen(false);
       setNewProdTitle('');
       setNewProdSummary('');
       setNewProdHighlights('');
-      setNewProdImageUrl('');
-      setNewProdImageUrls([]);
-      setNewProdVideoFile(null);
-      if (newProductVideoInputRef.current) newProductVideoInputRef.current.value = '';
-      setNewProdDevice('iOS・Android両方可');
+      setNewProdImages([]);
+      setNewProdImageUrlInput('');
+      setNewProdImageError(null);
+      setNewProdDeviceCompatibility('iOS・Android両方可');
       setNewProdPrice('');
       setNewProdIsPriceConfirmed(false);
-      setNewProdStatus('掲載停止');
-      setCreateProductError(null);
-      window.alert('商品を登録しました。商品一覧に反映されるまで少しお待ちください。');
-    } catch (error) {
-      console.error('Product creation failed:', error);
-      if (uploadedVideoId && !productCreated) {
-        try {
-          await deleteProductVideoFromFirestore(uploadedVideoId);
-        } catch (cleanupError) {
-          console.warn('Could not clean up video after failed product creation:', cleanupError);
-        }
+      setNewProdStatus('掲載中');
+      setNewProdSubmitError(null);
+    } catch (err: any) {
+      if (uploadedChunkedVideoRef) {
+        void deleteChunkedMediaIfManaged(uploadedChunkedVideoRef);
       }
-      let detail = error instanceof Error ? error.message : String(error);
-      try {
-        const parsed = JSON.parse(detail);
-        if (typeof parsed.error === 'string') detail = parsed.error;
-      } catch {
-        // Keep the original error text when it is not structured JSON.
+      const rawMsg = err?.message || String(err);
+      let friendlyMsg = '商品登録処理中にエラーが発生しました。入力内容をご確認のうえ再度お試しください。';
+      if (
+        rawMsg.includes('longer than') ||
+        rawMsg.includes('exceeds the maximum') ||
+        rawMsg.includes('FIRESTORE_DOC_TOO_LARGE')
+      ) {
+        friendlyMsg =
+          '添付データ容量がFirestoreの1ドキュメント上限（1MB）を超えました。画像の枚数を減らすか再選択（自動圧縮）して再度お試しください。';
+      } else if (rawMsg.includes('permission') || rawMsg.includes('Missing or insufficient')) {
+        friendlyMsg = '登録権限の確認中にエラーが発生しました。管理者アカウントでのログイン状態をご確認ください。';
+      } else if (rawMsg) {
+        friendlyMsg = `登録エラー: ${rawMsg}`;
       }
-      const friendly = detail.includes('permission-denied')
-        ? '保存権限がありません。管理者ログインとFirestoreの管理者権限を確認してください。'
-        : detail.includes('unavailable') || detail.includes('offline')
-          ? 'Firestoreに接続できません。通信状態を確認して、入力内容を残したまま再試行してください。'
-          : detail.includes('resource-exhausted')
-            ? 'Firestoreの無料利用枠または保存容量の上限に達した可能性があります。'
-            : `登録に失敗しました: ${detail}`;
-      setCreateProductError(friendly);
+      setNewProdSubmitError(friendlyMsg);
     } finally {
-      setNewVideoUploadProgress(null);
-      setIsCreatingProduct(false);
+      setIsSubmittingNewProd(false);
     }
   };
 
   // Open Product Edit Modal
   const openEditProductModal = (product: ProductItem) => {
-    const isVerified = product.verifiedForPublic === true;
+    revokeLocalPickerBlob('edit');
+    const modalSeq = ++activeEditModalSeqRef.current;
+
+    const initialImages = [
+      product.imageUrl,
+      ...(Array.isArray(product.additionalImages) ? product.additionalImages : []),
+    ]
+      .map((u) => (typeof u === 'string' ? u.trim() : ''))
+      .filter(Boolean)
+      .slice(0, MAX_PRODUCT_IMAGES);
+
+    const existingVideoUrl = typeof product.videoUrl === 'string' ? product.videoUrl.trim() : '';
+    const needsAsyncResolution = Boolean(
+      existingVideoUrl && (isChunkedMediaUrl(existingVideoUrl) || existingVideoUrl.startsWith('data:'))
+    );
+
     setEditingProduct(product);
     setEditProdTitle(product.title);
     setEditProdCategory(product.category === 'ゲーム内通貨・石垢' ? '石垢' : product.category);
-    setEditProdIsPriceConfirmed(isVerified && product.price !== null);
-    setEditProdPrice(isVerified && product.price !== null ? String(product.price) : '');
-    setEditProdSummary(isVerified ? product.summary || '' : '');
-    setEditProdHighlights(isVerified ? product.keyHighlights?.join('\n') || '' : '');
-    setEditProdImageUrl(isVerified ? product.imageUrl || '' : '');
-    setEditProdImageUrls(isVerified ? (product.imageUrls?.length ? product.imageUrls : (product.imageUrl ? [product.imageUrl] : [])) : []);
-    setEditProdDevice(product.deviceCompatibility || 'iOS・Android両方可');
+    setEditProdDeviceCompatibility(product.deviceCompatibility || 'iOS・Android両方可');
+    setEditProdIsPriceConfirmed(product.price !== null);
+    setEditProdPrice(product.price !== null ? String(product.price) : '');
+    setEditProdSummary(product.summary || '');
+    setEditProdHighlights(product.keyHighlights?.join('\n') || '');
+    setEditProdImages(initialImages);
+    setEditProdImageUrlInput('');
+    setEditProdImageError(null);
     setEditProdVideoFile(null);
-    if (editProductVideoInputRef.current) editProductVideoInputRef.current.value = '';
-    setEditProdStatus(isVerified ? product.status : '掲載停止');
+    setEditProdVideoUrl(existingVideoUrl);
+    setEditProdVideoPreviewUrl(needsAsyncResolution ? '' : existingVideoUrl);
+    setIsResolvingEditVideo(needsAsyncResolution);
+    setEditProdVideoError(null);
+    setEditProdSubmitError(null);
+    setEditProdStatus(product.status);
     setEditProdOrder(product.order !== undefined ? String(product.order) : '0');
+
+    if (needsAsyncResolution) {
+      resolveMediaPlayableUrl(existingVideoUrl)
+        .then((playableUrl) => {
+          if (activeEditModalSeqRef.current !== modalSeq) return;
+          setIsResolvingEditVideo(false);
+          if (playableUrl) {
+            setEditProdVideoPreviewUrl(playableUrl);
+          } else {
+            setEditProdVideoError('保存済み動画の再生URLを生成できませんでした。');
+          }
+        })
+        .catch(() => {
+          if (activeEditModalSeqRef.current !== modalSeq) return;
+          setIsResolvingEditVideo(false);
+          setEditProdVideoError('保存済み動画の読み込みに失敗しました。必要に応じて「動画を削除」または再選択してください。');
+        });
+    }
   };
 
   // Save Edited Product
   const handleSaveEditedProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct) return;
-    if (editProdVideoFile && editProdVideoFile.size > 15 * 1024 * 1024) {
-      window.alert('動画は15MB以下にしてください。');
-      return;
-    }
+    if (!editingProduct || isSubmittingEditProd) return;
 
-    const isVerifiedForPublic =
-      (['石垢', '引退垢', '初期垢'] as ProductCategory[]).includes(editProdCategory) &&
-      editProdIsPriceConfirmed &&
-      Boolean(editProdPrice.trim()) &&
-      Number(editProdPrice) > 0 &&
-      Boolean(editProdSummary.trim());
-    if (editProdStatus === '掲載中' && !isVerifiedForPublic) {
-      window.alert('公開するには、商品説明と確認済み価格を入力してください。');
-      return;
-    }
+    setEditProdSubmitError(null);
+    setEditProdVideoError(null);
+    setEditProdImageError(null);
+    setIsSubmittingEditProd(true);
 
-    const highlightsArr = editProdHighlights
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const previousVideoUrl = editingProduct.videoUrl || '';
+    let newChunkedVideoRef: string | undefined;
 
-    let videoStorageId = editingProduct.videoStorageId;
-    if (editProdVideoFile) {
-      try {
-        setEditVideoUploadProgress(0);
-        videoStorageId = await uploadProductVideoToFirestore(editProdVideoFile, setEditVideoUploadProgress);
-      } catch (error) {
-        console.error('Product video upload failed:', error);
-        window.alert('動画の登録に失敗したため、商品情報は変更していません。動画サイズとFirebaseの利用枠・ルールを確認してください。');
-        setEditVideoUploadProgress(null);
+    try {
+      const pendingUrl = editProdImageUrlInput.trim();
+      const finalImages = [
+        ...editProdImages,
+        ...(pendingUrl && editProdImages.length < MAX_PRODUCT_IMAGES ? [pendingUrl] : []),
+      ]
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, MAX_PRODUCT_IMAGES);
+
+      let resolvedVideoUrl: string = editProdVideoUrl.trim();
+
+      if (editProdVideoFile) {
+        try {
+          resolvedVideoUrl = await readVideoFileForSave(editProdVideoFile, finalImages);
+          if (isChunkedMediaUrl(resolvedVideoUrl)) {
+            newChunkedVideoRef = resolvedVideoUrl;
+          }
+        } catch (videoErr: any) {
+          const msg =
+            videoErr?.message ||
+            '動画ファイルの読み込みに失敗しました。「動画を削除」を押してから再選択するか、動画なしで保存してください。';
+          setEditProdVideoError(msg);
+          setEditProdSubmitError(msg);
+          setIsSubmittingEditProd(false);
+          return;
+        }
+      }
+
+      const highlightsArr = editProdHighlights
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const mainImageUrl = finalImages[0] || '';
+      const additionalImageUrls = finalImages.slice(1, MAX_PRODUCT_IMAGES);
+      const parsedPrice =
+        editProdIsPriceConfirmed && editProdPrice.trim() !== '' && !Number.isNaN(Number(editProdPrice))
+          ? Number(editProdPrice)
+          : null;
+      const finalSummary = editProdSummary.trim() || '専任スタッフによる動作・安全性検証済みアカウント。';
+      const isVerifiedForPublic =
+        ['石垢', '引退垢', '初期垢'].includes(editProdCategory) &&
+        editProdIsPriceConfirmed &&
+        parsedPrice !== null &&
+        parsedPrice > 0 &&
+        Boolean(editProdTitle.trim()) &&
+        Boolean(finalSummary);
+
+      if (editProdStatus === '掲載中' && !isVerifiedForPublic) {
+        if (newChunkedVideoRef) {
+          void deleteChunkedMediaIfManaged(newChunkedVideoRef);
+        }
+        setEditProdSubmitError('一般公開（掲載中）にするには、「石垢」「引退垢」「初期垢」カテゴリーと確認済みの販売価格（1円以上）を設定してください。');
+        setIsSubmittingEditProd(false);
         return;
       }
-    }
 
-    await updateProduct(editingProduct.id, {
-      title: editProdTitle.trim(),
-      category: editProdCategory,
-      deviceCompatibility: editProdDevice,
-      videoStorageId,
-      videoUrl: editProdVideoFile ? undefined : editingProduct.videoUrl,
-      price: isVerifiedForPublic ? Number(editProdPrice) : null,
-      verifiedForPublic: isVerifiedForPublic,
-      summary: isVerifiedForPublic ? editProdSummary.trim() : editingProduct.summary,
-      keyHighlights: isVerifiedForPublic ? highlightsArr : editingProduct.keyHighlights,
-      imageUrl: isVerifiedForPublic ? (editProdImageUrls[0] || editProdImageUrl.trim() || undefined) : editingProduct.imageUrl,
-      imageUrls: isVerifiedForPublic ? (editProdImageUrls.length ? editProdImageUrls : (editProdImageUrl.trim() ? [editProdImageUrl.trim()] : [])) : editingProduct.imageUrls,
-      status: isVerifiedForPublic ? editProdStatus : '掲載停止',
-      order: editProdOrder ? Number(editProdOrder) : 0,
-    });
+      await updateProduct(editingProduct.id, {
+        title: editProdTitle.trim(),
+        category: editProdCategory,
+        deviceCompatibility: editProdDeviceCompatibility,
+        price: parsedPrice,
+        verifiedForPublic: isVerifiedForPublic,
+        summary: finalSummary,
+        keyHighlights: highlightsArr,
+        imageUrl: mainImageUrl,
+        additionalImages: additionalImageUrls,
+        ...(resolvedVideoUrl || editingProduct.videoUrl ? { videoUrl: resolvedVideoUrl } : {}),
+        status: editProdStatus,
+        order: editProdOrder ? Number(editProdOrder) : 0,
+      });
 
-    if (editProdVideoFile && editingProduct.videoStorageId) {
-      try {
-        await deleteProductVideoFromFirestore(editingProduct.videoStorageId);
-      } catch (error) {
-        console.warn('Old product video cleanup failed:', error);
+      // Clean up replaced/removed chunked video only after update succeeds
+      if (previousVideoUrl && isChunkedMediaUrl(previousVideoUrl) && previousVideoUrl !== resolvedVideoUrl) {
+        void deleteChunkedMediaIfManaged(previousVideoUrl);
       }
+
+      handleRemoveEditProdVideo();
+      setEditProdImageUrlInput('');
+      setEditingProduct(null);
+    } catch (err: any) {
+      if (newChunkedVideoRef) {
+        void deleteChunkedMediaIfManaged(newChunkedVideoRef);
+      }
+      const rawMsg = err?.message || String(err);
+      let friendlyMsg = '商品情報の更新中にエラーが発生しました。入力内容をご確認のうえ再度お試しください。';
+      if (
+        rawMsg.includes('longer than') ||
+        rawMsg.includes('exceeds the maximum') ||
+        rawMsg.includes('FIRESTORE_DOC_TOO_LARGE')
+      ) {
+        friendlyMsg =
+          '添付された画像または動画のデータ容量がFirestoreの保存上限（1MB）を超えました。画像の枚数を減らすか再選択（自動圧縮）して再度お試しください。';
+      } else if (rawMsg) {
+        friendlyMsg = `更新エラー: ${rawMsg}`;
+      }
+      setEditProdSubmitError(friendlyMsg);
+    } finally {
+      setIsSubmittingEditProd(false);
     }
-    setEditVideoUploadProgress(null);
-    setEditingProduct(null);
   };
 
   // Handle Stone Rate Price Update
@@ -663,13 +825,13 @@ export const AdminDashboardView: React.FC = () => {
   // Open Stone Rate Full Edit Modal
   const openEditRateModal = (plan: StoneRatePlan) => {
     setEditingRatePlan(plan);
-    const isVerified = plan.verifiedForPublic === true;
-    setEditRatePlanName(isVerified ? plan.planName : '');
-    setEditRateAmount(isVerified ? plan.currencyAmount : '');
-    setEditRateConditions(isVerified ? plan.conditions : '');
-    setEditRateIsPriceConfirmed(isVerified && plan.currentPrice !== null);
-    setEditRateCurrPrice(isVerified && plan.currentPrice !== null ? String(plan.currentPrice) : '');
-    setEditRateNotes(isVerified ? plan.notes || '' : '');
+    setEditRatePlanName(plan.planName);
+    setEditRateAmount(plan.currencyAmount);
+    setEditRateConditions(plan.conditions);
+    setEditRateRefPrice(String(plan.referencePrice));
+    setEditRateIsPriceConfirmed(plan.currentPrice !== null);
+    setEditRateCurrPrice(plan.currentPrice !== null ? String(plan.currentPrice) : '');
+    setEditRateNotes(plan.notes || '');
   };
 
   // Save Stone Rate Full Edit
@@ -678,22 +840,18 @@ export const AdminDashboardView: React.FC = () => {
     if (!editingRatePlan) return;
 
     const currPriceVal = editRateIsPriceConfirmed && editRateCurrPrice ? Number(editRateCurrPrice) : null;
-    if (!editRatePlanName.trim() || !editRateAmount.trim() || !editRateConditions.trim()) {
-      window.alert('プラン名・通貨数量・確認済みの条件を入力してください。');
-      return;
-    }
-    const isVerifiedForPublic = currPriceVal !== null && currPriceVal > 0;
+    const isVerified = currPriceVal !== null && currPriceVal > 0;
     await updateStoneRatePlan(editingRatePlan.id, {
       planName: editRatePlanName.trim(),
       currencyAmount: editRateAmount.trim(),
       conditions: editRateConditions.trim(),
-      referencePrice: 0,
-      currentPrice: isVerifiedForPublic ? currPriceVal : null,
-      status: isVerifiedForPublic ? '取扱中' : '現在準備中',
-      isPreparation: !isVerifiedForPublic,
-      verifiedForPublic: isVerifiedForPublic,
+      referencePrice: Number(editRateRefPrice) || editingRatePlan.referencePrice,
+      currentPrice: currPriceVal,
+      status: isVerified ? '取扱中' : '現在準備中',
+      isPreparation: !isVerified,
+      verifiedForPublic: isVerified,
       notes: editRateNotes.trim() || undefined,
-      confirmedDate: isVerifiedForPublic ? new Date().toISOString().split('T')[0].replace(/-/g, '/') : '価格確認中',
+      confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
     });
 
     setEditingRatePlan(null);
@@ -706,12 +864,7 @@ export const AdminDashboardView: React.FC = () => {
     if (!game) return;
 
     const currPriceVal = newRateIsPriceConfirmed && newRateCurrPrice ? Number(newRateCurrPrice) : null;
-    const isVerifiedForPublic =
-      Boolean(newRatePlanName.trim()) &&
-      Boolean(newRateAmount.trim()) &&
-      Boolean(newRateConditions.trim()) &&
-      currPriceVal !== null &&
-      currPriceVal > 0;
+    const isVerified = currPriceVal !== null && currPriceVal > 0;
 
     addNewStoneRatePlan({
       gameId: game.id,
@@ -720,13 +873,13 @@ export const AdminDashboardView: React.FC = () => {
       planName: newRatePlanName.trim(),
       currencyName: game.currencyName,
       currencyAmount: newRateAmount.trim(),
-      conditions: newRateConditions.trim(),
-      referencePrice: 0,
-      currentPrice: isVerifiedForPublic ? currPriceVal : null,
-      confirmedDate: isVerifiedForPublic ? new Date().toISOString().split('T')[0].replace(/-/g, '/') : '価格確認中',
-      status: isVerifiedForPublic ? '取扱中' : '現在準備中',
-      isPreparation: !isVerifiedForPublic,
-      verifiedForPublic: isVerifiedForPublic,
+      conditions: newRateConditions.trim() || '初期状態・即納対応',
+      referencePrice: Number(newRateRefPrice) || 3000,
+      currentPrice: currPriceVal,
+      confirmedDate: new Date().toISOString().split('T')[0].replace(/-/g, '/'),
+      status: isVerified ? '取扱中' : '現在準備中',
+      isPreparation: !isVerified,
+      verifiedForPublic: isVerified,
     });
 
     setIsAddRateModalOpen(false);
@@ -913,11 +1066,28 @@ export const AdminDashboardView: React.FC = () => {
                     </td>
                     <td className="py-3 px-3 sm:px-4">
                       <div className="font-semibold text-white line-clamp-1">{p.title}</div>
-                      <div className="text-[11px] text-[#d4af37]">{p.gameName}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className="text-[#d4af37]">{p.gameName}</span>
+                        {p.deviceCompatibility && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-stone-900 text-stone-300 border border-stone-700">
+                            {p.deviceCompatibility}
+                          </span>
+                        )}
+                        {(() => {
+                          const imgCount = [p.imageUrl, ...(p.additionalImages || [])].filter((u) => Boolean(u && u.trim())).length;
+                          return imgCount > 0 ? (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-stone-800 text-stone-300 border border-stone-700">
+                              画像{imgCount}枚
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
                     </td>
-                    <td className="py-3 px-3 sm:px-4 text-stone-400 whitespace-nowrap">{p.category}</td>
+                    <td className="py-3 px-3 sm:px-4 text-stone-400 whitespace-nowrap">
+                      {p.category === 'ゲーム内通貨・石垢' ? '石垢' : p.category}
+                    </td>
                     <td className="py-3 px-3 sm:px-4 font-mono whitespace-nowrap">
-                      {p.verifiedForPublic && p.price !== null ? (
+                      {p.price !== null ? (
                         <span className="font-bold text-stone-200">¥{p.price.toLocaleString()}</span>
                       ) : (
                         <span className="text-amber-400 font-medium">価格確認中</span>
@@ -937,7 +1107,7 @@ export const AdminDashboardView: React.FC = () => {
                             : 'text-rose-400 border-rose-800'
                         }`}
                       >
-                        <option value="掲載中" disabled={!p.verifiedForPublic}>掲載中</option>
+                        <option value="掲載中">掲載中</option>
                         <option value="商談中">商談中</option>
                         <option value="売り切れ">売り切れ</option>
                         <option value="掲載停止">掲載停止 (非公開)</option>
@@ -982,7 +1152,7 @@ export const AdminDashboardView: React.FC = () => {
             <div>
               <h2 className="text-base sm:text-lg font-semibold text-white">石垢専用料金表管理</h2>
               <p className="text-xs text-stone-400">
-                登録済み石垢プランの商品内容・価格・在庫の確認と公開管理
+                全{games.length}タイトル・{stoneRates.length}プランの参考市場価格と現在価格の分離管理・未確認商品の「価格確認中」「要相談」「要確認」設定
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -990,7 +1160,7 @@ export const AdminDashboardView: React.FC = () => {
                 onClick={handleBulkSetPreparation}
                 disabled={isBulkSettingPrep}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-amber-300 bg-amber-950/60 hover:bg-amber-900/60 border border-amber-600/50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                title="登録済みの石垢プランを一括で準備中に変更"
+                title="全44タイトルの石垢全プランを一括で「現在準備中」「在庫要確認」に変更"
               >
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
                 <span>{isBulkSettingPrep ? '一括変更中...' : '全石垢プランを準備中に一括変更'}</span>
@@ -999,10 +1169,10 @@ export const AdminDashboardView: React.FC = () => {
                 onClick={handleBulkSyncRates}
                 disabled={isSyncingRates}
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 border border-[#d4af37]/40 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                title="登録済みの石垢プランをFirestoreへ同期"
+                title="初期マスタの全44タイトル・料金プランをFirestoreへ一括反映"
               >
                 <Database className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>{isSyncingRates ? 'Firestore同期中...' : '石垢プランをFirestoreへ同期'}</span>
+                <span>{isSyncingRates ? 'Firestore同期中...' : '料金表一括同期 (Firestoreへ反映)'}</span>
               </button>
               <button
                 onClick={() => setIsAddRateModalOpen(true)}
@@ -1034,6 +1204,7 @@ export const AdminDashboardView: React.FC = () => {
                 <tr>
                   <th className="py-3 px-3 sm:px-4">ゲーム / プラン名</th>
                   <th className="py-3 px-3 sm:px-4">通貨数量・条件・端末</th>
+                  <th className="py-3 px-3 sm:px-4">参考市場価格</th>
                   <th className="py-3 px-3 sm:px-4">現在提供価格</th>
                   <th className="py-3 px-3 sm:px-4">ステータス</th>
                   <th className="py-3 px-3 sm:px-4">最終確認日</th>
@@ -1046,35 +1217,32 @@ export const AdminDashboardView: React.FC = () => {
                   <tr key={plan.id} className="hover:bg-stone-900/40 transition-colors">
                     <td className="py-3 px-3 sm:px-4">
                       <div className="text-[11px] text-[#d4af37] font-medium">{plan.gameName}</div>
-                      <div className="font-semibold text-white">{plan.verifiedForPublic ? plan.planName : '未確認プラン（非公開）'}</div>
+                      <div className="font-semibold text-white">{plan.planName}</div>
                     </td>
                     <td className="py-3 px-3 sm:px-4">
-                      {plan.verifiedForPublic ? (
-                        <>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-[#f7e7ce] font-bold">{plan.currencyAmount}</span>
-                            {plan.deviceRequirement && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
-                                {plan.deviceRequirement}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-stone-400 line-clamp-1">{plan.conditions}</div>
-                          {plan.notes && (
-                            <div className="text-[10px] text-amber-400/90 italic">※ {plan.notes}</div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-[11px] text-amber-400">数量・条件は未確認（編集画面で再入力）</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-[#f7e7ce] font-bold">{plan.currencyAmount}</span>
+                        {plan.deviceRequirement && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/60">
+                            {plan.deviceRequirement}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-stone-400 line-clamp-1">{plan.conditions}</div>
+                      {plan.notes && (
+                        <div className="text-[10px] text-amber-400/90 italic">※ {plan.notes}</div>
                       )}
                     </td>
+                    <td className="py-3 px-3 sm:px-4 font-mono text-stone-400 whitespace-nowrap">
+                      {plan.referencePrice > 0 ? `¥${plan.referencePrice.toLocaleString()}` : '-'}
+                    </td>
                     <td className="py-3 px-3 sm:px-4 font-mono whitespace-nowrap">
-                      {plan.verifiedForPublic && plan.priceDisplay ? (
+                      {plan.priceDisplay ? (
                         <span className="font-bold text-[#f7e7ce]">{plan.priceDisplay}</span>
-                      ) : plan.verifiedForPublic && plan.currentPrice !== null ? (
+                      ) : plan.currentPrice !== null ? (
                         <span className="font-bold text-white">¥{plan.currentPrice.toLocaleString()}</span>
                       ) : (
-                        <span className="text-amber-400 font-medium">{plan.verifiedForPublic ? (plan.status === '要相談' ? '要相談' : '価格確認中') : '未確認・非公開'}</span>
+                        <span className="text-amber-400 font-medium">{plan.status === '要相談' ? '要相談' : '価格確認中'}</span>
                       )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
@@ -1103,7 +1271,7 @@ export const AdminDashboardView: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-stone-400 font-mono text-[11px] whitespace-nowrap">
-                      {plan.verifiedForPublic ? plan.confirmedDate || '-' : '未確認'}
+                      {plan.confirmedDate}
                     </td>
                     <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       <span className="text-[11px] text-stone-400">
@@ -1153,27 +1321,26 @@ export const AdminDashboardView: React.FC = () => {
                           </button>
                           <button
                             onClick={async () => {
+                              const nextStatus = plan.status === '現在準備中' ? '取扱中' : '現在準備中';
                               await updateStoneRatePlan(plan.id, {
-                                status: '現在準備中',
+                                status: nextStatus,
                                 stockStatus: '在庫要確認',
-                                isPreparation: true,
-                                verifiedForPublic: false,
+                                isPreparation: nextStatus === '現在準備中',
                               });
                             }}
                             className={`px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
-                              !plan.verifiedForPublic
+                              plan.status === '現在準備中'
                                 ? 'bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border-emerald-800/60'
                                 : 'bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border-amber-700/60'
                             }`}
-                            disabled={!plan.verifiedForPublic}
-                            title="未確認プランは編集画面で価格・数量・条件を確認してから公開してください"
+                            title="個別ステータス切り替え"
                           >
-                            {plan.verifiedForPublic ? '準備中に変更' : '編集画面で確認'}
+                            {plan.status === '現在準備中' ? '取扱中に変更' : '準備中に変更'}
                           </button>
                           <button
                             onClick={() => {
                               setRateEditPlanId(plan.id);
-                              setRateEditNewPrice(plan.verifiedForPublic && plan.currentPrice !== null ? String(plan.currentPrice) : '');
+                              setRateEditNewPrice(plan.currentPrice !== null ? String(plan.currentPrice) : '');
                               setRateEditReason('');
                             }}
                             className="px-2 py-1 rounded bg-stone-800 hover:bg-stone-700 text-[11px] text-[#d4af37] border border-stone-700"
@@ -1352,30 +1519,6 @@ export const AdminDashboardView: React.FC = () => {
             <p className="text-xs text-stone-400">
               形式: SL-ゲームコード-3桁連番（例: SL-FP-001）。一度発行された番号は削除後も永久欠番として記録され、再利用を完全に防止します。
             </p>
-            <div className="mt-4 rounded-xl border border-[#8f7534]/50 bg-[#17150f] p-4 space-y-3">
-              <div className="text-sm font-semibold text-[#f2d98c]">初期サンプル番号の整理</div>
-              <p className="text-xs leading-relaxed text-stone-300">
-                初期サンプル9件は削除せず保持し、サンプル専用番号へ変更します。サンプル由来の台帳だけを整理し、実商品と実際の永久欠番は残します。処理前に内容を照合し、想定外のデータがあれば自動中止します。
-              </p>
-              <button
-                type="button"
-                onClick={handlePrepareInitialNumbering}
-                disabled={isPreparingNumbering}
-                className="rounded-lg bg-[#d4af37] px-4 py-2.5 text-sm font-bold text-black disabled:opacity-50"
-              >
-                {isPreparingNumbering ? '番号を安全に確認・整理中...' : '正式商品の番号を001から準備する'}
-              </button>
-              {numberingPreparationMessage && (
-                <div className="rounded-lg border border-emerald-800 bg-emerald-950/40 p-3 text-xs text-emerald-200 break-words">
-                  {numberingPreparationMessage}
-                </div>
-              )}
-              {numberingPreparationError && (
-                <div className="rounded-lg border border-red-900 bg-red-950/40 p-3 text-xs text-red-200 break-words">
-                  {numberingPreparationError}
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1596,32 +1739,6 @@ export const AdminDashboardView: React.FC = () => {
             </div>
           </div>
 
-          {/* Pre-stage public catalog without changing the current storefront listeners */}
-          <div className="rounded-xl bg-[#111216] border border-stone-800 p-5 space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-white">公開専用データの事前準備</h3>
-              <p className="text-[11px] text-stone-400 mt-1 leading-relaxed">
-                現在のホームページ表示は変更せず、将来のセキュリティ切替に使う公開専用データだけを作成します。元の商品・価格・価格履歴・商品番号台帳は変更しません。
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleBuildPublicCatalog}
-              disabled={isBuildingPublicCatalog || !isFirestoreConnected}
-              className="px-5 py-2.5 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isBuildingPublicCatalog ? '公開専用データを作成中...' : '公開専用データを事前作成'}
-            </button>
-            {publicCatalogStatus && (
-              <div className="text-[11px] text-emerald-300 space-y-1">
-                <div>作成結果: ゲーム {publicCatalogStatus.games}件 / 商品 {publicCatalogStatus.products}件 / 石垢料金 {publicCatalogStatus.rates}件</div>
-                <div className="font-mono break-all">世代ID: {publicCatalogStatus.generationId}</div>
-                <div>{publicCatalogStatus.activated ? '公開用世代の準備が完了しました。現在のホームページ表示はまだ切り替わっていません。' : '新しい世代は作成されましたが、より新しい公開世代が既に有効なため切替は行っていません。'}</div>
-              </div>
-            )}
-            {publicCatalogError && <div className="text-[11px] text-red-300">{publicCatalogError}</div>}
-          </div>
-
           {/* Security & Rules Info */}
           <div className="rounded-xl bg-[#111216] border border-stone-800 p-6 space-y-4 text-xs text-stone-300 leading-relaxed">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
@@ -1706,21 +1823,7 @@ export const AdminDashboardView: React.FC = () => {
               </button>
             </div>
 
-            <form noValidate onSubmit={handleCreateProduct} className="space-y-4 text-xs">
-              {createProductError && (
-                <div role="alert" className="rounded-lg border border-red-800 bg-red-950/50 p-3 text-xs text-red-200">
-                  {createProductError}
-                </div>
-              )}
-              {isCreatingProduct && (
-                <div className="rounded-lg border border-[#d4af37]/40 bg-[#d4af37]/10 p-3 text-xs text-[#f0d98a]">
-                  {newVideoUploadProgress !== null
-                    ? `動画をアップロード中です… ${newVideoUploadProgress}%`
-                    : '商品情報を保存しています…'}
-                  <p className="mt-1 text-[10px] text-stone-400">この画面を閉じたり、登録ボタンを再度押したりしないでください。</p>
-                </div>
-              )}
-
+            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-stone-300 block mb-1 font-semibold">対象ゲームタイトル</label>
@@ -1748,25 +1851,27 @@ export const AdminDashboardView: React.FC = () => {
                     <option value="初期垢">初期垢</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-stone-300 block mb-1 font-semibold">OS</label>
-                  <select
-                    value={newProdDevice}
-                    onChange={(e) => setNewProdDevice(e.target.value as NonNullable<ProductItem['deviceCompatibility']>)}
-                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
-                  >
-                    <option value="iOSのみ">iOSのみ</option>
-                    <option value="Androidのみ">Androidのみ</option>
-                    <option value="iOS・Android両方可">iOS・Android両方可</option>
-                  </select>
-                </div>
               </div>
+
+              <div>
+                <label className="text-stone-300 block mb-1 font-semibold">対応OS</label>
+                <select
+                  value={newProdDeviceCompatibility}
+                  onChange={(e) => setNewProdDeviceCompatibility(e.target.value)}
+                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                >
+                  <option value="iOSのみ">iOSのみ</option>
+                  <option value="Androidのみ">Androidのみ</option>
+                  <option value="iOS・Android両方可">iOS・Android両方可</option>
+                </select>
+              </div>
+
               <div>
                 <label className="text-stone-300 block mb-1 font-semibold">商品タイトル *</label>
                 <input
                   type="text"
                   required
-                  placeholder="例: 廻珠80,000個保有の石垢アカウント"
+                  placeholder="例: 初期リセマラ・限定SSR共存アカウント"
                   value={newProdTitle}
                   onChange={(e) => setNewProdTitle(e.target.value)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
@@ -1798,65 +1903,308 @@ export const AdminDashboardView: React.FC = () => {
                 )}
               </div>
 
-              {/* Image Upload for Mobile */}
-              <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品画像（スマホ写真・カメラ・URL）</label>
+              {/* Image Upload (Up to 5 images: 1st = Main, 2nd-5th = Additional) */}
+              <div className="space-y-2.5 p-3 rounded-lg bg-[#0a0b0d] border border-stone-800">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-stone-300 font-semibold flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>商品画像（最大5枚・1枚目がメイン画像）</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded border bg-stone-900 text-[#f7e7ce] border-[#d4af37]/40 font-mono">
+                      {newProdImages.length} / {MAX_PRODUCT_IMAGES}枚
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded border bg-emerald-950/40 text-emerald-300 border-emerald-800/50">
+                      自動軽量圧縮対応
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row items-center gap-2">
                   <input
                     type="file"
                     ref={newProductFileInputRef}
                     accept="image/*"
                     multiple
-                    onChange={(e) => handleMultipleProductImages(e, (dataUrls) => {
-                      if (newProdImageUrls.length + dataUrls.length > 5) window.alert('商品画像は合計5枚まで登録できます。超過分は追加されません。'); const next = [...newProdImageUrls, ...dataUrls].slice(0, 5); setNewProdImageUrls(next); setNewProdImageUrl(next[0] || '');
-                    })}
+                    onChange={(e) =>
+                      handleProductImagesUpload(
+                        e,
+                        newProdImages,
+                        setNewProdImages,
+                        setNewProdImageError,
+                        setNewProdSubmitError
+                      )
+                    }
                     className="hidden"
                   />
                   <button
                     type="button"
+                    disabled={isUploadingMedia || newProdImages.length >= MAX_PRODUCT_IMAGES}
                     onClick={() => newProductFileInputRef.current?.click()}
-                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors"
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors disabled:opacity-50"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#d4af37]" />
-                    <span>写真を複数アップロード (複数選択可)</span>
+                    <span>
+                      {isUploadingMedia
+                        ? '画像最適化中...'
+                        : newProdImages.length >= MAX_PRODUCT_IMAGES
+                        ? '上限(5枚)に達しました'
+                        : `写真を追加 (残り${MAX_PRODUCT_IMAGES - newProdImages.length}枚)`}
+                    </span>
                   </button>
-                  <input
-                    type="url"
-                    placeholder="または画像URL (https://...)"
-                    value={newProdImageUrl}
-                    onChange={(e) => { setNewProdImageUrl(e.target.value); setNewProdImageUrls(e.target.value.trim() ? [e.target.value.trim()] : []); }}
-                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
-                  />
+                  <div className="flex w-full items-center gap-1.5">
+                    <input
+                      type="url"
+                      placeholder="または画像URL (https://...)"
+                      value={newProdImageUrlInput}
+                      disabled={newProdImages.length >= MAX_PRODUCT_IMAGES}
+                      onChange={(e) => setNewProdImageUrlInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddImageUrl(
+                            newProdImageUrlInput,
+                            setNewProdImageUrlInput,
+                            newProdImages,
+                            setNewProdImages,
+                            setNewProdImageError,
+                            setNewProdSubmitError
+                          );
+                        }
+                      }}
+                      className="w-full bg-[#121316] border border-stone-700 rounded-lg p-2.5 text-white text-[11px] disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      disabled={newProdImages.length >= MAX_PRODUCT_IMAGES || !newProdImageUrlInput.trim()}
+                      onClick={() =>
+                        handleAddImageUrl(
+                          newProdImageUrlInput,
+                          setNewProdImageUrlInput,
+                          newProdImages,
+                          setNewProdImages,
+                          setNewProdImageError,
+                          setNewProdSubmitError
+                        )
+                      }
+                      className="px-3 py-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-[11px] font-semibold shrink-0 disabled:opacity-40"
+                    >
+                      URL追加
+                    </button>
+                  </div>
                 </div>
-                {newProdImageUrls.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {newProdImageUrls.map((url, index) => <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#d4af37]/40 bg-black">
-                      <img src={url} alt={`商品画像 ${index + 1}`} className="w-full h-full object-cover" />
-                      <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] bg-black/80 text-white">{index + 1}</span>
-                      <div className="absolute top-1 left-1 flex gap-1">
-                        <button type="button" disabled={index === 0} onClick={() => moveProductImage(newProdImageUrls, setNewProdImageUrls, index, -1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">←</button>
-                        <button type="button" disabled={index === newProdImageUrls.length - 1} onClick={() => moveProductImage(newProdImageUrls, setNewProdImageUrls, index, 1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">→</button>
+
+                {newProdImageError && (
+                  <div className="p-2 rounded bg-amber-950/60 border border-amber-700/60 text-[11px] text-amber-200 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>{newProdImageError}</span>
+                  </div>
+                )}
+
+                {newProdImages.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                    {newProdImages.map((imgSrc, idx) => (
+                      <div
+                        key={`new-img-${idx}-${imgSrc.slice(0, 20)}`}
+                        className={`relative rounded-lg overflow-hidden bg-black border ${
+                          idx === 0 ? 'border-[#d4af37]' : 'border-stone-700'
+                        }`}
+                      >
+                        <div className="h-24 w-full">
+                          <img src={imgSrc} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                        <span
+                          className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                            idx === 0
+                              ? 'bg-[#d4af37] text-black'
+                              : 'bg-black/80 text-stone-200 border border-stone-700'
+                          }`}
+                        >
+                          {idx === 0 ? 'メイン (1枚目)' : `追加 (${idx + 1}枚目)`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductImage(idx, setNewProdImages, setNewProdImageError)}
+                          title="この画像を削除"
+                          className="absolute top-1 right-1 bg-black/85 hover:bg-rose-950 text-rose-400 border border-stone-700 rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
+                        >
+                          ✕
+                        </button>
+                        <div className="flex items-center justify-between px-1.5 py-1 bg-[#121316] border-t border-stone-800 text-[9px]">
+                          <span className="text-stone-400 font-mono">
+                            {imgSrc.startsWith('data:') ? `約${Math.round(imgSrc.length / 1024)}KB` : 'URL'}
+                          </span>
+                          {idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handlePromoteProductImageToMain(idx, setNewProdImages)}
+                              className="text-[#d4af37] hover:underline font-semibold"
+                            >
+                              メインにする
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <button type="button" onClick={() => { const next = newProdImageUrls.filter((_, i) => i !== index); setNewProdImageUrls(next); setNewProdImageUrl(next[0] || ''); }} className="absolute top-1 right-1 bg-black/80 text-rose-400 rounded-full w-5 h-5">✕</button>
-                    </div>)}
+                    ))}
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品動画（端末から直接登録）</label>
-                <input
-                  ref={newProductVideoInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setNewProdVideoFile(e.target.files?.[0] || null)}
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-xs file:mr-3 file:rounded file:border-0 file:bg-[#d4af37] file:px-3 file:py-1 file:text-black"
-                />
-                {newProdVideoFile && <p className="text-xs text-stone-300">{newProdVideoFile.name}（{(newProdVideoFile.size / 1024 / 1024).toFixed(1)}MB）</p>}
-                <p className="text-[10px] text-stone-500 leading-relaxed">スマホ内の画面録画を直接選択できます（1本15MB以下）。動画はFirestoreに分割保存し、再生時のみ読み込みます。課金を避けるにはFirebaseがSpark（無料）プランであることを事前に確認してください。Blaze（従量課金）プランでは無料枠超過分が課金される可能性があります。</p>
-                {newVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画を保存中：{newVideoUploadProgress}%</p>}
-              </div>
+              {/* Video Upload / Selection & Removal */}
+              <div className="space-y-2 p-3 rounded-lg bg-[#0a0b0d] border border-stone-800">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-stone-300 font-semibold flex items-center gap-1.5">
+                    <Video className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>商品動画（任意・動画なしでも登録可能）</span>
+                  </label>
+                  {(newProdVideoFile || newProdVideoPreviewUrl || newProdVideoUrl.trim()) && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveNewProdVideo}
+                      className="px-2.5 py-1 rounded-md bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-700/60 text-[11px] font-semibold flex items-center gap-1 transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>動画を削除</span>
+                    </button>
+                  )}
+                </div>
 
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="file"
+                    ref={newProductVideoInputRef}
+                    accept="video/*"
+                    onChange={(e) => handleVideoFileSelect(e, 'new')}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => newProductVideoInputRef.current?.click()}
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>{newProdVideoFile ? '別の動画を選択' : '動画ファイルを選択'}</span>
+                  </button>
+                  <input
+                    type="url"
+                    placeholder="または動画URL (https://...)"
+                    value={newProdVideoUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (newProdVideoFile) {
+                        revokeLocalPickerBlob('new');
+                        setNewProdVideoFile(null);
+                        if (newProductVideoInputRef.current) {
+                          newProductVideoInputRef.current.value = '';
+                        }
+                      }
+                      setNewProdVideoUrl(val);
+                      setNewProdVideoPreviewUrl(val.trim());
+                      setNewProdVideoError(null);
+                      setNewProdSubmitError(null);
+                    }}
+                    className="w-full bg-[#121316] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
+                  />
+                </div>
+
+                {/* Selected Video Preview + Side "動画を削除" Button */}
+                {(newProdVideoFile || newProdVideoPreviewUrl) && (
+                  <div className="mt-2 p-2.5 rounded-lg bg-[#121316] border border-[#d4af37]/30 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="relative w-full sm:w-44 h-28 rounded-lg overflow-hidden border border-stone-800 bg-black shrink-0 flex items-center justify-center">
+                      {newProdVideoPreviewUrl ? (
+                        <video
+                          key={newProdVideoPreviewUrl}
+                          src={newProdVideoPreviewUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-contain bg-black"
+                          onError={(e) => {
+                            const code = e.currentTarget.error?.code;
+                            setNewProdVideoError(
+                              code === 4 || code === 3
+                                ? 'お使いのブラウザで再生できない動画コーデック／形式（HEVC等）の可能性があります。H.264形式のMP4等をご選択いただくか、公開後の互換性にご注意ください。'
+                                : '動画プレビューを読み込めませんでした。「動画を削除」を押して別の動画を再選択してください。'
+                            );
+                          }}
+                        />
+                      ) : (
+                        <span className="text-[11px] text-stone-400">プレビュー準備中...</span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-2 w-full">
+                      {newProdVideoFile ? (
+                        <div className="space-y-0.5">
+                          <div className="text-[11px] font-semibold text-white truncate" title={newProdVideoFile.name}>
+                            {newProdVideoFile.name}
+                          </div>
+                          <div className="text-[10px] text-stone-400 font-mono">
+                            サイズ: {(newProdVideoFile.size / 1024).toFixed(1)} KB
+                            {newProdVideoFile.size > 10 * 1024 * 1024 ? (
+                              <span className="ml-1.5 text-rose-400">
+                                （※上限10MBを超えています。軽量化するか外部URLをご使用ください）
+                              </span>
+                            ) : (
+                              <span className="ml-1.5 text-emerald-400">
+                                （10MBまで分割保存対応）
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-stone-300 truncate">
+                          動画: {isChunkedMediaUrl(newProdVideoUrl) ? 'Firestore分割保存動画' : newProdVideoPreviewUrl}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRemoveNewProdVideo}
+                          className="px-3 py-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-900/80 text-rose-200 border border-rose-700/70 text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>動画を削除</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => newProductVideoInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-[11px] font-medium flex items-center gap-1.5 transition-colors"
+                        >
+                          <RefreshCw className="w-3 h-3 text-[#d4af37]" />
+                          <span>別の動画を再選択</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {newProdVideoError && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-700/70 text-[11px] text-rose-200 flex items-start gap-2 leading-relaxed">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1.5 flex-1">
+                      <div>{newProdVideoError}</div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRemoveNewProdVideo}
+                          className="px-2.5 py-1 rounded bg-rose-900/80 hover:bg-rose-800 text-white text-[10px] font-semibold"
+                        >
+                          動画を削除して画像のみで登録する
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => newProductVideoInputRef.current?.click()}
+                          className="px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-700 text-[10px] font-semibold"
+                        >
+                          動画を再選択する
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Summary Description */}
               <div>
@@ -1875,7 +2223,7 @@ export const AdminDashboardView: React.FC = () => {
                 <label className="text-stone-300 block mb-1 font-semibold">ハイライト（改行区切り）</label>
                 <textarea
                   rows={2}
-                  placeholder="確認済みの通貨内訳&#10;アカウント連携状況&#10;引き継ぎ条件"
+                  placeholder="限定SSR所持&#10;ワンオーナー安心データ&#10;即納対応"
                   value={newProdHighlights}
                   onChange={(e) => setNewProdHighlights(e.target.value)}
                   className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white resize-none"
@@ -1903,23 +2251,28 @@ export const AdminDashboardView: React.FC = () => {
                 </span>
               </div>
 
+              {newProdSubmitError && (
+                <div className="p-3 rounded-lg bg-rose-950/70 border border-rose-700/80 text-xs text-rose-200 flex items-start gap-2 leading-relaxed">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">{newProdSubmitError}</div>
+                </div>
+              )}
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsProductModalOpen(false)}
-                  className="px-4 py-2 rounded bg-stone-800 text-stone-300"
+                  disabled={isSubmittingNewProd}
+                  className="px-4 py-2 rounded bg-stone-800 text-stone-300 disabled:opacity-50"
                 >
                   キャンセル
                 </button>
                 <button
-                  type="button"
-                  onClick={handleCreateProduct}
-                  disabled={isCreatingProduct}
-                  className="px-5 py-2 rounded font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="submit"
+                  disabled={isSubmittingNewProd}
+                  className="px-5 py-2 rounded font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50"
                 >
-                  {isCreatingProduct
-                    ? (newVideoUploadProgress !== null ? `動画アップロード中 ${newVideoUploadProgress}%` : '登録処理中…')
-                    : '発番して登録'}
+                  {isSubmittingNewProd ? '登録処理中...' : '発番して登録'}
                 </button>
               </div>
             </form>
@@ -1955,30 +2308,34 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveEditedProduct} className="space-y-4 text-xs">
-              <div>
-                <label className="text-stone-300 block mb-1 font-semibold">カテゴリー</label>
-                <select
-                  value={editProdCategory}
-                  onChange={(e) => setEditProdCategory(e.target.value as ProductCategory)}
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
-                >
-                  <option value="石垢">石垢</option>
-                  <option value="引退垢">引退垢</option>
-                  <option value="初期垢">初期垢</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-stone-300 block mb-1 font-semibold">OS</label>
-                <select
-                  value={editProdDevice}
-                  onChange={(e) => setEditProdDevice(e.target.value as NonNullable<ProductItem['deviceCompatibility']>)}
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
-                >
-                  <option value="iOSのみ">iOSのみ</option>
-                  <option value="Androidのみ">Androidのみ</option>
-                  <option value="iOS・Android両方可">iOS・Android両方可</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-stone-300 block mb-1 font-semibold">カテゴリー</label>
+                  <select
+                    value={editProdCategory}
+                    onChange={(e) => setEditProdCategory(e.target.value as ProductCategory)}
+                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                  >
+                    <option value="石垢">石垢</option>
+                    <option value="引退垢">引退垢</option>
+                    <option value="初期垢">初期垢</option>
+                    {!['石垢', '引退垢', '初期垢'].includes(editProdCategory) && (
+                      <option value={editProdCategory}>{editProdCategory}（旧分類）</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-stone-300 block mb-1 font-semibold">対応OS</label>
+                  <select
+                    value={editProdDeviceCompatibility}
+                    onChange={(e) => setEditProdDeviceCompatibility(e.target.value)}
+                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                  >
+                    <option value="iOSのみ">iOSのみ</option>
+                    <option value="Androidのみ">Androidのみ</option>
+                    <option value="iOS・Android両方可">iOS・Android両方可</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -2017,64 +2374,310 @@ export const AdminDashboardView: React.FC = () => {
                 )}
               </div>
 
-              {/* Image Upload for Mobile */}
-              <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品画像（スマホ写真・カメラ・URL）</label>
+              {/* Image Upload (Up to 5 images: 1st = Main, 2nd-5th = Additional) */}
+              <div className="space-y-2.5 p-3 rounded-lg bg-[#0a0b0d] border border-stone-800">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="text-stone-300 font-semibold flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>商品画像（最大5枚・1枚目がメイン画像）</span>
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded border bg-stone-900 text-[#f7e7ce] border-[#d4af37]/40 font-mono">
+                      {editProdImages.length} / {MAX_PRODUCT_IMAGES}枚
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded border bg-emerald-950/40 text-emerald-300 border-emerald-800/50">
+                      自動軽量圧縮対応
+                    </span>
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row items-center gap-2">
                   <input
                     type="file"
                     ref={editProductFileInputRef}
                     accept="image/*"
                     multiple
-                    onChange={(e) => handleMultipleProductImages(e, (dataUrls) => {
-                      if (editProdImageUrls.length + dataUrls.length > 5) window.alert('商品画像は合計5枚まで登録できます。超過分は追加されません。'); const next = [...editProdImageUrls, ...dataUrls].slice(0, 5); setEditProdImageUrls(next); setEditProdImageUrl(next[0] || '');
-                    })}
+                    onChange={(e) =>
+                      handleProductImagesUpload(
+                        e,
+                        editProdImages,
+                        setEditProdImages,
+                        setEditProdImageError,
+                        setEditProdSubmitError
+                      )
+                    }
                     className="hidden"
                   />
                   <button
                     type="button"
+                    disabled={isUploadingMedia || editProdImages.length >= MAX_PRODUCT_IMAGES}
                     onClick={() => editProductFileInputRef.current?.click()}
-                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors"
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors disabled:opacity-50"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#d4af37]" />
-                    <span>写真を複数アップロード (複数選択可)</span>
+                    <span>
+                      {isUploadingMedia
+                        ? '画像最適化中...'
+                        : editProdImages.length >= MAX_PRODUCT_IMAGES
+                        ? '上限(5枚)に達しました'
+                        : `写真を追加 (残り${MAX_PRODUCT_IMAGES - editProdImages.length}枚)`}
+                    </span>
                   </button>
-                  <input
-                    type="url"
-                    placeholder="または画像URL (https://...)"
-                    value={editProdImageUrl}
-                    onChange={(e) => { setEditProdImageUrl(e.target.value); setEditProdImageUrls(e.target.value.trim() ? [e.target.value.trim()] : []); }}
-                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
-                  />
+                  <div className="flex w-full items-center gap-1.5">
+                    <input
+                      type="url"
+                      placeholder="または画像URL (https://...)"
+                      value={editProdImageUrlInput}
+                      disabled={editProdImages.length >= MAX_PRODUCT_IMAGES}
+                      onChange={(e) => setEditProdImageUrlInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddImageUrl(
+                            editProdImageUrlInput,
+                            setEditProdImageUrlInput,
+                            editProdImages,
+                            setEditProdImages,
+                            setEditProdImageError,
+                            setEditProdSubmitError
+                          );
+                        }
+                      }}
+                      className="w-full bg-[#121316] border border-stone-700 rounded-lg p-2.5 text-white text-[11px] disabled:opacity-50"
+                    />
+                    <button
+                      type="button"
+                      disabled={editProdImages.length >= MAX_PRODUCT_IMAGES || !editProdImageUrlInput.trim()}
+                      onClick={() =>
+                        handleAddImageUrl(
+                          editProdImageUrlInput,
+                          setEditProdImageUrlInput,
+                          editProdImages,
+                          setEditProdImages,
+                          setEditProdImageError,
+                          setEditProdSubmitError
+                        )
+                      }
+                      className="px-3 py-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-[11px] font-semibold shrink-0 disabled:opacity-40"
+                    >
+                      URL追加
+                    </button>
+                  </div>
                 </div>
-                {editProdImageUrls.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {editProdImageUrls.map((url, index) => <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#d4af37]/40 bg-black">
-                      <img src={url} alt={`商品画像 ${index + 1}`} className="w-full h-full object-cover" />
-                      <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] bg-black/80 text-white">{index + 1}</span>
-                      <div className="absolute top-1 left-1 flex gap-1">
-                        <button type="button" disabled={index === 0} onClick={() => moveProductImage(editProdImageUrls, setEditProdImageUrls, index, -1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">←</button>
-                        <button type="button" disabled={index === editProdImageUrls.length - 1} onClick={() => moveProductImage(editProdImageUrls, setEditProdImageUrls, index, 1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">→</button>
+
+                {editProdImageError && (
+                  <div className="p-2 rounded bg-amber-950/60 border border-amber-700/60 text-[11px] text-amber-200 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>{editProdImageError}</span>
+                  </div>
+                )}
+
+                {editProdImages.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
+                    {editProdImages.map((imgSrc, idx) => (
+                      <div
+                        key={`edit-img-${idx}-${imgSrc.slice(0, 20)}`}
+                        className={`relative rounded-lg overflow-hidden bg-black border ${
+                          idx === 0 ? 'border-[#d4af37]' : 'border-stone-700'
+                        }`}
+                      >
+                        <div className="h-24 w-full">
+                          <img src={imgSrc} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+                        </div>
+                        <span
+                          className={`absolute top-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                            idx === 0
+                              ? 'bg-[#d4af37] text-black'
+                              : 'bg-black/80 text-stone-200 border border-stone-700'
+                          }`}
+                        >
+                          {idx === 0 ? 'メイン (1枚目)' : `追加 (${idx + 1}枚目)`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductImage(idx, setEditProdImages, setEditProdImageError)}
+                          title="この画像を削除"
+                          className="absolute top-1 right-1 bg-black/85 hover:bg-rose-950 text-rose-400 border border-stone-700 rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
+                        >
+                          ✕
+                        </button>
+                        <div className="flex items-center justify-between px-1.5 py-1 bg-[#121316] border-t border-stone-800 text-[9px]">
+                          <span className="text-stone-400 font-mono">
+                            {imgSrc.startsWith('data:') ? `約${Math.round(imgSrc.length / 1024)}KB` : 'URL'}
+                          </span>
+                          {idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handlePromoteProductImageToMain(idx, setEditProdImages)}
+                              className="text-[#d4af37] hover:underline font-semibold"
+                            >
+                              メインにする
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <button type="button" onClick={() => { const next = editProdImageUrls.filter((_, i) => i !== index); setEditProdImageUrls(next); setEditProdImageUrl(next[0] || ''); }} className="absolute top-1 right-1 bg-black/80 text-rose-400 rounded-full w-5 h-5">✕</button>
-                    </div>)}
+                    ))}
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-stone-300 block font-semibold">商品動画（端末から直接登録）</label>
-                {editingProduct?.videoStorageId && !editProdVideoFile && <p className="text-xs text-emerald-400">動画登録済み</p>}
-                <input
-                  ref={editProductVideoInputRef}
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => setEditProdVideoFile(e.target.files?.[0] || null)}
-                  className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-xs file:mr-3 file:rounded file:border-0 file:bg-[#d4af37] file:px-3 file:py-1 file:text-black"
-                />
-                {editProdVideoFile && <p className="text-xs text-stone-300">{editProdVideoFile.name}（{(editProdVideoFile.size / 1024 / 1024).toFixed(1)}MB）</p>}
-                <p className="text-[10px] text-stone-500 leading-relaxed">新しい動画を選ぶと差し替えます（1本15MB以下）。Firestoreに保存します。課金を避けるにはFirebaseがSpark（無料）プランであることを事前に確認してください。Blaze（従量課金）プランでは無料枠超過分が課金される可能性があります。</p>
-                {editVideoUploadProgress !== null && <p className="text-xs text-[#d4af37]">動画を保存中：{editVideoUploadProgress}%</p>}
+              {/* Video Upload / Selection & Removal (Edit Modal) */}
+              <div className="space-y-2 p-3 rounded-lg bg-[#0a0b0d] border border-stone-800">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-stone-300 font-semibold flex items-center gap-1.5">
+                    <Video className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>商品動画（任意・動画なしでも保存可能）</span>
+                  </label>
+                  {(editProdVideoFile || editProdVideoPreviewUrl || editProdVideoUrl.trim()) && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveEditProdVideo}
+                      className="px-2.5 py-1 rounded-md bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-700/60 text-[11px] font-semibold flex items-center gap-1 transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>動画を削除</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <input
+                    type="file"
+                    ref={editProductVideoInputRef}
+                    accept="video/*"
+                    onChange={(e) => handleVideoFileSelect(e, 'edit')}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => editProductVideoInputRef.current?.click()}
+                    className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>{editProdVideoFile ? '別の動画を選択' : '動画ファイルを選択'}</span>
+                  </button>
+                  <input
+                    type="url"
+                    placeholder="または動画URL (https://...)"
+                    value={editProdVideoUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (editProdVideoFile) {
+                        revokeLocalPickerBlob('edit');
+                        setEditProdVideoFile(null);
+                        if (editProductVideoInputRef.current) {
+                          editProductVideoInputRef.current.value = '';
+                        }
+                      }
+                      activeEditModalSeqRef.current += 1;
+                      setIsResolvingEditVideo(false);
+                      setEditProdVideoUrl(val);
+                      setEditProdVideoPreviewUrl(val.trim());
+                      setEditProdVideoError(null);
+                      setEditProdSubmitError(null);
+                    }}
+                    className="w-full bg-[#121316] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
+                  />
+                </div>
+
+                {(editProdVideoFile || editProdVideoPreviewUrl || isResolvingEditVideo) && (
+                  <div className="mt-2 p-2.5 rounded-lg bg-[#121316] border border-[#d4af37]/30 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="relative w-full sm:w-44 h-28 rounded-lg overflow-hidden border border-stone-800 bg-black shrink-0 flex items-center justify-center">
+                      {isResolvingEditVideo ? (
+                        <span className="text-[11px] text-[#d4af37] px-2 text-center">保存済み動画を読み込み中...</span>
+                      ) : editProdVideoPreviewUrl ? (
+                        <video
+                          key={editProdVideoPreviewUrl}
+                          src={editProdVideoPreviewUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-contain bg-black"
+                          onError={(e) => {
+                            const code = e.currentTarget.error?.code;
+                            setEditProdVideoError(
+                              code === 4 || code === 3
+                                ? 'お使いのブラウザで再生できない動画コーデック／形式（HEVC等）の可能性があります。H.264形式のMP4等をお試しいただくか、「動画を削除」を押してください。'
+                                : '動画プレビューを読み込めませんでした。「動画を削除」を押して別の動画を再選択してください。'
+                            );
+                          }}
+                        />
+                      ) : (
+                        <span className="text-[11px] text-stone-400">プレビュー準備中...</span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-2 w-full">
+                      {editProdVideoFile ? (
+                        <div className="space-y-0.5">
+                          <div className="text-[11px] font-semibold text-white truncate" title={editProdVideoFile.name}>
+                            {editProdVideoFile.name}
+                          </div>
+                          <div className="text-[10px] text-stone-400 font-mono">
+                            サイズ: {(editProdVideoFile.size / 1024).toFixed(1)} KB
+                            {editProdVideoFile.size > 10 * 1024 * 1024 ? (
+                              <span className="ml-1.5 text-rose-400">
+                                （※上限10MBを超えています。軽量化するか外部URLをご使用ください）
+                              </span>
+                            ) : (
+                              <span className="ml-1.5 text-emerald-400">
+                                （10MBまで分割保存対応）
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-stone-300 truncate">
+                          動画: {isChunkedMediaUrl(editProdVideoUrl) ? 'Firestore分割保存動画' : editProdVideoPreviewUrl}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRemoveEditProdVideo}
+                          className="px-3 py-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-900/80 text-rose-200 border border-rose-700/70 text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                          <span>動画を削除</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => editProductVideoInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-[11px] font-medium flex items-center gap-1.5 transition-colors"
+                        >
+                          <RefreshCw className="w-3 h-3 text-[#d4af37]" />
+                          <span>別の動画を再選択</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {editProdVideoError && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-700/70 text-[11px] text-rose-200 flex items-start gap-2 leading-relaxed">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1.5 flex-1">
+                      <div>{editProdVideoError}</div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRemoveEditProdVideo}
+                          className="px-2.5 py-1 rounded bg-rose-900/80 hover:bg-rose-800 text-white text-[10px] font-semibold"
+                        >
+                          動画を削除して画像のみで保存する
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => editProductVideoInputRef.current?.click()}
+                          className="px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-700 text-[10px] font-semibold"
+                        >
+                          動画を再選択する
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Summary Description */}
@@ -2114,19 +2717,28 @@ export const AdminDashboardView: React.FC = () => {
                 </select>
               </div>
 
+              {editProdSubmitError && (
+                <div className="p-3 rounded-lg bg-rose-950/70 border border-rose-700/80 text-xs text-rose-200 flex items-start gap-2 leading-relaxed">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">{editProdSubmitError}</div>
+                </div>
+              )}
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="px-4 py-2 rounded bg-stone-800 text-stone-300"
+                  disabled={isSubmittingEditProd}
+                  className="px-4 py-2 rounded bg-stone-800 text-stone-300 disabled:opacity-50"
                 >
                   キャンセル
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e]"
+                  disabled={isSubmittingEditProd}
+                  className="px-5 py-2 rounded font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] disabled:opacity-50"
                 >
-                  変更を保存
+                  {isSubmittingEditProd ? '保存中...' : '変更を保存'}
                 </button>
               </div>
             </form>
@@ -2207,7 +2819,17 @@ export const AdminDashboardView: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-stone-300 block mb-1 font-semibold">参考市場価格 (円)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newRateRefPrice}
+                    onChange={(e) => setNewRateRefPrice(e.target.value)}
+                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                  />
+                </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-stone-300 font-semibold">現在価格 (円)</label>
@@ -2315,7 +2937,17 @@ export const AdminDashboardView: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-stone-300 block mb-1 font-semibold">参考市場価格 (円)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editRateRefPrice}
+                    onChange={(e) => setEditRateRefPrice(e.target.value)}
+                    className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white"
+                  />
+                </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-stone-300 font-semibold">現在価格 (円)</label>
@@ -2478,7 +3110,9 @@ export const AdminDashboardView: React.FC = () => {
                     type="file"
                     ref={newGameFileInputRef}
                     accept="image/*"
-                    onChange={(e) => handleFileUpload(e, (dataUrl) => setNewGameIconUrl(dataUrl))}
+                    onChange={(e) =>
+                      handleCompressedIconUpload(e, (url) => setNewGameIconUrl(url))
+                    }
                     className="hidden"
                   />
                   <button
@@ -2575,7 +3209,7 @@ export const AdminDashboardView: React.FC = () => {
               accept="image/*"
               className="hidden"
               onChange={(e) =>
-                handleCompressedIconUpload(e, (dataUrl) => setTempIconUrl(dataUrl))
+                handleCompressedIconUpload(e, (url) => setTempIconUrl(url))
               }
             />
             <input
@@ -2584,7 +3218,7 @@ export const AdminDashboardView: React.FC = () => {
               accept="image/*"
               className="hidden"
               onChange={(e) =>
-                handleCompressedIconUpload(e, (dataUrl) => setTempCurrencyIconUrl(dataUrl))
+                handleCompressedIconUpload(e, (url) => setTempCurrencyIconUrl(url))
               }
             />
 

@@ -1,11 +1,10 @@
 /**
  * SENA LUXE - Popular Game Candidates View (人気ゲーム追加候補)
- * 8 Candidate titles separated from handled games. Shows '価格確認中' and request actions.
  */
 
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { Sparkles, ArrowRight, Clock, ShieldCheck, Check } from 'lucide-react';
+import { Sparkles, ArrowRight, Clock, Check } from 'lucide-react';
 import { GameCardIcon } from '../components/GameCardIcon';
 
 export const CandidatesView: React.FC = () => {
@@ -55,10 +54,8 @@ export const CandidatesView: React.FC = () => {
             className="group rounded-xl bg-[#111216] border border-stone-800/90 hover:border-[#d4af37]/50 p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(212,175,55,0.1)]"
           >
             <div>
-              {/* App Icon or Black x Gold Luxury Crest */}
               <GameCardIcon game={game} />
 
-              {/* Title & Info */}
               <div className="flex items-center justify-between text-[11px] text-stone-400 mb-1">
                 <span>{game.category}</span>
                 <span className="text-amber-400/90 font-medium">取扱準備中</span>
@@ -74,7 +71,6 @@ export const CandidatesView: React.FC = () => {
               </p>
             </div>
 
-            {/* Actions */}
             <div className="pt-4 mt-4 border-t border-stone-800/80 space-y-2">
               <div className="w-full py-2.5 px-3 rounded-lg text-xs font-medium text-stone-400 bg-stone-900 border border-stone-800 text-center">
                 現在、販売準備中です
@@ -94,7 +90,7 @@ export const CandidatesView: React.FC = () => {
         ))}
       </div>
 
-      {/* Candidate Notice */}
+      {/* Procurement Note */}
       <div className="rounded-xl bg-[#0c0d10] border border-stone-800 p-6 text-xs text-stone-400 text-center max-w-3xl mx-auto space-y-2">
         <h4 className="text-sm font-semibold text-stone-200">候補タイトルについて</h4>
         <p className="leading-relaxed">

@@ -105,17 +105,17 @@ interface StoreContextType {
   addNewProduct: (data: {
     gameId: string;
     category: ProductCategory;
+    deviceCompatibility?: string;
     title: string;
     summary: string;
     price: number | null;
+    verifiedForPublic?: boolean;
     imageUrl?: string;
-    imageUrls?: string[];
+    additionalImages?: string[];
     videoUrl?: string;
     videoStorageId?: string;
-    deviceCompatibility?: ProductItem['deviceCompatibility'];
     keyHighlights: string[];
     status?: ProductStatus;
-    verifiedForPublic?: boolean;
   }) => Promise<ProductItem>;
   updateProduct: (id: string, updates: Partial<ProductItem>) => Promise<void>;
   deleteProduct: (id: string, reason?: string) => Promise<void>;
@@ -280,12 +280,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             };
           });
 
-          // Keep the master catalog available even when public Firestore writes are restricted.
-          // Existing Firestore records always win, so administrator edits are preserved.
-          const loadedGameIds = new Set(loadedGames.map((game) => game.id));
-          const missingInitialGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]
-            .filter((game) => !loadedGameIds.has(game.id));
-          const mergedGames = [...loadedGames, ...missingInitialGames];
+          const existingIds = new Set(loadedGames.map((g) => g.id));
+          const missingCatalogGames = [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].filter(
+            (g) => !existingIds.has(g.id)
+          );
+          const mergedGames = [...loadedGames, ...missingCatalogGames];
           mergedGames.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
           setAllGames(mergedGames);
         }
@@ -301,22 +300,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       (snapshot) => {
         if (!snapshot.empty) {
           const loadedProducts: ProductItem[] = snapshot.docs.map((d) => {
-            const rawData = d.data() as ProductItem;
-            const data = {
-              ...rawData,
-              category: rawData.category === 'ゲーム内通貨・石垢' ? '石垢' : rawData.category,
-            } as ProductItem;
-            const verified =
-              data.verifiedForPublic === true &&
-              (['石垢', '引退垢', '初期垢'] as ProductCategory[]).includes(data.category) &&
-              typeof data.price === 'number' &&
-              data.price > 0 &&
-              Boolean(data.title?.trim()) &&
-              Boolean(data.summary?.trim());
+            const raw = d.data() as ProductItem;
+            const normalizedCategory: ProductCategory =
+              raw.category === 'ゲーム内通貨・石垢' ? '石垢' : raw.category;
+            const isVerified =
+              raw.verifiedForPublic === true &&
+              ['石垢', '引退垢', '初期垢'].includes(normalizedCategory) &&
+              typeof raw.price === 'number' &&
+              raw.price > 0 &&
+              Boolean(raw.title?.trim()) &&
+              Boolean(raw.summary?.trim());
+
+            const primaryImage = raw.imageUrl || raw.imageUrls?.[0];
+            const derivedAdditional =
+              Array.isArray(raw.additionalImages) && raw.additionalImages.length > 0
+                ? raw.additionalImages
+                : Array.isArray(raw.imageUrls) && raw.imageUrls.length > 1
+                ? raw.imageUrls.slice(1, 5)
+                : undefined;
+
             return {
-              ...data,
-              verifiedForPublic: verified,
-              status: verified ? data.status : '掲載停止',
+              ...raw,
+              category: normalizedCategory,
+              ...(primaryImage ? { imageUrl: primaryImage } : {}),
+              ...(derivedAdditional && derivedAdditional.length > 0
+                ? { additionalImages: derivedAdditional }
+                : {}),
+              verifiedForPublic: isVerified,
+              status: isVerified ? raw.status : '掲載停止',
             };
           });
           // sort by createdAt desc
@@ -336,44 +347,44 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!snapshot.empty) {
           const loadedRates: StoneRatePlan[] = snapshot.docs.map((d) => {
             const data = d.data() as StoneRatePlan;
-            const catalogFallback = INITIAL_STONE_RATES.find((plan) => plan.id === data.id);
-            // Older Firestore records had their public prices cleared during the
-            // temporary preparation state. Restore only the original catalog price
-            // for entries already marked 取扱中 in that source catalog.
-            const restoreCatalogPrice =
+            const baseline = INITIAL_STONE_RATES.find((r) => r.id === data.id);
+            const resolved =
               data.currentPrice == null &&
-              catalogFallback?.verifiedForPublic === true &&
-              typeof catalogFallback.currentPrice === 'number';
-            const merged: StoneRatePlan = restoreCatalogPrice && catalogFallback
-              ? {
-                  ...catalogFallback,
-                  ...data,
-                  currentPrice: catalogFallback.currentPrice,
-                  referencePrice: catalogFallback.referencePrice,
-                  confirmedDate: catalogFallback.confirmedDate,
-                  status: '取扱中',
-                  currencyAmount: data.currencyAmount?.trim() ? data.currencyAmount : catalogFallback.currencyAmount,
-                  planName: data.planName?.trim() ? data.planName : catalogFallback.planName,
-                  conditions: data.conditions?.trim() ? data.conditions : catalogFallback.conditions,
-                  isPreparation: false,
-                  verifiedForPublic: true,
-                }
-              : data;
-            const confirmedForDisplay =
-              merged.verifiedForPublic === true &&
-              merged.status === '取扱中' &&
-              merged.isPreparation === false &&
-              typeof merged.currentPrice === 'number' &&
-              merged.currentPrice > 0 &&
-              Boolean(merged.currencyAmount?.trim()) &&
-              Boolean(merged.planName?.trim()) &&
-              Boolean(merged.conditions?.trim());
+              baseline?.verifiedForPublic === true &&
+              typeof baseline.currentPrice === 'number'
+                ? {
+                    ...baseline,
+                    ...data,
+                    currentPrice: baseline.currentPrice,
+                    referencePrice: baseline.referencePrice,
+                    confirmedDate: baseline.confirmedDate,
+                    status: '取扱中' as const,
+                    currencyAmount: data.currencyAmount?.trim()
+                      ? data.currencyAmount
+                      : baseline.currencyAmount,
+                    planName: data.planName?.trim() ? data.planName : baseline.planName,
+                    conditions: data.conditions?.trim() ? data.conditions : baseline.conditions,
+                    isPreparation: false,
+                    verifiedForPublic: true,
+                  }
+                : data;
+
+            const isVerified =
+              resolved.verifiedForPublic === true &&
+              resolved.status === '取扱中' &&
+              resolved.isPreparation === false &&
+              typeof resolved.currentPrice === 'number' &&
+              resolved.currentPrice > 0 &&
+              Boolean(resolved.currencyAmount?.trim()) &&
+              Boolean(resolved.planName?.trim()) &&
+              Boolean(resolved.conditions?.trim());
+
             return {
-              ...merged,
-              status: confirmedForDisplay ? '取扱中' : '価格確認中',
+              ...resolved,
+              status: isVerified ? '取扱中' : '価格確認中',
               stockStatus: '在庫要確認',
-              isPreparation: !confirmedForDisplay,
-              verifiedForPublic: confirmedForDisplay,
+              isPreparation: !isVerified,
+              verifiedForPublic: isVerified,
             };
           });
           setStoneRates(loadedRates);
@@ -467,38 +478,48 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addNewProduct = async (data: {
     gameId: string;
     category: ProductCategory;
+    deviceCompatibility?: string;
     title: string;
     summary: string;
     price: number | null;
+    verifiedForPublic?: boolean;
     imageUrl?: string;
-    imageUrls?: string[];
+    additionalImages?: string[];
     videoUrl?: string;
     videoStorageId?: string;
-    deviceCompatibility?: ProductItem['deviceCompatibility'];
     keyHighlights: string[];
     status?: ProductStatus;
-    verifiedForPublic?: boolean;
   }): Promise<ProductItem> => {
     const game = allGames.find((g) => g.id === data.gameId);
     const gameCode = game ? game.code.toUpperCase() : 'GEN';
     const gameName = game ? game.name : 'ゲームタイトル';
+
+    const trimmedImageUrl = typeof data.imageUrl === 'string' ? data.imageUrl.trim() : '';
+    const cleanAdditionalImages = Array.isArray(data.additionalImages)
+      ? data.additionalImages
+          .filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+          .map((img) => img.trim())
+          .slice(0, 4)
+      : [];
+    const trimmedVideoUrl = typeof data.videoUrl === 'string' ? data.videoUrl.trim() : '';
+    const trimmedVideoStorageId = typeof data.videoStorageId === 'string' ? data.videoStorageId.trim() : '';
 
     const newProd = await createProductAtomic({
       gameId: data.gameId,
       gameCode,
       gameName,
       category: data.category,
+      ...(data.deviceCompatibility ? { deviceCompatibility: data.deviceCompatibility } : {}),
       title: data.title,
       summary: data.summary,
       price: data.price,
-      imageUrl: data.imageUrls?.[0] || data.imageUrl,
-      imageUrls: data.imageUrls,
-      videoUrl: data.videoUrl,
-      videoStorageId: data.videoStorageId,
-      deviceCompatibility: data.deviceCompatibility,
+      ...(data.verifiedForPublic !== undefined ? { verifiedForPublic: data.verifiedForPublic } : {}),
+      ...(trimmedImageUrl ? { imageUrl: trimmedImageUrl } : {}),
+      ...(cleanAdditionalImages.length > 0 ? { additionalImages: cleanAdditionalImages } : {}),
+      ...(trimmedVideoUrl ? { videoUrl: trimmedVideoUrl } : {}),
+      ...(trimmedVideoStorageId ? { videoStorageId: trimmedVideoStorageId } : {}),
       keyHighlights: data.keyHighlights,
-      status: data.status,
-      verifiedForPublic: data.verifiedForPublic,
+      ...(data.status ? { status: data.status } : {}),
     });
 
     return newProd;
@@ -517,7 +538,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
     const target = products.find((p) => p.id === id);
     if (!target) return;
-    if (status === '掲載中' && (!target.verifiedForPublic || !(['石垢', '引退垢', '初期垢'] as ProductCategory[]).includes(target.category) || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
+    if (
+      status === '掲載中' &&
+      (!target.verifiedForPublic ||
+        !['石垢', '引退垢', '初期垢'].includes(target.category) ||
+        target.price === null ||
+        target.price <= 0 ||
+        !target.title.trim() ||
+        !target.summary.trim())
+    ) {
+      return;
+    }
     await updateProductDoc(id, { status });
   };
 
@@ -547,7 +578,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             status: '現在準備中',
             stockStatus: '在庫要確認',
             isPreparation: true,
-            verifiedForPublic: false,
           },
           { merge: true }
         );
@@ -562,7 +592,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         status: '現在準備中',
         stockStatus: '在庫要確認',
         isPreparation: true,
-        verifiedForPublic: false,
       }))
     );
   };
@@ -656,7 +685,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // Copy the inquiry message first, then let the customer open LINE and paste it.
+  // LINE Modal Actions: Copy formatted inquiry text and open LINE guidance modal
   const copyToClipboardAndOpenModal = async (
     textToCopy: string,
     gameName: string,
@@ -672,6 +701,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       copiedSuccessfully = false;
     }
+
     setLineModal({
       isOpen: true,
       gameName,
@@ -682,15 +712,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const openLineInquiry = (gameName = 'お問い合わせ', productNumber = '一般相談', planName?: string) => {
-    const message = [
+  const openLineInquiry = (gameName: string = '', productNumber: string = '', planName?: string) => {
+    const formattedText = [
       '【SENA LUXE お問い合わせ】',
-      `ゲーム名：${gameName}`,
-      `商品番号：${productNumber}`,
+      gameName ? `ゲーム名：${gameName}` : '',
+      productNumber ? `商品番号：${productNumber}` : '',
       planName ? `商品・プラン：${planName}` : '',
       '確認したい内容：',
-    ].filter(Boolean).join('\n');
-    void copyToClipboardAndOpenModal(message, gameName, productNumber, planName);
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    void copyToClipboardAndOpenModal(formattedText, gameName, productNumber, planName);
   };
 
   const closeLineModal = () => {

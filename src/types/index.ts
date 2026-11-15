@@ -25,7 +25,6 @@ export type ProductCategory =
   | '石垢'
   | '引退垢'
   | '初期垢'
-  // Legacy values remain readable for existing Firestore records during migration.
   | 'ゲームアカウント'
   | 'ゲーム内通貨・石垢'
   | '育成済みデータ'
@@ -40,6 +39,7 @@ export interface ProductItem {
   gameCode: string;
   gameName: string;
   category: ProductCategory;
+  deviceCompatibility?: string;
   title: string;
   summary: string;
   price: number | null; // null represents '価格確認中'
@@ -47,10 +47,10 @@ export interface ProductItem {
   status: ProductStatus;
   verifiedForPublic?: boolean;
   imageUrl?: string;
-  imageUrls?: string[]; // Ordered product gallery images; imageUrl remains the primary-image fallback
-  videoUrl?: string; // Legacy external MP4/WebM URL
-  videoStorageId?: string; // Video file stored in Firestore chunks under the free-tier quota
-  deviceCompatibility?: 'iOSのみ' | 'Androidのみ' | 'iOS・Android両方可';
+  additionalImages?: string[]; // 2nd-5th images (max 4 additional images)
+  imageUrls?: string[];
+  videoUrl?: string;
+  videoStorageId?: string;
   currencyIconUrl?: string; // for stone accounts
   keyHighlights: string[]; // High-level highlights without revealing confidential account credentials
   order?: number;
@@ -72,7 +72,6 @@ export interface StoneRatePlan {
   gameName: string;
   planName: string; // e.g. スタンダード天井確保プラン
   currencyName: string; // e.g. 廻珠
-  currencyType?: '無償' | '有償' | '未確認'; // Only explicitly verified free currency may be publicly listed
   currencyAmount: string; // e.g. 80,000個+
   conditions: string; // e.g. 初期進行・SSR確定チケット未受取・即納
   referencePrice: number; // 参考サイト基準価格

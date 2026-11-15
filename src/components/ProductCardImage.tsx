@@ -6,10 +6,21 @@
  * - For other categories: Uses admin-registered authentic image, or high-end verified placeholder
  */
 
-import React, { useEffect, useState } from 'react';
-import { getProductVideoBlob } from '../services/firestoreService';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ProductCategory } from '../types';
-import { Gem, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
+import { resolveMediaPlayableUrl } from '../services/mediaService';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Gem,
+  Image as ImageIcon,
+  Loader2,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Trophy,
+  Video,
+} from 'lucide-react';
 
 interface ProductCardImageProps {
   category: ProductCategory;
@@ -17,6 +28,8 @@ interface ProductCardImageProps {
   gameCode?: string;
   currencyName?: string;
   imageUrl?: string;
+  additionalImages?: string[];
+  imageUrls?: string[];
   videoUrl?: string;
   videoStorageId?: string;
   currencyIconUrl?: string;
@@ -28,9 +41,10 @@ interface ProductCardImageProps {
 export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   category,
   gameName,
-  gameCode,
   currencyName,
   imageUrl,
+  additionalImages,
+  imageUrls,
   videoUrl,
   videoStorageId,
   currencyIconUrl,
@@ -38,185 +52,559 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   title,
   className = 'w-full h-44',
 }) => {
-  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
-  const [videoObjectUrl, setVideoObjectUrl] = useState<string | null>(null);
-  const [videoLoading, setVideoLoading] = useState(false);
-  const [videoError, setVideoError] = useState('');
-  useEffect(() => () => { if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl); }, [videoObjectUrl]);
+  const [failedStoneSrc, setFailedStoneSrc] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [extraIndex, setExtraIndex] = useState(0);
+  const [failedIndices, setFailedIndices] = useState<Record<number, boolean>>({});
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState('');
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [videoPlayError, setVideoPlayError] = useState<string | null>(null);
+  const [videoReloadSeq, setVideoReloadSeq] = useState(0);
+  const isStoneCategory = category === '石垢' || category === 'ゲーム内通貨・石垢';
 
-  const loadStoredVideo = async () => {
-    if (!videoStorageId || videoLoading || videoObjectUrl) return;
-    setVideoLoading(true);
-    setVideoError('');
+  const galleryImages = useMemo(() => {
+    const raw =
+      Array.isArray(additionalImages) && additionalImages.length > 0
+        ? [imageUrl, ...additionalImages]
+        : Array.isArray(imageUrls) && imageUrls.length > 0
+        ? imageUrls
+        : [imageUrl];
+    return Array.from(
+      new Set(
+        raw
+          .map((u) => (typeof u === 'string' ? u.trim() : ''))
+          .filter(Boolean)
+      )
+    ).slice(0, 5);
+  }, [imageUrl, additionalImages, imageUrls]);
+
+  const effectiveVideoSource = useMemo(() => {
+    const direct = typeof videoUrl === 'string' ? videoUrl.trim() : '';
+    if (direct) return direct;
+    const storageId = typeof videoStorageId === 'string' ? videoStorageId.trim() : '';
+    return storageId ? `fs-media://${storageId}` : '';
+  }, [videoUrl, videoStorageId]);
+
+  const hasVideo = Boolean(effectiveVideoSource);
+  const galleryKey = galleryImages.join('|');
+
+  useEffect(() => {
+    setActiveIndex(0);
+    setExtraIndex(0);
+    setFailedIndices({});
+  }, [galleryKey]);
+
+  const loadVideoSource = useCallback(async (source: string, isCancelled: () => boolean) => {
+    if (!source) return;
+    setIsLoadingVideo(true);
+    setVideoPlayError(null);
+    setResolvedVideoUrl('');
+
     try {
-      const blob = await getProductVideoBlob(videoStorageId);
-      setVideoObjectUrl(URL.createObjectURL(blob));
-    } catch (error) {
-      setVideoError(error instanceof Error ? error.message : '動画を読み込めませんでした。');
+      const playable = await resolveMediaPlayableUrl(source);
+      if (isCancelled()) return;
+      if (playable) {
+        setResolvedVideoUrl(playable);
+      } else {
+        setVideoPlayError('動画データを読み込めませんでした。');
+      }
+    } catch {
+      if (isCancelled()) return;
+      setVideoPlayError('動画データの読み込みに失敗しました。');
     } finally {
-      setVideoLoading(false);
+      if (!isCancelled()) {
+        setIsLoadingVideo(false);
+      }
     }
-  };
-  const isStoneCategory = category === 'ゲーム内通貨・石垢';
+  }, []);
 
-  // Stored videos are fetched only after a visitor explicitly presses play.
-  if (videoStorageId) {
-    return (
-      <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
-        {videoObjectUrl ? (
-          <video src={videoObjectUrl} poster={imageUrl || undefined} controls playsInline preload="metadata" className="w-full h-full object-contain" aria-label={`${gameName} 商品紹介動画`} />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center">
-            <button type="button" onClick={loadStoredVideo} disabled={videoLoading} className="px-5 py-2.5 rounded-lg bg-[#d4af37] text-black text-xs font-bold disabled:opacity-60">
-              {videoLoading ? '動画を読み込み中…' : '商品動画を再生'}
-            </button>
-            {videoError && <p className="text-[10px] text-rose-300">{videoError}</p>}
-          </div>
-        )}
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">VIDEO</div>
-      </div>
-    );
-  }
-
-  // Legacy direct MP4/WebM links remain supported for previously registered products.
-  if (videoUrl) {
-    return (
-      <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
-        <video src={videoUrl} poster={imageUrl || undefined} controls playsInline preload="none" className="w-full h-full object-contain" aria-label={`${gameName} 商品紹介動画`} />
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">VIDEO</div>
-      </div>
-    );
-  }
-
-  // 1. Stone Account Category
-  if (isStoneCategory) {
-    // Prefer the actual product/account screenshot uploaded for this listing.
-    if (imageUrl && failedImageUrl !== imageUrl) {
-      return (
-        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 ${className}`}>
-          <img
-            src={imageUrl}
-            alt={`${gameName} 石垢アカウント画像`}
-            className="w-full h-full object-contain"
-            loading="lazy"
-            decoding="async"
-            onError={() => setFailedImageUrl(imageUrl)}
-          />
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
-            石垢
-          </div>
-        </div>
-      );
+  useEffect(() => {
+    if (!hasVideo) {
+      setResolvedVideoUrl('');
+      setVideoPlayError(null);
+      setIsLoadingVideo(false);
+      return;
     }
 
-    // If no product screenshot is available, use only a separately registered game-currency icon.
-    if (currencyIconUrl && failedImageUrl !== currencyIconUrl) {
-      return (
-        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 flex items-center justify-center ${className}`}>
-          <img
-            src={currencyIconUrl}
-            alt={`${gameName} ${currencyName || 'ゲーム内通貨'}`}
-            className="w-full h-full object-contain p-3"
-            loading="lazy"
-            decoding="async"
-            onError={() => setFailedImageUrl(currencyIconUrl)}
-          />
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
-            石垢
-          </div>
-        </div>
-      );
-    }
+    let cancelled = false;
+    void loadVideoSource(effectiveVideoSource, () => cancelled);
 
-    // If the currency image is missing or unavailable, always identify the game with its app icon.
-    if (gameIconUrl && failedImageUrl !== gameIconUrl) {
-      return (
-        <div className={`relative overflow-hidden bg-[#0c0d10] border border-stone-800 flex items-center justify-center ${className}`}>
-          <img
-            src={gameIconUrl}
-            alt={`${gameName} アプリアイコン`}
-            className="w-full h-full object-contain p-3"
-            loading="lazy"
-            decoding="async"
-            onError={() => setFailedImageUrl(gameIconUrl)}
-          />
-          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">石垢</div>
-        </div>
-      );
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [hasVideo, effectiveVideoSource, videoReloadSeq, loadVideoSource]);
 
-    // No unrelated or generated artwork: keep the existing SENA LUXE placeholder.
-    return (
-      <div
-        className={`relative overflow-hidden bg-gradient-to-b from-[#131419] to-[#08090b] border-b border-[#d4af37]/20 flex flex-col items-center justify-center p-4 text-center select-none ${className}`}
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#d4af37]/10 via-transparent to-transparent pointer-events-none" />
-        <div className="relative z-10 space-y-1.5 flex flex-col items-center">
-          <div className="w-10 h-10 rounded-full bg-black/70 border border-[#d4af37]/40 flex items-center justify-center shadow-lg">
-            <Gem className="w-5 h-5 text-[#d4af37]" />
-          </div>
-          <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">{gameName}</div>
-          {currencyName && (
-            <div className="text-[10px] font-semibold text-[#d4af37] max-w-[180px] truncate">{currencyName}</div>
-          )}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-black/80 border border-[#d4af37]/60 shadow-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
-            <span className="text-xs font-bold font-serif text-[#f7e7ce] tracking-widest">石垢</span>
-          </div>
-          <div className="text-[9px] font-mono tracking-widest text-[#d4af37]/70">画像準備中</div>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Admin-registered authentic product image
-  if (imageUrl) {
-    return (
-      <div className={`relative overflow-hidden bg-[#0a0b0d] ${className}`}>
-        <img
-          src={imageUrl}
-          alt={gameName}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
-      </div>
-    );
-  }
-
-  // 3. Fallback Authentic Placeholder for Account / Data / Items
   const getCategoryIcon = () => {
     switch (category) {
       case '育成済みデータ':
         return <Trophy className="w-5 h-5 text-[#d4af37]" />;
       case '限定キャラクター・アイテム':
         return <Sparkles className="w-5 h-5 text-[#d4af37]" />;
+      case '石垢':
+      case 'ゲーム内通貨・石垢':
+        return <Gem className="w-5 h-5 text-[#d4af37]" />;
       default:
         return <ShieldCheck className="w-5 h-5 text-[#d4af37]" />;
     }
   };
 
-  return (
-    <div
-      className={`relative overflow-hidden bg-gradient-to-b from-[#14151b] to-[#090a0d] border-b border-stone-800 flex flex-col items-center justify-center p-4 text-center select-none ${className}`}
-    >
-      <div className="relative z-10 space-y-1.5 flex flex-col items-center">
-        <div className="w-10 h-10 rounded-full bg-black/60 border border-[#d4af37]/30 flex items-center justify-center">
-          {getCategoryIcon()}
+  // 1. Stone Account Category without video & without authentic product images -> currency/game icon or placeholder
+  if (isStoneCategory && !hasVideo && galleryImages.length === 0) {
+    if (currencyIconUrl && failedStoneSrc !== currencyIconUrl) {
+      return (
+        <div
+          className={`relative overflow-hidden bg-[#0c0d10] rounded-lg border border-stone-800 flex items-center justify-center ${className}`}
+        >
+          <img
+            src={currencyIconUrl}
+            alt={`${gameName} ${currencyName || 'ゲーム内通貨'}`}
+            className="w-full h-full object-contain p-3"
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailedStoneSrc(currencyIconUrl)}
+          />
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
+            石垢
+          </div>
         </div>
-        <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">
-          {gameName}
+      );
+    }
+
+    if (gameIconUrl && failedStoneSrc !== gameIconUrl) {
+      return (
+        <div
+          className={`relative overflow-hidden bg-[#0c0d10] rounded-lg border border-stone-800 flex items-center justify-center ${className}`}
+        >
+          <img
+            src={gameIconUrl}
+            alt={`${gameName} アプリアイコン`}
+            className="w-full h-full object-contain p-3"
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailedStoneSrc(gameIconUrl)}
+          />
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37]">
+            石垢
+          </div>
         </div>
-        <div className="text-[10px] text-stone-400 font-medium">
-          {category}
-        </div>
-        <div className="text-[9px] font-cinzel tracking-widest text-[#d4af37]/60 uppercase">
-          SENA LUXE VERIFIED
+      );
+    }
+
+    return (
+      <div
+        className={`relative overflow-hidden rounded-lg bg-gradient-to-b from-[#131419] to-[#08090b] border border-[#d4af37]/20 flex flex-col items-center justify-center p-4 text-center select-none ${className}`}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#d4af37]/10 via-transparent to-transparent pointer-events-none" />
+
+        <div className="relative z-10 space-y-1.5 flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full bg-black/70 border border-[#d4af37]/40 flex items-center justify-center shadow-lg">
+            <Gem className="w-5 h-5 text-[#d4af37]" />
+          </div>
+
+          <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">
+            {gameName}
+          </div>
+
+          {currencyName && (
+            <div className="text-[10px] font-semibold text-[#d4af37] max-w-[180px] truncate">
+              {currencyName}
+            </div>
+          )}
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-black/80 border border-[#d4af37]/60 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
+            <span className="text-xs font-bold font-serif text-[#f7e7ce] tracking-widest">
+              石垢
+            </span>
+          </div>
+
+          <div className="text-[9px] font-mono tracking-widest text-[#d4af37]/70">
+            画像準備中
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // 2. Non-stone category with neither images nor video -> Authentic Fallback Placeholder
+  if (!hasVideo && galleryImages.length === 0) {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-lg bg-gradient-to-b from-[#14151b] to-[#090a0d] border border-stone-800 flex flex-col items-center justify-center p-4 text-center select-none ${className}`}
+      >
+        <div className="relative z-10 space-y-1.5 flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full bg-black/60 border border-[#d4af37]/30 flex items-center justify-center">
+            {getCategoryIcon()}
+          </div>
+          <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">
+            {gameName}
+          </div>
+          <div className="text-[10px] text-stone-400 font-medium">{category}</div>
+          <div className="text-[9px] font-cinzel tracking-widest text-[#d4af37]/60 uppercase">
+            SENA LUXE VERIFIED
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Layout when Video IS Registered:
+  //    - Top: Main image (1st image) displayed large (keeps container size)
+  //    - Bottom-Left: Registered video preview player
+  //    - Bottom-Right: Additional images (2nd - 5th) display & switcher
+  if (hasVideo) {
+    const mainImage = galleryImages[0];
+    const extraImages = galleryImages.slice(1, 5);
+    const safeExtraIndex = extraIndex < extraImages.length ? extraIndex : 0;
+    const currentExtraSrc = extraImages[safeExtraIndex];
+    const currentExtraGalleryIndex = safeExtraIndex + 1;
+
+    const handlePrevExtra = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (extraImages.length <= 1) return;
+      setExtraIndex((prev) => (prev <= 0 ? extraImages.length - 1 : prev - 1));
+    };
+
+    const handleNextExtra = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (extraImages.length <= 1) return;
+      setExtraIndex((prev) => (prev >= extraImages.length - 1 ? 0 : prev + 1));
+    };
+
+    return (
+      <div className="w-full space-y-2">
+        {/* Top Section: 1st Main Image (Large Display) */}
+        <div className={`relative overflow-hidden bg-[#0a0b0d] rounded-lg border border-stone-800/90 ${className}`}>
+          {mainImage && !failedIndices[0] ? (
+            <>
+              <img
+                src={mainImage}
+                alt={`${title || gameName} メイン画像`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+                onError={() => {
+                  setFailedIndices((prev) => ({ ...prev, 0: true }));
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25 pointer-events-none" />
+              <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 border border-[#d4af37]/50 text-[10px] font-semibold text-[#f7e7ce] pointer-events-none">
+                メイン画像
+              </div>
+              {galleryImages.length > 1 && (
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 border border-stone-700 text-[10px] font-mono text-stone-200 pointer-events-none">
+                  画像全{galleryImages.length}枚
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-b from-[#14151b] to-[#090a0d] flex flex-col items-center justify-center p-4 text-center select-none">
+              <div className="w-9 h-9 rounded-full bg-black/70 border border-[#d4af37]/40 flex items-center justify-center mb-1.5">
+                {getCategoryIcon()}
+              </div>
+              <div className="text-[11px] font-medium text-stone-300 max-w-[180px] truncate">
+                {gameName}
+              </div>
+              <div className="text-[10px] text-[#d4af37]/80 mt-0.5">
+                {mainImage ? '画像を読み込めませんでした' : 'メイン画像未登録'}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Section: Left = Video Preview / Right = Switchable 2nd-5th Additional Images */}
+        <div className="grid grid-cols-2 gap-2 items-stretch">
+          {/* Bottom-Left: Registered Video Preview */}
+          <div
+            className="rounded-lg overflow-hidden bg-[#0a0b0d] border border-[#d4af37]/40 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-2 py-1 bg-[#14151a] border-b border-stone-800/90 flex items-center justify-between gap-1 text-[10px]">
+              <span className="flex items-center gap-1 font-semibold text-[#f7e7ce] truncate">
+                <Video className="w-3 h-3 text-[#d4af37] shrink-0" />
+                <span className="truncate">動画プレビュー</span>
+              </span>
+            </div>
+
+            <div className="relative w-full h-28 sm:h-32 bg-black flex items-center justify-center flex-1">
+              {isLoadingVideo ? (
+                <div className="flex flex-col items-center justify-center gap-1.5 text-stone-300 text-[10px] px-2 text-center">
+                  <Loader2 className="w-4 h-4 text-[#d4af37] animate-spin" />
+                  <span>動画読込中...</span>
+                </div>
+              ) : videoPlayError ? (
+                <div className="p-2 text-center text-[10px] text-rose-300 space-y-1.5">
+                  <div className="leading-snug">{videoPlayError}</div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setVideoReloadSeq((n) => n + 1);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-[10px]"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5 text-[#d4af37]" />
+                    <span>再読込</span>
+                  </button>
+                </div>
+              ) : resolvedVideoUrl ? (
+                <video
+                  key={resolvedVideoUrl}
+                  src={resolvedVideoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-contain bg-black"
+                  onError={() => {
+                    setVideoPlayError('お使いのブラウザではこの動画形式を再生できませんでした。');
+                  }}
+                />
+              ) : null}
+            </div>
+          </div>
+
+          {/* Bottom-Right: Switchable 2nd - 5th Additional Images */}
+          <div className="rounded-lg overflow-hidden bg-[#0a0b0d] border border-stone-800/90 flex flex-col">
+            <div className="px-2 py-1 bg-[#14151a] border-b border-stone-800/90 flex items-center justify-between gap-1 text-[10px]">
+              <span className="flex items-center gap-1 font-semibold text-stone-200 truncate">
+                <ImageIcon className="w-3 h-3 text-[#d4af37] shrink-0" />
+                <span className="truncate">
+                  {extraImages.length > 0 ? `画像 ${currentExtraGalleryIndex + 1}` : '追加画像'}
+                </span>
+              </span>
+              {extraImages.length > 0 && (
+                <span className="font-mono text-[9px] text-stone-400 shrink-0">
+                  {safeExtraIndex + 1}/{extraImages.length}
+                </span>
+              )}
+            </div>
+
+            <div className="relative w-full h-28 sm:h-32 bg-[#08090c] flex items-center justify-center flex-1 overflow-hidden">
+              {extraImages.length > 0 ? (
+                <>
+                  {!failedIndices[currentExtraGalleryIndex] ? (
+                    <img
+                      src={currentExtraSrc}
+                      alt={`${title || gameName} 追加画像 ${currentExtraGalleryIndex + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={() => {
+                        setFailedIndices((prev) => ({ ...prev, [currentExtraGalleryIndex]: true }));
+                      }}
+                    />
+                  ) : (
+                    <div className="px-2 text-center text-[10px] text-stone-500">
+                      画像を読み込めませんでした
+                    </div>
+                  )}
+
+                  {extraImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handlePrevExtra}
+                        aria-label="前の追加画像"
+                        className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/80 hover:bg-black border border-stone-700 hover:border-[#d4af37]/70 text-stone-200 flex items-center justify-center transition-colors"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNextExtra}
+                        aria-label="次の追加画像"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/80 hover:bg-black border border-stone-700 hover:border-[#d4af37]/70 text-stone-200 flex items-center justify-center transition-colors"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="p-2 text-center flex flex-col items-center justify-center gap-1 text-stone-500 select-none">
+                  <ImageIcon className="w-4 h-4 text-stone-600" />
+                  <span className="text-[10px]">追加画像なし</span>
+                </div>
+              )}
+            </div>
+
+            {extraImages.length > 1 && (
+              <div className="grid grid-cols-4 gap-1 p-1 bg-[#111216] border-t border-stone-800/80">
+                {extraImages.map((src, idx) => {
+                  const galleryIdx = idx + 1;
+                  const isSelected = idx === safeExtraIndex;
+                  return (
+                    <button
+                      key={`extra-${galleryIdx}-${src.slice(0, 18)}`}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setExtraIndex(idx);
+                      }}
+                      aria-label={`追加画像 ${galleryIdx + 1} を表示`}
+                      className={`relative h-7 rounded overflow-hidden bg-black border transition-all ${
+                        isSelected
+                          ? 'border-[#d4af37] ring-1 ring-[#d4af37]/50 opacity-100'
+                          : 'border-stone-800 opacity-65 hover:opacity-100 hover:border-stone-600'
+                      }`}
+                    >
+                      {!failedIndices[galleryIdx] ? (
+                        <img
+                          src={src}
+                          alt={`追加画像 ${galleryIdx + 1}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={() => {
+                            setFailedIndices((prev) => ({ ...prev, [galleryIdx]: true }));
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[9px] text-stone-600">
+                          ×
+                        </div>
+                      )}
+                      <span className="absolute bottom-0 right-0 px-1 bg-black/80 text-[8px] font-mono text-stone-200 leading-tight">
+                        {galleryIdx + 1}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Layout when Video is NOT Registered (1 to 5 images):
+  //    - Top: Main display image (position & size preserved; switches when thumbnail clicked)
+  //    - Bottom: Thumbnails for Main + 2nd - 5th images (switches Top image on click)
+  const safeIndex = activeIndex < galleryImages.length ? activeIndex : 0;
+  const currentSrc = galleryImages[safeIndex];
+  const hasMultipleImages = galleryImages.length > 1;
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActiveIndex((prev) => (prev <= 0 ? galleryImages.length - 1 : prev - 1));
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActiveIndex((prev) => (prev >= galleryImages.length - 1 ? 0 : prev + 1));
+  };
+
+  return (
+    <div className="w-full">
+      <div className={`relative overflow-hidden bg-[#0a0b0d] rounded-lg border border-stone-800/80 ${className}`}>
+        {!failedIndices[safeIndex] ? (
+          <img
+            src={currentSrc}
+            alt={`${title || gameName} (${safeIndex + 1}/${galleryImages.length})`}
+            className={`w-full h-full ${
+              isStoneCategory && !hasMultipleImages ? 'object-contain' : 'object-cover'
+            } group-hover:scale-105 transition-transform duration-500`}
+            loading="lazy"
+            onError={() => {
+              setFailedIndices((prev) => ({ ...prev, [safeIndex]: true }));
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[11px] text-stone-500">
+            画像を読み込めませんでした
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 pointer-events-none" />
+
+        {isStoneCategory && !hasMultipleImages && (
+          <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/85 border border-[#d4af37]/40 text-[10px] font-semibold text-[#d4af37] pointer-events-none">
+            石垢
+          </div>
+        )}
+
+        {hasMultipleImages && (
+          <>
+            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 border border-[#d4af37]/40 text-[10px] font-semibold text-[#f7e7ce] pointer-events-none">
+              {safeIndex === 0 ? 'メイン' : `画像 ${safeIndex + 1}`}
+            </div>
+
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 border border-stone-700 text-[10px] font-mono text-stone-200 pointer-events-none">
+              {safeIndex + 1} / {galleryImages.length}
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="前の画像"
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/75 hover:bg-black border border-stone-700 hover:border-[#d4af37]/60 text-stone-200 flex items-center justify-center transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="次の画像"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/75 hover:bg-black border border-stone-700 hover:border-[#d4af37]/60 text-stone-200 flex items-center justify-center transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {hasMultipleImages && (
+        <div className="grid grid-cols-5 gap-1.5 mt-2">
+          {galleryImages.map((src, idx) => {
+            const isSelected = idx === safeIndex;
+            return (
+              <button
+                key={`${idx}-${src.slice(0, 24)}`}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setActiveIndex(idx);
+                }}
+                aria-label={idx === 0 ? 'メイン画像を表示' : `画像 ${idx + 1} を表示`}
+                className={`relative h-10 sm:h-11 rounded overflow-hidden bg-[#0a0b0d] border transition-all ${
+                  isSelected
+                    ? 'border-[#d4af37] ring-1 ring-[#d4af37]/50 opacity-100'
+                    : 'border-stone-800 opacity-65 hover:opacity-100 hover:border-stone-600'
+                }`}
+              >
+                {!failedIndices[idx] ? (
+                  <img
+                    src={src}
+                    alt={`${title || gameName} サムネイル ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={() => {
+                      setFailedIndices((prev) => ({ ...prev, [idx]: true }));
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[9px] text-stone-600">
+                    ×
+                  </div>
+                )}
+                <span
+                  className={`absolute bottom-0 left-0 px-1 text-[8px] font-semibold leading-tight ${
+                    isSelected ? 'bg-[#d4af37] text-black' : 'bg-black/80 text-stone-300'
+                  }`}
+                >
+                  {idx === 0 ? 'メイン' : idx + 1}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

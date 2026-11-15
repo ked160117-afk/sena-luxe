@@ -1,7 +1,5 @@
 /**
  * SENA LUXE - FAQ & Transaction Notices View (よくある質問・お取引注意事項)
- * Comprehensive legal, operational, and customer guidelines for purchasing game accounts & stone accounts.
- * Black x Gold luxury aesthetics, mobile-first responsive design, interactive FAQ accordions, and LINE CTA.
  */
 
 import React, { useState } from 'react';
@@ -16,11 +14,8 @@ import {
   Gem,
   Lock,
   Wifi,
-  FileQuestion,
-  CreditCard,
   UserCheck,
   Scale,
-  Sparkles,
 } from 'lucide-react';
 
 interface FaqItem {
@@ -99,8 +94,7 @@ export const FaqNoticeView: React.FC = () => {
       id: 'faq-8',
       category: '商品仕様・石垢',
       question: '取り扱っている石垢は無償石ですか？',
-      answer:
-        '取り扱っている石垢は全て無償石です。',
+      answer: '取り扱っている石垢は全て無償石です。',
     },
     {
       id: 'faq-9',
@@ -134,9 +128,10 @@ export const FaqNoticeView: React.FC = () => {
 
   const categories = ['ALL', '決済・料金', '商品仕様・石垢', '対応・納期', '安心・安全'];
 
-  const filteredFaq = selectedCategory === 'ALL'
-    ? faqList
-    : faqList.filter((item) => item.category === selectedCategory);
+  const filteredFaq =
+    selectedCategory === 'ALL'
+      ? faqList
+      : faqList.filter((item) => item.category === selectedCategory);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12 animate-fade-in text-[#f4efe6]">
@@ -155,7 +150,7 @@ export const FaqNoticeView: React.FC = () => {
         </p>
       </div>
 
-      {/* SECTION 1: 石垢の仕様・事前確認事項 */}
+      {/* SECTION 1 */}
       <section className="rounded-xl bg-gradient-to-br from-[#16171d] via-[#111216] to-[#0c0d10] border border-[#d4af37]/40 p-6 sm:p-8 space-y-4 shadow-[0_4px_25px_rgba(0,0,0,0.6)]">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] shrink-0 mt-0.5">
@@ -176,12 +171,16 @@ export const FaqNoticeView: React.FC = () => {
           <p>
             当店で取り扱う「石垢」は、ゲーム内で無料で入手できる無償石・無償通貨のみを所持した新規または進行済みアカウント本体をお渡しする商品です。有償石・課金石・有料通貨は一切取り扱いません。
           </p>
-          <p>※お客様が現在プレイされている既存アカウントへのゲーム内通貨の追加は承っておりません。</p>
-          <p>※ゲーム運営会社の利用規約によるアカウント制限リスク、引き継ぎ時の通信環境の留意点、受取後のパスワード変更義務等がございます。</p>
+          <p>
+            ※お客様が現在プレイされている既存アカウントへのゲーム内通貨の追加は承っておりません。
+          </p>
+          <p>
+            ※ゲーム運営会社の利用規約によるアカウント制限リスク、引き継ぎ時の通信環境の留意点、受取後のパスワード変更義務等がございます。
+          </p>
         </div>
       </section>
 
-      {/* SECTION 2: お取引に関する注意事項 */}
+      {/* SECTION 2 */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 border-b border-stone-800 pb-3">
           <Scale className="w-5 h-5 text-[#d4af37]" />
@@ -195,7 +194,6 @@ export const FaqNoticeView: React.FC = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Item 1: 規約と制限のリスク */}
           <div className="p-5 rounded-xl bg-[#111216] border border-stone-800/90 space-y-2">
             <div className="flex items-center gap-2 text-stone-200 font-semibold text-xs sm:text-sm">
               <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
@@ -206,7 +204,6 @@ export const FaqNoticeView: React.FC = () => {
             </p>
           </div>
 
-          {/* Item 2: 購入者のリスク理解と同意 */}
           <div className="p-5 rounded-xl bg-[#111216] border border-stone-800/90 space-y-2">
             <div className="flex items-center gap-2 text-stone-200 font-semibold text-xs sm:text-sm">
               <UserCheck className="w-4 h-4 text-[#d4af37] shrink-0" />
@@ -217,7 +214,6 @@ export const FaqNoticeView: React.FC = () => {
             </p>
           </div>
 
-          {/* Item 3: 補償の範囲と制限 */}
           <div className="p-5 rounded-xl bg-[#111216] border border-stone-800/90 space-y-2">
             <div className="flex items-center gap-2 text-stone-200 font-semibold text-xs sm:text-sm">
               <ShieldCheck className="w-4 h-4 text-stone-400 shrink-0" />
@@ -228,7 +224,6 @@ export const FaqNoticeView: React.FC = () => {
             </p>
           </div>
 
-          {/* Item 4: 引き継ぎ環境の注意 */}
           <div className="p-5 rounded-xl bg-[#111216] border border-stone-800/90 space-y-2">
             <div className="flex items-center gap-2 text-stone-200 font-semibold text-xs sm:text-sm">
               <Wifi className="w-4 h-4 text-blue-400 shrink-0" />
@@ -239,7 +234,6 @@ export const FaqNoticeView: React.FC = () => {
             </p>
           </div>
 
-          {/* Item 5: 引き継ぎ完了後のパスワード変更 */}
           <div className="p-5 rounded-xl bg-[#111216] border border-stone-800/90 space-y-2">
             <div className="flex items-center gap-2 text-stone-200 font-semibold text-xs sm:text-sm">
               <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -250,7 +244,6 @@ export const FaqNoticeView: React.FC = () => {
             </p>
           </div>
 
-          {/* Item 6: 当店側の不備・内容相違への誠実対応 */}
           <div className="p-5 rounded-xl bg-[#111216] border border-stone-800/90 space-y-2">
             <div className="flex items-center gap-2 text-stone-200 font-semibold text-xs sm:text-sm">
               <CheckCircle2 className="w-4 h-4 text-[#d4af37] shrink-0" />
@@ -262,7 +255,6 @@ export const FaqNoticeView: React.FC = () => {
           </div>
         </div>
 
-        {/* 法令遵守と返品・返金条件の明記 */}
         <div className="p-5 rounded-xl bg-[#0f1014] border border-[#d4af37]/30 text-xs sm:text-sm space-y-2 text-stone-300">
           <div className="text-stone-100 font-semibold flex items-center gap-2">
             <Scale className="w-4 h-4 text-[#d4af37]" />
@@ -274,7 +266,7 @@ export const FaqNoticeView: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 3: FAQ (よくある質問) */}
+      {/* SECTION 3: FAQ */}
       <section className="space-y-6 pt-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-800 pb-3">
           <div className="flex items-center gap-2">
@@ -286,7 +278,6 @@ export const FaqNoticeView: React.FC = () => {
           <span className="text-xs text-stone-400">全{faqList.length}問</span>
         </div>
 
-        {/* Category Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {categories.map((cat) => (
             <button
@@ -303,7 +294,6 @@ export const FaqNoticeView: React.FC = () => {
           ))}
         </div>
 
-        {/* FAQ Accordion List */}
         <div className="space-y-3">
           {filteredFaq.map((item) => {
             const isOpen = openFaqId === item.id;
@@ -355,7 +345,7 @@ export const FaqNoticeView: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION 4: 公式LINEへの問い合わせ導線 */}
+      {/* SECTION 4 */}
       <section className="rounded-2xl bg-gradient-to-br from-[#16171f] via-[#111217] to-[#0c0d10] border border-[#d4af37]/40 p-6 sm:p-10 text-center space-y-6 shadow-[0_8px_35px_rgba(0,0,0,0.7)]">
         <div className="max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#06C755]/15 border border-[#06C755]/30 text-[#06C755] text-xs font-medium">

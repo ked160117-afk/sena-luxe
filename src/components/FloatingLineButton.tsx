@@ -1,6 +1,6 @@
 /**
  * SENA LUXE - Floating LINE Contact Button
- * Compact on mobile so it never covers game cards or product actions.
+ * Ubiquitous access on all pages for customer convenience.
  */
 
 import React from 'react';
@@ -22,12 +22,26 @@ export const FloatingLineButton: React.FC = () => {
               fill="#FFFFFF"
               d="M16 3.5C8.82 3.5 3 8.48 3 14.62c0 3.31 1.68 6.27 4.34 8.24-.19 1.12-.7 2.58-1.65 3.75-.22.27-.02.68.33.66 2.36-.13 4.5-1.08 6.02-2.05 1.25.34 2.58.52 3.96.52 7.18 0 13-4.98 13-11.12S23.18 3.5 16 3.5Z"
             />
-            <text x="16" y="17.4" textAnchor="middle" fontSize="7.1" fontWeight="800" letterSpacing=".15" fill="#06C755">LINE</text>
+            <text
+              x="16"
+              y="17.4"
+              textAnchor="middle"
+              fontSize="7.1"
+              fontWeight="800"
+              letterSpacing=".15"
+              fill="#06C755"
+            >
+              LINE
+            </text>
           </svg>
         </div>
         <div className="hidden sm:flex flex-col text-left pr-1">
-          <span className="text-[10px] tracking-widest text-[#d4af37] font-cinzel leading-none">OFFICIAL LINE</span>
-          <span className="text-xs font-semibold text-stone-100 whitespace-nowrap">LINEお問い合わせ</span>
+          <span className="text-[10px] tracking-widest text-[#d4af37] font-cinzel leading-none">
+            OFFICIAL LINE
+          </span>
+          <span className="text-xs font-semibold text-stone-100 whitespace-nowrap">
+            LINEお問い合わせ
+          </span>
         </div>
       </a>
     </div>

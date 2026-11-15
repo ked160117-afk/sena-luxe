@@ -1,6 +1,6 @@
 /**
  * SENA LUXE - LINE Inquiry Modal
- * Pops up when customer taps inquiry, copies game and product code, and guides to official LINE.
+ * Pops up when customer taps inquiry, copies inquiry text, and guides to official LINE.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -55,7 +55,9 @@ export const LineInquiryModal: React.FC = () => {
           </div>
           <div>
             <span className="text-[11px] tracking-widest text-[#d4af37] uppercase font-cinzel">SENA LUXE CONCIERGE</span>
-            <h3 className="text-base sm:text-lg font-semibold text-white">{copied ? 'お問い合わせ内容をコピーしました' : 'お問い合わせ文を準備しました'}</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white">
+              {copied ? 'お問い合わせ内容をコピーしました' : 'お問い合わせ文を準備しました'}
+            </h3>
           </div>
         </div>
 
@@ -74,7 +76,11 @@ export const LineInquiryModal: React.FC = () => {
           <div className="font-mono text-sm sm:text-base font-semibold text-[#f7e7ce] select-all break-all py-1">
             {lineModal.formattedText}
           </div>
-          {!copied && <p className="text-[11px] text-amber-300 mt-2">自動コピーできなかった場合は、上の文章を長押ししてコピーしてください。</p>}
+          {!copied && (
+            <p className="text-[11px] text-amber-300 mt-2">
+              自動コピーできなかった場合は、上の文章を長押ししてコピーしてください。
+            </p>
+          )}
           {lineModal.planName && (
             <div className="text-xs text-stone-400 mt-1 border-t border-stone-800/80 pt-1.5">
               対象プラン: <span className="text-stone-300">{lineModal.planName}</span>

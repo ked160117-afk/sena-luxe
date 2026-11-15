@@ -1,7 +1,6 @@
 /**
  * SENA LUXE - Legal & Policy Views
  * Includes: Shop Information, Terms of Service, Privacy Policy, and Specified Commercial Transactions Act
- * Designed with transparent disclosures, compliance principles, and no fictitious data.
  */
 
 import React from 'react';
