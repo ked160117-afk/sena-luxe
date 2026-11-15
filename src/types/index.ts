@@ -47,6 +47,7 @@ export interface ProductItem {
   status: ProductStatus;
   verifiedForPublic?: boolean;
   imageUrl?: string;
+  imageUrls?: string[]; // Ordered product gallery images; imageUrl remains the primary-image fallback
   videoUrl?: string; // Legacy external MP4/WebM URL
   videoStorageId?: string; // Video file stored in Firestore chunks under the free-tier quota
   deviceCompatibility?: 'iOSのみ' | 'Androidのみ' | 'iOS・Android両方可';
