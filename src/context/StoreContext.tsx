@@ -300,10 +300,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       (snapshot) => {
         if (!snapshot.empty) {
           const loadedProducts: ProductItem[] = snapshot.docs.map((d) => {
-            const data = d.data() as ProductItem;
+            const rawData = d.data() as ProductItem;
+            const data = {
+              ...rawData,
+              category: rawData.category === 'ゲーム内通貨・石垢' ? '石垢' : rawData.category,
+            } as ProductItem;
             const verified =
               data.verifiedForPublic === true &&
-              (data.category === 'ゲーム内通貨・石垢' || data.category === '引退垢') &&
+              (['石垢', '引退垢', '初期垢'] as ProductCategory[]).includes(data.category) &&
               typeof data.price === 'number' &&
               data.price > 0 &&
               Boolean(data.title?.trim()) &&
@@ -510,7 +514,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleProductStatus = async (id: string, status: ProductStatus) => {
     const target = products.find((p) => p.id === id);
     if (!target) return;
-    if (status === '掲載中' && (!target.verifiedForPublic || (target.category !== 'ゲーム内通貨・石垢' && target.category !== '引退垢') || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
+    if (status === '掲載中' && (!target.verifiedForPublic || !(['石垢', '引退垢', '初期垢'] as ProductCategory[]).includes(target.category) || target.price === null || target.price <= 0 || !target.title.trim() || !target.summary.trim())) return;
     await updateProductDoc(id, { status });
   };
 
