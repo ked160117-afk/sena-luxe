@@ -12,7 +12,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
-import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore, rebuildPublicCatalogMirrors } from '../services/firestoreService';
+import { seedInitialDataIfEmpty, syncAllStoneRatesAndGamesToFirestore, uploadProductVideoToFirestore, deleteProductVideoFromFirestore, rebuildPublicCatalogMirrors, prepareInitialProductNumbering } from '../services/firestoreService';
 import { ProductCategory, ProductStatus, StoneRatePlan, GameTitle, ProductItem } from '../types';
 import { GameCardIcon } from '../components/GameCardIcon';
 import {
@@ -71,6 +71,9 @@ export const AdminDashboardView: React.FC = () => {
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
+  const [isPreparingNumbering, setIsPreparingNumbering] = useState(false);
+  const [numberingPreparationMessage, setNumberingPreparationMessage] = useState<string | null>(null);
+  const [numberingPreparationError, setNumberingPreparationError] = useState<string | null>(null);
 
   const [isBuildingPublicCatalog, setIsBuildingPublicCatalog] = useState(false);
   const [publicCatalogStatus, setPublicCatalogStatus] = useState<{
@@ -127,6 +130,28 @@ export const AdminDashboardView: React.FC = () => {
       setPublicCatalogError(error instanceof Error ? error.message : '公開専用データの事前作成に失敗しました。');
     } finally {
       setIsBuildingPublicCatalog(false);
+    }
+  };
+
+  const handlePrepareInitialNumbering = async () => {
+    const confirmed = window.confirm(
+      '初期サンプル9件は削除せず保持したまま、商品番号だけを SAMPLE-... に変更します。サンプル分の番号台帳だけを整理し、実際の商品・実際の永久欠番は保持します。\n\n正式商品の次回番号を各ゲーム SL-XX-001 から始められる状態にします。内容が想定と異なる場合は自動中止します。実行しますか？'
+    );
+    if (!confirmed) return;
+
+    setIsPreparingNumbering(true);
+    setNumberingPreparationMessage(null);
+    setNumberingPreparationError(null);
+    try {
+      const result = await prepareInitialProductNumbering();
+      const nextList = Object.values(result.nextNumbers).join(' / ');
+      setNumberingPreparationMessage(
+        `準備完了：サンプル商品番号を ${result.samplesRenumbered} 件整理しました。次回番号：${nextList}`
+      );
+    } catch (error) {
+      setNumberingPreparationError(error instanceof Error ? error.message : '番号の準備に失敗しました。データは安全のため変更を中止しました。');
+    } finally {
+      setIsPreparingNumbering(false);
     }
   };
 
@@ -1217,6 +1242,30 @@ export const AdminDashboardView: React.FC = () => {
             <p className="text-xs text-stone-400">
               形式: SL-ゲームコード-3桁連番（例: SL-FP-001）。一度発行された番号は削除後も永久欠番として記録され、再利用を完全に防止します。
             </p>
+            <div className="mt-4 rounded-xl border border-[#8f7534]/50 bg-[#17150f] p-4 space-y-3">
+              <div className="text-sm font-semibold text-[#f2d98c]">初期サンプル番号の整理</div>
+              <p className="text-xs leading-relaxed text-stone-300">
+                初期サンプル9件は削除せず保持し、サンプル専用番号へ変更します。サンプル由来の台帳だけを整理し、実商品と実際の永久欠番は残します。処理前に内容を照合し、想定外のデータがあれば自動中止します。
+              </p>
+              <button
+                type="button"
+                onClick={handlePrepareInitialNumbering}
+                disabled={isPreparingNumbering}
+                className="rounded-lg bg-[#d4af37] px-4 py-2.5 text-sm font-bold text-black disabled:opacity-50"
+              >
+                {isPreparingNumbering ? '番号を安全に確認・整理中...' : '正式商品の番号を001から準備する'}
+              </button>
+              {numberingPreparationMessage && (
+                <div className="rounded-lg border border-emerald-800 bg-emerald-950/40 p-3 text-xs text-emerald-200 break-words">
+                  {numberingPreparationMessage}
+                </div>
+              )}
+              {numberingPreparationError && (
+                <div className="rounded-lg border border-red-900 bg-red-950/40 p-3 text-xs text-red-200 break-words">
+                  {numberingPreparationError}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
