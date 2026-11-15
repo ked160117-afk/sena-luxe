@@ -413,15 +413,23 @@ export async function prepareInitialProductNumbering(): Promise<{ samplesRenumbe
   ];
   const codes = [...new Set(sampleSeeds.map((sample) => sample.code))];
 
+  // Read the full product catalogue first. Sequence documents are re-read inside
+  // the transaction, so concurrent legitimate product creation remains protected.
+  const productsSnapshot = await getDocs(query(collection(db, COLLECTIONS.PRODUCTS)));
+
   return runTransaction(db, async (transaction) => {
-    const productsSnapshot = await transaction.get(query(collection(db, COLLECTIONS.PRODUCTS)));
-    const sequenceSnapshots = await Promise.all(codes.map((code) => transaction.get(doc(db, COLLECTIONS.SEQUENCES, code))));
-    const productsById = new Map(productsSnapshot.docs.map((snapshot) => [snapshot.id, snapshot]));
-    const samplesById = new Map(sampleSeeds.map((sample) => [sample.id, sample]));
+    const sampleSnapshots = await Promise.all(sampleSeeds.map((sample) =>
+      transaction.get(doc(db, COLLECTIONS.PRODUCTS, sample.id))
+    ));
+    const sequenceSnapshots = await Promise.all(codes.map((code) =>
+      transaction.get(doc(db, COLLECTIONS.SEQUENCES, code))
+    ));
+    const productsById = new Map(sampleSeeds.map((sample, index) => [sample.id, sampleSnapshots[index]]));
+    const samplesById = new Set(sampleSeeds.map((sample) => sample.id));
 
     for (const sample of sampleSeeds) {
-      const snapshot = productsById.get(sample.id);
-      if (!snapshot) continue;
+      const snapshot = productsById.get(sample.id)!;
+      if (!snapshot.exists()) continue;
       const data = snapshot.data();
       const expectedNumber = 'SL-' + sample.code + '-' + String(sample.sequence).padStart(3, '0');
       const sampleNumber = 'SAMPLE-' + sample.code + '-' + String(sample.sequence).padStart(3, '0');
@@ -444,8 +452,8 @@ export async function prepareInitialProductNumbering(): Promise<{ samplesRenumbe
     const nextNumbers: Record<string, string> = {};
     let samplesRenumbered = 0;
     for (const sample of sampleSeeds) {
-      const snapshot = productsById.get(sample.id);
-      if (!snapshot) continue;
+      const snapshot = productsById.get(sample.id)!;
+      if (!snapshot.exists()) continue;
       const sampleNumber = 'SAMPLE-' + sample.code + '-' + String(sample.sequence).padStart(3, '0');
       if (snapshot.data().productNumber !== sampleNumber) {
         transaction.update(snapshot.ref, { productNumber: sampleNumber, updatedAt: new Date().toISOString() });
