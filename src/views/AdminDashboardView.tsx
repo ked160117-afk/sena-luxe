@@ -1751,7 +1751,7 @@ export const AdminDashboardView: React.FC = () => {
                     className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#d4af37]" />
-                    <span>写真をアップロード (カメラ/写真)</span>
+                    <span>写真を複数アップロード (複数選択可)</span>
                   </button>
                   <input
                     type="url"
@@ -1966,7 +1966,7 @@ export const AdminDashboardView: React.FC = () => {
                     className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 flex items-center justify-center gap-2 shrink-0 transition-colors"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#d4af37]" />
-                    <span>写真をアップロード (カメラ/写真)</span>
+                    <span>写真を複数アップロード (複数選択可)</span>
                   </button>
                   <input
                     type="url"
