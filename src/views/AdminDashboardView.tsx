@@ -187,6 +187,7 @@ export const AdminDashboardView: React.FC = () => {
   const [newProdIsPriceConfirmed, setNewProdIsPriceConfirmed] = useState(false); // default to 価格確認中
   const [newProdPrice, setNewProdPrice] = useState<string>('');
   const [newProdImageUrl, setNewProdImageUrl] = useState('');
+  const [newProdImageUrls, setNewProdImageUrls] = useState<string[]>([]);
   const [newProdHighlights, setNewProdHighlights] = useState('');
   const [newProdStatus, setNewProdStatus] = useState<ProductStatus>('掲載停止');
 
@@ -201,6 +202,7 @@ export const AdminDashboardView: React.FC = () => {
   const [editProdSummary, setEditProdSummary] = useState('');
   const [editProdHighlights, setEditProdHighlights] = useState('');
   const [editProdImageUrl, setEditProdImageUrl] = useState('');
+  const [editProdImageUrls, setEditProdImageUrls] = useState<string[]>([]);
   const [editProdDevice, setEditProdDevice] = useState<NonNullable<ProductItem['deviceCompatibility']>>('iOS・Android両方可');
   const [editProdVideoFile, setEditProdVideoFile] = useState<File | null>(null);
   const [editVideoUploadProgress, setEditVideoUploadProgress] = useState<number | null>(null);
@@ -395,6 +397,57 @@ export const AdminDashboardView: React.FC = () => {
   };
 
 
+
+
+  // Compress and add multiple product photos while preserving their selected order.
+  const handleMultipleProductImages = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onComplete: (dataUrls: string[]) => void
+  ) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    const accepted = files.filter((file) => file.size <= 5 * 1024 * 1024);
+    if (accepted.length !== files.length) window.alert('5MBを超える画像は除外しました。画像は1枚5MB以下にしてください。');
+    const compress = (file: File) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('画像を読み込めませんでした。'));
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') { reject(new Error('画像を読み込めませんでした。')); return; }
+        const img = new Image();
+        img.onerror = () => resolve(reader.result as string);
+        img.onload = () => {
+          const maxDim = 1200;
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(reader.result as string); return; }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/webp', 0.72));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    try {
+      const uploaded = await Promise.all(accepted.map(compress));
+      onComplete(uploaded);
+    } catch (error) {
+      console.error('Product image processing failed:', error);
+      window.alert('画像の読み込みに失敗しました。別の画像をお試しください。');
+    }
+  };
+
+  const moveProductImage = (images: string[], setImages: (next: string[]) => void, index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    [next[index], next[target]] = [next[target], next[index]];
+    setImages(next);
+  };
+
   // Handle Product Add
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -428,7 +481,8 @@ export const AdminDashboardView: React.FC = () => {
       summary: newProdSummary.trim(),
       price: isVerifiedForPublic ? Number(newProdPrice) : null,
       verifiedForPublic: isVerifiedForPublic,
-      imageUrl: newProdImageUrl.trim() || undefined,
+      imageUrl: newProdImageUrls[0] || newProdImageUrl.trim() || undefined,
+      imageUrls: newProdImageUrls.length ? newProdImageUrls : (newProdImageUrl.trim() ? [newProdImageUrl.trim()] : []),
       keyHighlights: highlightsArr,
       status: isVerifiedForPublic ? newProdStatus : '掲載停止',
     });
@@ -451,6 +505,7 @@ export const AdminDashboardView: React.FC = () => {
     setNewProdSummary('');
     setNewProdHighlights('');
     setNewProdImageUrl('');
+    setNewProdImageUrls([]);
     setNewProdVideoFile(null);
     if (newProductVideoInputRef.current) newProductVideoInputRef.current.value = '';
     setNewProdDevice('iOS・Android両方可');
@@ -470,6 +525,7 @@ export const AdminDashboardView: React.FC = () => {
     setEditProdSummary(isVerified ? product.summary || '' : '');
     setEditProdHighlights(isVerified ? product.keyHighlights?.join('\n') || '' : '');
     setEditProdImageUrl(isVerified ? product.imageUrl || '' : '');
+    setEditProdImageUrls(isVerified ? (product.imageUrls?.length ? product.imageUrls : (product.imageUrl ? [product.imageUrl] : [])) : []);
     setEditProdDevice(product.deviceCompatibility || 'iOS・Android両方可');
     setEditProdVideoFile(null);
     if (editProductVideoInputRef.current) editProductVideoInputRef.current.value = '';
@@ -525,7 +581,8 @@ export const AdminDashboardView: React.FC = () => {
       verifiedForPublic: isVerifiedForPublic,
       summary: isVerifiedForPublic ? editProdSummary.trim() : editingProduct.summary,
       keyHighlights: isVerifiedForPublic ? highlightsArr : editingProduct.keyHighlights,
-      imageUrl: isVerifiedForPublic ? editProdImageUrl.trim() || undefined : editingProduct.imageUrl,
+      imageUrl: isVerifiedForPublic ? (editProdImageUrls[0] || editProdImageUrl.trim() || undefined) : editingProduct.imageUrl,
+      imageUrls: isVerifiedForPublic ? (editProdImageUrls.length ? editProdImageUrls : (editProdImageUrl.trim() ? [editProdImageUrl.trim()] : [])) : editingProduct.imageUrls,
       status: isVerifiedForPublic ? editProdStatus : '掲載停止',
       order: editProdOrder ? Number(editProdOrder) : 0,
     });
@@ -1682,7 +1739,10 @@ export const AdminDashboardView: React.FC = () => {
                     type="file"
                     ref={newProductFileInputRef}
                     accept="image/*"
-                    onChange={(e) => handleFileUpload(e, (dataUrl) => setNewProdImageUrl(dataUrl))}
+                    multiple
+                    onChange={(e) => handleMultipleProductImages(e, (dataUrls) => {
+                      setNewProdImageUrls((current) => { const next = [...current, ...dataUrls]; setNewProdImageUrl(next[0] || ''); return next; });
+                    })}
                     className="hidden"
                   />
                   <button
@@ -1697,20 +1757,21 @@ export const AdminDashboardView: React.FC = () => {
                     type="url"
                     placeholder="または画像URL (https://...)"
                     value={newProdImageUrl}
-                    onChange={(e) => setNewProdImageUrl(e.target.value)}
+                    onChange={(e) => { setNewProdImageUrl(e.target.value); setNewProdImageUrls(e.target.value.trim() ? [e.target.value.trim()] : []); }}
                     className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
                   />
                 </div>
-                {newProdImageUrl && (
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#d4af37]/40 bg-black">
-                    <img src={newProdImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setNewProdImageUrl('')}
-                      className="absolute top-1 right-1 bg-black/80 text-rose-400 rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
-                    >
-                      ✕
-                    </button>
+                {newProdImageUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {newProdImageUrls.map((url, index) => <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#d4af37]/40 bg-black">
+                      <img src={url} alt={`商品画像 ${index + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] bg-black/80 text-white">{index + 1}</span>
+                      <div className="absolute top-1 left-1 flex gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => moveProductImage(newProdImageUrls, setNewProdImageUrls, index, -1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">←</button>
+                        <button type="button" disabled={index === newProdImageUrls.length - 1} onClick={() => moveProductImage(newProdImageUrls, setNewProdImageUrls, index, 1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">→</button>
+                      </div>
+                      <button type="button" onClick={() => { const next = newProdImageUrls.filter((_, i) => i !== index); setNewProdImageUrls(next); setNewProdImageUrl(next[0] || ''); }} className="absolute top-1 right-1 bg-black/80 text-rose-400 rounded-full w-5 h-5">✕</button>
+                    </div>)}
                   </div>
                 )}
               </div>
@@ -1893,7 +1954,10 @@ export const AdminDashboardView: React.FC = () => {
                     type="file"
                     ref={editProductFileInputRef}
                     accept="image/*"
-                    onChange={(e) => handleFileUpload(e, (dataUrl) => setEditProdImageUrl(dataUrl))}
+                    multiple
+                    onChange={(e) => handleMultipleProductImages(e, (dataUrls) => {
+                      setEditProdImageUrls((current) => { const next = [...current, ...dataUrls]; setEditProdImageUrl(next[0] || ''); return next; });
+                    })}
                     className="hidden"
                   />
                   <button
@@ -1908,20 +1972,21 @@ export const AdminDashboardView: React.FC = () => {
                     type="url"
                     placeholder="または画像URL (https://...)"
                     value={editProdImageUrl}
-                    onChange={(e) => setEditProdImageUrl(e.target.value)}
+                    onChange={(e) => { setEditProdImageUrl(e.target.value); setEditProdImageUrls(e.target.value.trim() ? [e.target.value.trim()] : []); }}
                     className="w-full bg-[#0a0b0d] border border-stone-700 rounded-lg p-2.5 text-white text-[11px]"
                   />
                 </div>
-                {editProdImageUrl && (
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#d4af37]/40 bg-black">
-                    <img src={editProdImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setEditProdImageUrl('')}
-                      className="absolute top-1 right-1 bg-black/80 text-rose-400 rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
-                    >
-                      ✕
-                    </button>
+                {editProdImageUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {editProdImageUrls.map((url, index) => <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#d4af37]/40 bg-black">
+                      <img src={url} alt={`商品画像 ${index + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] bg-black/80 text-white">{index + 1}</span>
+                      <div className="absolute top-1 left-1 flex gap-1">
+                        <button type="button" disabled={index === 0} onClick={() => moveProductImage(editProdImageUrls, setEditProdImageUrls, index, -1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">←</button>
+                        <button type="button" disabled={index === editProdImageUrls.length - 1} onClick={() => moveProductImage(editProdImageUrls, setEditProdImageUrls, index, 1)} className="bg-black/80 text-white rounded px-1 disabled:opacity-30">→</button>
+                      </div>
+                      <button type="button" onClick={() => { const next = editProdImageUrls.filter((_, i) => i !== index); setEditProdImageUrls(next); setEditProdImageUrl(next[0] || ''); }} className="absolute top-1 right-1 bg-black/80 text-rose-400 rounded-full w-5 h-5">✕</button>
+                    </div>)}
                   </div>
                 )}
               </div>
