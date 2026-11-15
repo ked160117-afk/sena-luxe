@@ -245,7 +245,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
           const loadedGames: GameTitle[] = snapshot.docs.map((d) => {
             const data = d.data() as GameTitle;
-            const fallback = allInitialMap.get(data.code?.toUpperCase() || '');
+            const fallback =
+              allInitialMap.get((data.code || '').trim().toUpperCase()) ||
+              [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES].find((g) => g.id === (data.id || d.id));
             let description = data.description;
 
             // Ensure neutral description without fictional inventory claims
