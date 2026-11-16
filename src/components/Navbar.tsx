@@ -145,14 +145,7 @@ export const Navbar: React.FC = () => {
               <span>公式LINEで問い合わせる</span>
             </a>
 
-            {isAdminLoggedIn ? (
-              <button
-                onClick={() => handleNav('admin_dashboard')}
-                className="w-full py-2.5 rounded-lg text-xs font-medium text-[#d4af37] border border-[#d4af37]/40 text-center"
-              >
-                管理者ダッシュボードを開く
-              </button>
-            ) : (
+            {!isAdminLoggedIn && (
               <button
                 onClick={() => handleNav('admin_login')}
                 className="w-full py-2 text-[11px] text-stone-500 hover:text-stone-400 text-center"
