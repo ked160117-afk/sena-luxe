@@ -10,8 +10,8 @@ import React, { useEffect, useState } from 'react';
 import { GameTitle } from '../types';
 
 const FALLBACK_GAME_ICON_URLS: Record<string, string> = {
-  OPBR: 'https://play-lh.googleusercontent.com/N-cQRxsEqco6aWT29lG3BqSF1PjYYsks6C4qTORVn2NoUloJqa-XGdi2n9D3QeDi5wbeVp5_bBx-HKDTHz9ftUQ=w240-h480',
-  HSR: 'https://play-lh.googleusercontent.com/aWrGocSA7hEuk1qAPe7L4T57LvLKrwwH26kC2_LOqxRQMQX7j3uHYojC-EKWgYEV2PdrmE0ahqvvhLhXrAGk6Q=w240-h480',
+  OPBR: 'https://play-lh.googleusercontent.com/N-cQRxsEqco6aWT29lG3BqSF1PjYYsks6C4qTORVn2NoUloJqa-XGdi2n9D3QeDi5wbeVp5_bBx-HKDTHz9ftUQ=w240-h480&v=20261116',
+  HSR: 'https://play-lh.googleusercontent.com/aWrGocSA7hEuk1qAPe7L4T57LvLKrwwH26kC2_LOqxRQMQX7j3uHYojC-EKWgYEV2PdrmE0ahqvvhLhXrAGk6Q=w240-h480&v=20261116',
 };
 
 interface GameCardIconProps {
