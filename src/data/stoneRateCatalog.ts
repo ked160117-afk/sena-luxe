@@ -41,7 +41,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     "currencyName": "虹のダイヤ・かけら",
     "currencyUnit": "個",
     "currencyIconUrl": "https://cdn3.xsolla.com/img/misc/images/0c1f31eba3d60fd5f29460175f64e1d3.png",
-    "iconUrl": "https://play-lh.googleusercontent.com/N-cQRxsEqco6aWT29lG3BqSF1PjYYsks6C4qTORVn2NoUloJqa-XGdi2n9D3QeDi5wbeVp5_bBx-HKDTHz9ftUQ=w240-h480",
+    "iconUrl": "https://play-lh.googleusercontent.com/N-cQRxsEqco6aWT29lG3BqSF1PjYYsks6C4qTORVn2NoUloJqa-XGdi2n9D3QeDi5wbeVp5_bBx-HKDTHz9ftUQ=w240-h480&v=20261116",
     "isHandled": true,
     "description": "ONE PIECEのキャラクターたちを操り4対4のリアルタイムベリー争奪チームバトル。",
     "order": 3
@@ -341,7 +341,7 @@ export const ALL_GAMES_CATALOG: GameTitle[] = [
     "category": "スペースファンタジーRPG",
     "currencyName": "星玉",
     "currencyUnit": "個",
-    "iconUrl": "https://play-lh.googleusercontent.com/aWrGocSA7hEuk1qAPe7L4T57LvLKrwwH26kC2_LOqxRQMQX7j3uHYojC-EKWgYEV2PdrmE0ahqvvhLhXrAGk6Q=w240-h480",
+    "iconUrl": "https://play-lh.googleusercontent.com/aWrGocSA7hEuk1qAPe7L4T57LvLKrwwH26kC2_LOqxRQMQX7j3uHYojC-EKWgYEV2PdrmE0ahqvvhLhXrAGk6Q=w240-h480&v=20261116",
     "isHandled": true,
     "description": "銀河を駆ける星穹列車に乗り未知の世界を巡るスペースファンタジーRPG。",
     "order": 26
