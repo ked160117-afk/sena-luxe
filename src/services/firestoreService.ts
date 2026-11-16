@@ -149,6 +149,7 @@ export async function createProductAtomic(data: {
   summary: string;
   price: number | null;
   verifiedForPublic?: boolean;
+  showInRecommended?: boolean;
   imageUrl?: string;
   additionalImages?: string[];
   videoUrl?: string;
@@ -206,6 +207,7 @@ export async function createProductAtomic(data: {
         price: typeof data.price === 'number' && !Number.isNaN(data.price) ? data.price : null,
         status: data.status || '掲載中',
         ...(data.verifiedForPublic !== undefined ? { verifiedForPublic: data.verifiedForPublic } : {}),
+        showInRecommended: data.showInRecommended !== false,
         ...(trimmedImageUrl ? { imageUrl: trimmedImageUrl } : {}),
         ...(cleanAdditionalImages.length > 0 ? { additionalImages: cleanAdditionalImages } : {}),
         ...(trimmedVideoUrl ? { videoUrl: trimmedVideoUrl } : {}),
