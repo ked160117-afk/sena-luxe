@@ -1055,6 +1055,7 @@ export const AdminDashboardView: React.FC = () => {
                   <th className="py-3 px-3 sm:px-4">カテゴリー</th>
                   <th className="py-3 px-3 sm:px-4">価格</th>
                   <th className="py-3 px-3 sm:px-4">掲載状況</th>
+                  <th className="py-3 px-3 sm:px-4">おすすめ</th>
                   <th className="py-3 px-3 sm:px-4 text-right">操作</th>
                 </tr>
               </thead>
@@ -1112,6 +1113,20 @@ export const AdminDashboardView: React.FC = () => {
                         <option value="売り切れ">売り切れ</option>
                         <option value="掲載停止">掲載停止 (非公開)</option>
                       </select>
+                    </td>
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
+                      {p.category === '引退垢' ? (
+                        <button
+                          type="button"
+                          onClick={() => updateProduct(p.id, { showInRecommended: p.showInRecommended === false })}
+                          className={`text-[10px] font-semibold rounded px-2 py-1 border ${p.showInRecommended === false ? 'text-stone-400 border-stone-700 bg-stone-900' : 'text-emerald-300 border-emerald-800 bg-emerald-950/30'}`}
+                          title="おすすめ引退アカウントへの表示を切り替え"
+                        >
+                          {p.showInRecommended === false ? '非表示' : '表示中'}
+                        </button>
+                      ) : (
+                        <span className="text-stone-600">—</span>
+                      )}
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
