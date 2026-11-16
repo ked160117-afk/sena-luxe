@@ -46,6 +46,7 @@ export interface ProductItem {
   priceDisplay?: string; // e.g. "¥49,800" or "価格確認中"
   status: ProductStatus;
   verifiedForPublic?: boolean;
+  showInRecommended?: boolean; // false hides this item from the recommended retired-account list
   imageUrl?: string;
   additionalImages?: string[]; // 2nd-5th images (max 4 additional images)
   imageUrls?: string[];
