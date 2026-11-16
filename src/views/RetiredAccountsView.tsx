@@ -14,7 +14,12 @@ export const RetiredAccountsView: React.FC = () => {
 
   const retiredProducts = useMemo(() => {
     return products
-      .filter((p) => p.category === '引退垢' && p.status === '掲載中' && p.verifiedForPublic === true)
+      .filter((p) =>
+        (p.category === '引退垢' || p.category === '初期垢') &&
+        p.status === '掲載中' &&
+        p.verifiedForPublic === true &&
+        p.isRecommended !== false
+      )
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
