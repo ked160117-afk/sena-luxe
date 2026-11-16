@@ -46,6 +46,8 @@ export interface ProductItem {
   priceDisplay?: string; // e.g. "¥49,800" or "価格確認中"
   status: ProductStatus;
   verifiedForPublic?: boolean;
+  /** Whether this account appears in the recommended retired-account list. Missing legacy values default to true. */
+  isRecommended?: boolean;
   imageUrl?: string;
   additionalImages?: string[]; // 2nd-5th images (max 4 additional images)
   imageUrls?: string[];
