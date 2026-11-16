@@ -110,6 +110,7 @@ interface StoreContextType {
     summary: string;
     price: number | null;
     verifiedForPublic?: boolean;
+    showInRecommended?: boolean;
     imageUrl?: string;
     additionalImages?: string[];
     videoUrl?: string;
@@ -518,6 +519,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       summary: data.summary,
       price: data.price,
       ...(data.verifiedForPublic !== undefined ? { verifiedForPublic: data.verifiedForPublic } : {}),
+      showInRecommended: data.showInRecommended !== false,
       ...(trimmedImageUrl ? { imageUrl: trimmedImageUrl } : {}),
       ...(cleanAdditionalImages.length > 0 ? { additionalImages: cleanAdditionalImages } : {}),
       ...(trimmedVideoUrl ? { videoUrl: trimmedVideoUrl } : {}),
