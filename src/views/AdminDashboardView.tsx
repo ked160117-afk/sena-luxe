@@ -596,6 +596,7 @@ export const AdminDashboardView: React.FC = () => {
         summary: finalSummary,
         price: parsedPrice,
         verifiedForPublic: isVerifiedForPublic,
+        ...(newProdCategory === '引退垢' || newProdCategory === '初期垢' ? { isRecommended: true } : {}),
         ...(mainImageUrl ? { imageUrl: mainImageUrl } : {}),
         ...(additionalImageUrls.length > 0 ? { additionalImages: additionalImageUrls } : {}),
         ...(trimmedVideoUrl ? { videoUrl: trimmedVideoUrl } : {}),
@@ -1115,6 +1116,16 @@ export const AdminDashboardView: React.FC = () => {
                     </td>
                     <td className="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
+                        {(p.category === '引退垢' || p.category === '初期垢') && (
+                          <button
+                            onClick={() => updateProduct(p.id, { isRecommended: p.isRecommended === false })}
+                            className={`p-1.5 rounded transition-colors ${p.isRecommended === false ? 'text-stone-500 hover:text-emerald-400 hover:bg-stone-800' : 'text-emerald-400 hover:text-amber-300 hover:bg-stone-800'}`}
+                            title={p.isRecommended === false ? 'おすすめ一覧に掲載する' : 'おすすめ一覧から外す'}
+                            aria-label={p.isRecommended === false ? 'おすすめ一覧に掲載する' : 'おすすめ一覧から外す'}
+                          >
+                            {p.isRecommended === false ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
                         <button
                           onClick={() => openEditProductModal(p)}
                           className="p-1.5 text-stone-400 hover:text-[#d4af37] rounded hover:bg-stone-800 transition-colors"
