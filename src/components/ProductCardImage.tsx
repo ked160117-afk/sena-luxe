@@ -20,6 +20,7 @@ import {
   Sparkles,
   Trophy,
   Video,
+  X,
 } from 'lucide-react';
 
 interface ProductCardImageProps {
@@ -60,6 +61,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [videoPlayError, setVideoPlayError] = useState<string | null>(null);
   const [videoReloadSeq, setVideoReloadSeq] = useState(0);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const isStoneCategory = category === '石垢' || category === 'ゲーム内通貨・石垢';
 
   const galleryImages = useMemo(() => {
@@ -274,6 +276,7 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
     };
 
     return (
+      <>
       <div className="w-full space-y-2">
         {/* Top Section: 1st Main Image (Large Display) */}
         <div className={`relative overflow-hidden bg-[#0a0b0d] rounded-lg border border-stone-800/90 ${className}`}>
@@ -281,6 +284,8 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
             <>
               <img
                 src={mainImage}
+                onClick={() => setPreviewImage(mainImage)}
+                style={{ cursor: 'zoom-in' }}
                 alt={`${title || gameName} メイン画像`}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 loading="lazy"
@@ -387,6 +392,8 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
                   {!failedIndices[currentExtraGalleryIndex] ? (
                     <img
                       src={currentExtraSrc}
+                      onClick={() => setPreviewImage(currentExtraSrc)}
+                      style={{ cursor: 'zoom-in' }}
                       alt={`${title || gameName} 追加画像 ${currentExtraGalleryIndex + 1}`}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -453,6 +460,8 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
                       {!failedIndices[galleryIdx] ? (
                         <img
                           src={src}
+                          onClick={() => setPreviewImage(src)}
+                          style={{ cursor: 'zoom-in' }}
                           alt={`追加画像 ${galleryIdx + 1}`}
                           className="w-full h-full object-cover"
                           loading="lazy"
@@ -476,6 +485,35 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
           </div>
         </div>
       </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="画像を拡大表示"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            aria-label="拡大画像を閉じる"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 z-[101] w-10 h-10 rounded-full bg-black/80 border border-[#d4af37]/60 text-white flex items-center justify-center"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={previewImage}
+            alt={`${title || gameName} 拡大画像`}
+            className="max-w-[96vw] max-h-[90vh] w-auto h-auto object-contain rounded-md"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-stone-300 pointer-events-none">
+            画面の外側をタップすると閉じます
+          </p>
+        </div>
+      )}
+      </>
     );
   }
 
@@ -499,11 +537,14 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
   };
 
   return (
+    <>
     <div className="w-full">
       <div className={`relative overflow-hidden bg-[#0a0b0d] rounded-lg border border-stone-800/80 ${className}`}>
         {!failedIndices[safeIndex] ? (
           <img
             src={currentSrc}
+            onClick={() => setPreviewImage(currentSrc)}
+            style={{ cursor: 'zoom-in' }}
             alt={`${title || gameName} (${safeIndex + 1}/${galleryImages.length})`}
             className={`w-full h-full ${
               isStoneCategory && !hasMultipleImages ? 'object-contain' : 'object-cover'
@@ -581,6 +622,8 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
                 {!failedIndices[idx] ? (
                   <img
                     src={src}
+                    onClick={() => setPreviewImage(src)}
+                    style={{ cursor: 'zoom-in' }}
                     alt={`${title || gameName} サムネイル ${idx + 1}`}
                     className="w-full h-full object-cover"
                     loading="lazy"
@@ -606,5 +649,34 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
         </div>
       )}
     </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="画像を拡大表示"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            aria-label="拡大画像を閉じる"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 z-[101] w-10 h-10 rounded-full bg-black/80 border border-[#d4af37]/60 text-white flex items-center justify-center"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={previewImage}
+            alt={`${title || gameName} 拡大画像`}
+            className="max-w-[96vw] max-h-[90vh] w-auto h-auto object-contain rounded-md"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-stone-300 pointer-events-none">
+            画面の外側をタップすると閉じます
+          </p>
+        </div>
+      )}
+    </>
   );
 };
