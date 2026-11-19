@@ -114,12 +114,8 @@ export default {
     }
 
     if (shareMatch) {
-      // Human visitors see the normal SENA LUXE SPA. Social crawlers receive
-      // product-specific server-rendered Open Graph/Twitter metadata.
-      if (!isShareCrawler(request.headers.get("user-agent") || "")) {
-        return env.ASSETS.fetch(new Request(new URL("/", request.url), request));
-      }
-
+      // Render a product-specific share landing page for both humans and social
+      // crawlers, so opening the X preview lands on the shared account itself.
       const productId = decodeURIComponent(shareMatch[1]);
       const fields = await loadPublicProduct(productId);
       if (
@@ -134,6 +130,8 @@ export default {
       const title = readString(fields, "title") || readString(fields, "gameName") || "SENA LUXE";
       const gameName = readString(fields, "gameName");
       const summary = readString(fields, "summary");
+      const priceValue = fields.price?.integerValue ?? fields.price?.doubleValue;
+      const priceLabel = typeof priceValue === "number" ? `¥${priceValue.toLocaleString("ja-JP")}` : `価格確認中`;
       const description = [gameName, summary, "商品内容・在庫・価格は公式LINEでご確認ください。"]
         .filter(Boolean)
         .join("｜")
@@ -160,15 +158,23 @@ export default {
 <meta property="og:url" content="${safeCanonical}">
 <meta property="og:image" content="${safeImageUrl}">
 <meta property="og:image:alt" content="${safeTitle}のメイン画像">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${safeTitle}">
 <meta name="twitter:description" content="${safeDescription}">
 <meta name="twitter:image" content="${safeImageUrl}">
 <link rel="canonical" href="${safeCanonical}">
 </head>
-<body><p><a href="/">SENA LUXE</a></p><h1>${safeTitle}</h1><p>${safeDescription}</p><img src="${safeImageUrl}" alt="${safeTitle}"></body>
+<body style="margin:0;background:#0b0c0e;color:#f4efe6;font-family:system-ui,sans-serif">
+<main style="max-width:760px;margin:0 auto;padding:24px">
+<a href="/" style="color:#d4af37;text-decoration:none;font-weight:700">SENA LUXE</a>
+<div style="margin-top:20px"><img src="${safeImageUrl}" alt="${safeTitle}" style="display:block;width:100%;height:auto;max-height:640px;object-fit:contain;background:#111216;border-radius:12px"></div>
+<p style="color:#d4af37;font-size:13px;margin:18px 0 8px">${htmlEscape(gameName)}</p>
+<h1 style="font-size:22px;line-height:1.5;margin:0 0 12px">${safeTitle}</h1>
+<p style="color:#aaa;font-size:14px;line-height:1.8">${safeDescription}</p>
+<p style="font-size:20px;font-weight:700;color:#f7e7ce">${htmlEscape(priceLabel)}</p>
+<a href="https://lin.ee/6uy8hu9" style="display:block;margin:24px 0;padding:15px;text-align:center;background:#d4af37;color:#000;border-radius:10px;font-weight:700;text-decoration:none">公式LINEで在庫・詳細を確認</a>
+<p style="text-align:center"><a href="/" style="color:#aaa">SENA LUXE ホームページへ</a></p>
+</main></body>
 </html>`;
 
       return new Response(html, {
