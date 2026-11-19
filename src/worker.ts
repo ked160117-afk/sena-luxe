@@ -1,7 +1,7 @@
 import firebaseConfig from "../firebase-applet-config.json";
 
 interface Env {
-  ASSETS: Fetcher;
+  ASSETS: { fetch: (request: Request) => Promise<Response> };
 }
 
 type FirestoreValue = {
