@@ -428,7 +428,8 @@ export const GameProductsView: React.FC = () => {
                       </button>
 
                       <XShareButton
-                        gameName={item.gameName}
+                    productId={item.id}
+                    gameName={item.gameName}
                         gameShortName={game?.shortName}
                         gameCode={item.gameCode}
                         productTitle={item.title}
