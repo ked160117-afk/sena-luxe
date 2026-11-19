@@ -338,6 +338,46 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
                   <Loader2 className="w-4 h-4 text-[#d4af37] animate-spin" />
                   <span>動画読込中...</span>
                 </div>
+              ) : resolvedVideoUrl ? (
+                <div className="relative w-full h-full min-h-[7rem]">
+                  <video
+                    key={resolvedVideoUrl}
+                    src={resolvedVideoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-contain bg-black"
+                    onError={(event) => {
+                      const mediaError = event.currentTarget.error;
+                      const message =
+                        mediaError?.code === 2
+                          ? '動画の読み込み通信に失敗しました。通信環境を確認して再読込してください。'
+                          : mediaError?.code === 3
+                          ? '動画のデコードに失敗しました。動画ファイルが破損しているか、対応していないコーデックの可能性があります。'
+                          : mediaError?.code === 4
+                          ? 'この動画形式・コーデックはブラウザで再生できません。MP4（H.264）形式をお試しください。'
+                          : '動画の再生に失敗しました。再読込してください。';
+                      setVideoPlayError(message);
+                    }}
+                  />
+                  {videoPlayError && (
+                    <div className="absolute inset-x-1 bottom-1 p-1.5 rounded bg-black/85 border border-rose-900/60 text-rose-200 text-[9px] text-center space-y-1">
+                      <p className="leading-snug">{videoPlayError}</p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setVideoReloadSeq((n) => n + 1);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5 text-[#d4af37]" />
+                        <span>動画を再読込</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : videoPlayError ? (
                 <div className="p-2 text-center text-[10px] text-rose-300 space-y-1.5">
                   <div className="leading-snug">{videoPlayError}</div>
@@ -354,18 +394,6 @@ export const ProductCardImage: React.FC<ProductCardImageProps> = ({
                     <span>再読込</span>
                   </button>
                 </div>
-              ) : resolvedVideoUrl ? (
-                <video
-                  key={resolvedVideoUrl}
-                  src={resolvedVideoUrl}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="w-full h-full object-contain bg-black"
-                  onError={() => {
-                    setVideoPlayError('お使いのブラウザではこの動画形式を再生できませんでした。');
-                  }}
-                />
               ) : null}
             </div>
           </div>

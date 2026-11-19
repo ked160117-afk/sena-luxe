@@ -149,6 +149,7 @@ export const RetiredAccountsView: React.FC = () => {
                   </button>
 
                   <XShareButton
+                    productId={item.id}
                     gameName={item.gameName}
                     gameShortName={game?.shortName}
                     gameCode={item.gameCode}

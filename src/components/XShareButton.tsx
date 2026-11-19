@@ -18,6 +18,7 @@ interface XShareButtonProps {
   gameCode?: string;
   productTitle: string;
   category: string;
+  productId?: string;
 }
 
 export const XShareButton: React.FC<XShareButtonProps> = ({
@@ -26,6 +27,7 @@ export const XShareButton: React.FC<XShareButtonProps> = ({
   gameCode,
   productTitle,
   category,
+  productId,
 }) => {
   const alias = HASHTAG_ALIASES[(gameCode || '').toUpperCase()];
   const fullTag = sanitizeHashtag(alias?.full || gameName);
@@ -43,11 +45,15 @@ export const XShareButton: React.FC<XShareButtonProps> = ({
     .map((tag) => `#${tag}`)
     .join(' ');
 
+  const baseUrl = 'https://sena-luxe.sena-luxejp.workers.dev';
+  const isAccountCategory = category === '引退垢' || category === '初期垢';
+  const productShareUrl = productId && isAccountCategory ? `${baseUrl}/share/${encodeURIComponent(productId)}` : baseUrl;
+
   const text = [
     productTitle,
     '',
     'SENA LUXE',
-    'https://sena-luxe.sena-luxejp.workers.dev/',
+    productShareUrl,
     '',
     hashtagLine,
   ].join('\n');

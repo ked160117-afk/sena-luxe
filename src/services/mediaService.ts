@@ -58,15 +58,21 @@ export function normalizeVideoMimeType(mimeType?: string | null, fileName?: stri
   if (cleanMime === 'video/ogg' || lowerName.endsWith('.ogg') || lowerName.endsWith('.ogv')) {
     return 'video/ogg';
   }
+  // Never label QuickTime/MOV bytes as MP4: MIME relabeling does not transcode
+  // the container and can cause mobile browsers to reject the video.
+  if (cleanMime === 'video/quicktime' || lowerName.endsWith('.mov')) {
+    return 'video/quicktime';
+  }
   if (
-    !cleanMime ||
-    cleanMime === 'application/octet-stream' ||
-    cleanMime === 'video/quicktime' ||
+    cleanMime === 'video/mp4' ||
     cleanMime === 'video/x-m4v' ||
-    lowerName.endsWith('.mov') ||
     lowerName.endsWith('.m4v') ||
     lowerName.endsWith('.mp4')
   ) {
+    return 'video/mp4';
+  }
+  if (!cleanMime || cleanMime === 'application/octet-stream') {
+    // For unknown file types only use MP4 when there is no stronger signal.
     return 'video/mp4';
   }
   if (cleanMime.startsWith('video/')) {
