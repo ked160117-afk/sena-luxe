@@ -35,11 +35,6 @@ const htmlEscape = (value: string): string =>
     return replacements[char] || char;
   });
 
-const isShareCrawler = (userAgent: string): boolean =>
-  /twitterbot|xbot|facebookexternalhit|facebot|linkedinbot|discordbot|slackbot|telegrambot|whatsapp|pinterestbot|googlebot|bingbot|crawler|spider/i.test(
-    userAgent
-  );
-
 async function loadPublicProduct(productId: string): Promise<Record<string, FirestoreValue> | null> {
   const databaseId = encodeURIComponent(firebaseConfig.firestoreDatabaseId);
   const encodedProductId = encodeURIComponent(productId);
@@ -130,8 +125,12 @@ export default {
       const title = readString(fields, "title") || readString(fields, "gameName") || "SENA LUXE";
       const gameName = readString(fields, "gameName");
       const summary = readString(fields, "summary");
-      const priceValue = fields.price?.integerValue ?? fields.price?.doubleValue;
-      const priceLabel = typeof priceValue === "number" ? `¥${priceValue.toLocaleString("ja-JP")}` : `価格確認中`;
+      const priceValue = fields.price?.integerValue != null
+        ? Number(fields.price.integerValue)
+        : fields.price?.doubleValue;
+      const priceLabel = typeof priceValue === "number" && Number.isFinite(priceValue)
+        ? `¥${priceValue.toLocaleString("ja-JP")}`
+        : `価格確認中`;
       const description = [gameName, summary, "商品内容・在庫・価格は公式LINEでご確認ください。"]
         .filter(Boolean)
         .join("｜")
