@@ -54,7 +54,10 @@ async function loadPublicProduct(productId: string): Promise<Record<string, Fire
 function primaryImage(fields: Record<string, FirestoreValue>): string {
   const main = readString(fields, "imageUrl");
   if (main) return main;
-  const imageValues = fields.imageUrls?.arrayValue?.values || [];
+  const imageValues =
+    fields.imageUrls?.arrayValue?.values ||
+    fields.additionalImages?.arrayValue?.values ||
+    [];
   return imageValues[0]?.stringValue || "";
 }
 
