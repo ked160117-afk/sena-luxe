@@ -15,13 +15,16 @@ export const RetiredAccountsView: React.FC = () => {
   const retiredProducts = useMemo(() => {
     // Legacy records may omit or use older values for status/category/recommendation.
     // Show retired/initial account records unless explicitly marked unavailable.
-    const retiredCategories = new Set(['引退垢', '初期垢', '引退アカウント', '初期アカウント']);
+    // Legacy category labels may vary, and recommendations may be flagged separately.
+    // Match retired/initial-account category aliases and the recommendation flag,
+    // while excluding explicitly unavailable products.
     const unavailableStatuses = new Set(['掲載停止', '売り切れ', '商談中', '非公開']);
     return products
       .filter((p) => {
-        const category = typeof p.category === 'string' ? p.category.trim() : '';
+        const category = typeof p.category === 'string' ? p.category.trim().replace(/\s+/g, '') : '';
         const status = typeof p.status === 'string' ? p.status.trim() : '';
-        return retiredCategories.has(category) && !unavailableStatuses.has(status);
+        const isRetiredCategory = category.includes('引退') || category.includes('初期');
+        return (isRetiredCategory || p.isRecommended === true) && !unavailableStatuses.has(status);
       })
       .sort(
         (a, b) =>
