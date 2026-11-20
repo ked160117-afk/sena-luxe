@@ -13,16 +13,18 @@ export const RetiredAccountsView: React.FC = () => {
   const { products, games, copyToClipboardAndOpenModal } = useStore();
 
   const retiredProducts = useMemo(() => {
+    // Tolerate legacy category/status fields; only hide records explicitly unavailable.
+    const retiredCategories = new Set(['引退垢', '初期垢', '引退アカウント', '初期アカウント']);
+    const unavailableStatuses = new Set(['掲載停止', '売り切れ', '商談中', '非公開']);
     return products
-      .filter((p) =>
-        (p.category === '引退垢' || p.category === '初期垢') &&
-        p.status === '掲載中' &&
-        p.verifiedForPublic === true &&
-        p.isRecommended !== false
-      )
+      .filter((p) => {
+        const category = typeof p.category === 'string' ? p.category.trim() : '';
+        const status = typeof p.status === 'string' ? p.status.trim() : '';
+        return retiredCategories.has(category) && !unavailableStatuses.has(status);
+      })
       .sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime() ||
           (b.order || 0) - (a.order || 0)
       );
   }, [products]);
