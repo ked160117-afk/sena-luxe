@@ -1,6 +1,6 @@
 /**
  * SENA LUXE - Recommended Retired Accounts View (おすすめ引退アカウント)
- * Displays all published & verified retired accounts across all games.
+ * Displays all published retired accounts across all games.
  */
 
 import React, { useMemo } from 'react';
@@ -17,7 +17,6 @@ export const RetiredAccountsView: React.FC = () => {
       .filter((p) =>
         (p.category === '引退垢' || p.category === '初期垢') &&
         p.status === '掲載中' &&
-        p.verifiedForPublic === true &&
         p.isRecommended !== false
       )
       .sort(
