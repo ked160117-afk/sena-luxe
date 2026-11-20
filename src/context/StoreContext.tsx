@@ -308,14 +308,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const raw = d.data() as ProductItem;
             const normalizedCategory: ProductCategory =
               raw.category === 'ゲーム内通貨・石垢' ? '石垢' : raw.category;
-            const isVerified =
-              raw.verifiedForPublic === true &&
-              ['石垢', '引退垢', '初期垢'].includes(normalizedCategory) &&
-              typeof raw.price === 'number' &&
-              raw.price > 0 &&
-              Boolean(raw.title?.trim()) &&
-              Boolean(raw.summary?.trim());
-
             const primaryImage = raw.imageUrl || raw.imageUrls?.[0];
             const derivedAdditional =
               Array.isArray(raw.additionalImages) && raw.additionalImages.length > 0
@@ -331,8 +323,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               ...(derivedAdditional && derivedAdditional.length > 0
                 ? { additionalImages: derivedAdditional }
                 : {}),
-              verifiedForPublic: isVerified,
-              status: isVerified ? raw.status : '掲載停止',
+              // Preserve the Firestore publication flags as saved. Do not silently
+              // hide existing listings during client-side data normalization.
+              verifiedForPublic: raw.verifiedForPublic,
+              status: raw.status,
             };
           });
           // sort by createdAt desc
