@@ -10,7 +10,7 @@ import { ProductCardImage } from '../components/ProductCardImage';
 import { XShareButton } from '../components/XShareButton';
 
 export const RetiredAccountsView: React.FC = () => {
-  const { products, games, copyToClipboardAndOpenModal } = useStore();
+  const { products, productsLoading, games, copyToClipboardAndOpenModal } = useStore();
 
   const retiredProducts = useMemo(() => {
     // Legacy records may omit or use older values for status/category/recommendation.
@@ -50,7 +50,12 @@ export const RetiredAccountsView: React.FC = () => {
       </section>
 
       {/* Empty or Grid */}
-      {retiredProducts.length === 0 ? (
+      {productsLoading ? (
+        <section className="rounded-xl bg-[#111216] border border-stone-800 p-9 sm:p-12 text-center space-y-3">
+          <div className="w-8 h-8 mx-auto rounded-full border-2 border-[#d4af37]/30 border-t-[#d4af37] animate-spin" role="status" aria-label="商品を読み込み中" />
+          <p className="text-sm text-stone-400">商品情報を読み込み中です…</p>
+        </section>
+      ) : retiredProducts.length === 0 ? (
         <section className="rounded-xl bg-[#111216] border border-stone-800 p-9 sm:p-12 text-center space-y-3">
           <ShieldCheck className="w-9 h-9 text-[#d4af37] mx-auto" />
           <h2 className="text-lg font-semibold text-white">現在掲載中の引退垢はありません</h2>

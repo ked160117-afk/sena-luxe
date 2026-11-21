@@ -95,6 +95,7 @@ interface StoreContextType {
   games: GameTitle[];
   candidateGames: GameTitle[];
   products: ProductItem[];
+  productsLoading: boolean;
   stoneRates: StoneRatePlan[];
   requests: GameRequestItem[];
   sequences: Record<string, SerialSequence>;
@@ -174,6 +175,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Master Data State
   const [allGames, setAllGames] = useState<GameTitle[]>(() => [...INITIAL_GAMES, ...INITIAL_CANDIDATE_GAMES]);
   const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
+  const [productsLoading, setProductsLoading] = useState<boolean>(true);
   const [stoneRates, setStoneRates] = useState<StoneRatePlan[]>(INITIAL_STONE_RATES);
   const [requests, setRequests] = useState<GameRequestItem[]>([]);
   const [sequences, setSequences] = useState<Record<string, SerialSequence>>(INITIAL_SEQUENCES);
@@ -303,6 +305,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unsubProducts = onSnapshot(
       collection(db, 'products'),
       (snapshot) => {
+        setProductsLoading(false);
         if (!snapshot.empty) {
           const loadedProducts: ProductItem[] = snapshot.docs.map((d) => {
             const raw = d.data() as ProductItem;
@@ -335,6 +338,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       },
       (error) => {
+        setProductsLoading(false);
         console.warn('Products onSnapshot note:', error.message);
       }
     );
@@ -746,6 +750,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         games,
         candidateGames,
         products,
+        productsLoading,
         stoneRates,
         requests,
         sequences,
