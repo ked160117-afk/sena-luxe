@@ -33,6 +33,66 @@ export const RetiredAccountsView: React.FC = () => {
       );
   }, [products]);
 
+
+
+  // Inquiry-only items from GameTrade listings (no image assets; prices adjusted as requested).
+  const inquiryOnlyItems = [
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "初期アカウント｜廻珠15万・夏虎杖3凸・領域五条",
+    "price": 4400,
+    "summary": "初期アカウント。廻珠約151,000個。夏虎杖3凸、領域五条など。"
+  },
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "初期アカウント｜廻珠7.7万・限定夏虎杖3凸・五条ほか",
+    "price": 4300,
+    "summary": "初期アカウント。廻珠約77,000個。限定夏虎杖3凸、五条、東堂、真人、開宿儺など。"
+  },
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "引退アカウント｜廻珠2万・虎杖＆伏黒3凸・乙骨ほか",
+    "price": 4600,
+    "summary": "引退アカウント。廻珠約21,000個以上。虎杖＆伏黒3凸、影宿儺、乙骨など。ストーリー進行あり。"
+  },
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "初期アカウント｜廻珠1.6万・2周年コンプ・五条2凸",
+    "price": 3900,
+    "summary": "初期アカウント。廻珠約16,000個。2周年コンプ、虎杖＆伏黒3凸、五条2凸など。"
+  },
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "初期アカウント｜廻珠8.4万・虎杖＆伏黒",
+    "price": 3500,
+    "summary": "初期アカウント。廻珠約84,000個。虎杖＆伏黒所持。"
+  },
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "2周年コンプアカウント｜夏五条3凸・フーガ宿儺・乙骨",
+    "price": 13400,
+    "summary": "2周年コンプ。虎杖＆伏黒、夏五条3凸、フーガ、宿儺、乙骨など。ストーリー進行中。"
+  },
+  {
+    "game": "呪術廻戦 ファントムパレード",
+    "title": "初期アカウント｜廻珠7.6万・2周年コンプ・幻虎杖2凸",
+    "price": 5290,
+    "summary": "初期アカウント。廻珠約76,000個。2周年コンプ、五条2凸、幻虎杖2凸など。"
+  },
+  {
+    "game": "eFootball",
+    "title": "引退アカウント｜EPIC・BIG TIME多数・日本代表選手豊富",
+    "price": 12500,
+    "summary": "チームパワー3283。EPIC・BIG TIME選手多数、日本代表・国代表選手豊富。メールアドレス変更可能。Google Play Games未連携。"
+  },
+  {
+    "game": "勝利の女神：NIKKE",
+    "title": "初期アカウント｜ジュエル約6.7万・マリアン クイーン3凸",
+    "price": 6500,
+    "summary": "ジュエル約60,000〜70,000個。マリアン クイーン3凸、紅蓮、神殺、水着シンデレラなど。ストーリー3-11。メールアドレス譲渡可能。"
+  }
+];
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-8 animate-fade-in">
       {/* Header */}
@@ -173,6 +233,38 @@ export const RetiredAccountsView: React.FC = () => {
           })}
         </section>
       )}
+
+      {/* GameTrade inquiry-only listings */}
+      <section className="space-y-4">
+        <div className="border-b border-[#d4af37]/20 pb-4">
+          <h2 className="text-xl font-bold text-[#f7e7ce]">個別お問い合わせ商品</h2>
+          <p className="text-xs text-stone-400 mt-2">掲載内容をご確認のうえ、商品ごとに公式LINEからお問い合わせください。画像は掲載せず、内容・価格を表示しています。</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {inquiryOnlyItems.map((item, index) => {
+            const inquiryText = [
+              `ゲーム名：${item.game}`,
+              `商品名：${item.title}`,
+              `価格：¥${item.price.toLocaleString()}`,
+              `商品内容：${item.summary}`,
+            ].join('\\n');
+            return (
+              <article key={`inquiry-${index}`} className="rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/50 transition-colors p-4 flex flex-col justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] text-stone-400">{item.game}</p>
+                  <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                  <p className="text-xs text-stone-400 leading-relaxed">{item.summary}</p>
+                  <div className="border-t border-stone-800 pt-3 text-right text-lg font-bold text-[#f7e7ce]">¥{item.price.toLocaleString()}</div>
+                </div>
+                <button type="button" onClick={() => copyToClipboardAndOpenModal(inquiryText, item.game, 'GameTrade掲載商品', item.title)} className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-2">
+                  <MessageCircle className="w-4 h-4" /> 公式LINEで商品を問い合わせる <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
     </div>
   );
 };
