@@ -11,7 +11,7 @@ import { MessageCircle, ShieldAlert, Clock, HelpCircle } from 'lucide-react';
 import { ProductCardImage } from '../components/ProductCardImage';
 import { XShareButton } from '../components/XShareButton';
 
-const CATEGORIES: (ProductCategory | 'ALL')[] = ['ALL', '石垢', '引退垢', '初期垢'];
+const CATEGORIES: (ProductCategory | 'ALL')[] = ['ALL', '石垢', '引退垢', '初期垢', '進行垢'];
 const ALLOWED_PUBLIC_CATEGORIES: ProductCategory[] = ['石垢', '引退垢', '初期垢', 'ゲーム内通貨・石垢'];
 const NON_STONE_GAME_IDS = [
   'game-kitaou',
