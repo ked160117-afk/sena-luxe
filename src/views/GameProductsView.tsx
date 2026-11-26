@@ -338,7 +338,7 @@ export const GameProductsView: React.FC = () => {
                     `商品名：${item.title}`,
                     `価格：¥${item.price.toLocaleString()}`,
                     `商品内容：${item.summary}`,
-                  ].join('\\n');
+                  ].join('\n');
                   return (
                     <article key={`phantom-inquiry-${index}`} className="rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/50 transition-colors p-4 flex flex-col justify-between gap-4">
                       <div className="space-y-2">
