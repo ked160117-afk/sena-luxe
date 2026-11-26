@@ -90,6 +90,20 @@ export const GameProductsView: React.FC = () => {
 
   const showEmbeddedRates = selectedCategory === '石垢' && filteredStonePlans.length > 0;
 
+  // Static inquiry listings for Phantom Parade, categorized for the game-specific product catalog.
+  const phantomInquiryItems = [
+    { category: '初期垢', title: '初期アカウント｜廻珠15万・夏虎杖3凸・領域五条', price: 4900, summary: '廻珠約151,000個。夏虎杖3凸、領域五条を所持した初期アカウントです。' },
+    { category: '初期垢', title: '初期アカウント｜廻珠7.7万・限定夏虎杖3凸・五条ほか', price: 4800, summary: '廻珠約77,000個。限定夏虎杖3凸をはじめ、五条・東堂・真人・開宿儺などを所持しています。' },
+    { category: '進行垢', title: '進行アカウント｜廻珠2万・虎杖＆伏黒3凸・乙骨ほか', price: 5100, summary: '廻珠約21,000個以上。虎杖＆伏黒3凸、影宿儺、乙骨などを所持。ストーリー進行済みです。' },
+    { category: '進行垢', title: '進行アカウント｜廻珠1.6万・2周年コンプ・五条2凸', price: 4400, summary: '廻珠約16,000個。2周年キャラクターコンプリート、虎杖＆伏黒3凸、五条2凸などを所持しています。' },
+    { category: '初期垢', title: '初期アカウント｜廻珠8.4万・虎杖＆伏黒', price: 4000, summary: '廻珠約84,000個。虎杖＆伏黒を所持した初期アカウントです。' },
+    { category: '進行垢', title: '進行アカウント｜2周年コンプ・夏五条3凸・フーガ宿儺・乙骨', price: 13900, summary: '2周年キャラクターコンプリート。夏五条3凸、フーガ宿儺、乙骨、虎杖＆伏黒などを所持。ストーリー進行中です。' },
+    { category: '初期垢', title: '初期アカウント｜廻珠7.6万・2周年コンプ・幻虎杖2凸', price: 5790, summary: '廻珠約76,000個。2周年キャラクターコンプリート、五条2凸、幻虎杖2凸などを所持しています。' },
+  ];
+  const filteredPhantomInquiryItems = selectedGameId === 'game-fp'
+    ? phantomInquiryItems.filter((item) => selectedCategory === 'ALL' || item.category === selectedCategory)
+    : [];
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10 animate-fade-in">
       {/* Page Header */}
@@ -175,7 +189,7 @@ export const GameProductsView: React.FC = () => {
       </div>
 
       {/* Content */}
-      {filteredProducts.length === 0 && !showEmbeddedRates ? (
+      {filteredProducts.length === 0 && !showEmbeddedRates && filteredPhantomInquiryItems.length === 0 ? (
         <div className="rounded-xl bg-[#111216] border border-stone-800 p-8 sm:p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] mx-auto">
             <Clock className="w-6 h-6" />
@@ -305,6 +319,40 @@ export const GameProductsView: React.FC = () => {
 
               <div className="px-4 sm:px-5 py-2.5 bg-black/20 text-[11px] text-stone-400">
                 掲載価格・石の数量は参考情報を含みます。購入前に公式LINEで内容と在庫をご確認ください。取り扱う石は全て無償石です。
+              </div>
+            </section>
+          )}
+
+          {/* Phantom Parade inquiry listings grouped by account category */}
+          {filteredPhantomInquiryItems.length > 0 && (
+            <section className="space-y-4">
+              <div className="border-b border-[#d4af37]/20 pb-3">
+                <h2 className="text-lg font-bold text-[#f7e7ce]">ファンパレ お問い合わせ商品</h2>
+                <p className="text-xs text-stone-400 mt-1">商品内容・在庫の詳細は公式LINEでご確認ください。</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredPhantomInquiryItems.map((item, index) => {
+                  const inquiryText = [
+                    'ゲーム名：呪術廻戦 ファントムパレード',
+                    `商品カテゴリー：${item.category}`,
+                    `商品名：${item.title}`,
+                    `価格：¥${item.price.toLocaleString()}`,
+                    `商品内容：${item.summary}`,
+                  ].join('\\n');
+                  return (
+                    <article key={`phantom-inquiry-${index}`} className="rounded-xl bg-[#111216] border border-stone-800 hover:border-[#d4af37]/50 transition-colors p-4 flex flex-col justify-between gap-4">
+                      <div className="space-y-2">
+                        <span className="inline-block text-[10px] text-[#d4af37] border border-[#d4af37]/30 rounded px-2 py-1">{item.category}</span>
+                        <h3 className="text-sm font-semibold text-white leading-snug">{item.title}</h3>
+                        <p className="text-xs text-stone-400 leading-relaxed">{item.summary}</p>
+                        <div className="border-t border-stone-800 pt-3 text-right text-lg font-bold text-[#f7e7ce]">¥{item.price.toLocaleString()}</div>
+                      </div>
+                      <button type="button" onClick={() => copyToClipboardAndOpenModal(inquiryText, '呪術廻戦 ファントムパレード', item.category, item.title)} className="w-full py-2.5 px-3 rounded-lg text-xs font-semibold text-black bg-[#d4af37] hover:bg-[#e2bd4e] transition-colors flex items-center justify-center gap-2">
+                        <MessageCircle className="w-4 h-4" /> 公式LINEで商品を問い合わせる
+                      </button>
+                    </article>
+                  );
+                })}
               </div>
             </section>
           )}
